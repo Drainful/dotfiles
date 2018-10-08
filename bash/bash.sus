@@ -1,0 +1,6 @@
+card bash {
+    into ~
+
+    .bashrc
+    .bash_aliases
+}

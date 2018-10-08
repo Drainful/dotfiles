@@ -1,0 +1,8 @@
+alias e="$EDITOR --create-frame"
+alias md="mkdir"
+alias ~="cd ~"
+alias ..="cd .."
+alias ...="cd ../.."
+alias spdep="spark deploy ~/.dotfiles/dotfiles.sus"
+alias nrs="sudo nixos-rebuild switch"
+alias nget="sudo nix-env -i "

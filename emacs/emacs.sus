@@ -1,0 +1,5 @@
+card emacs {
+    into ~
+
+    .emacs
+}
