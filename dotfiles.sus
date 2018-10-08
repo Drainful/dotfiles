@@ -1,5 +1,5 @@
 card all {
     spark file neovim/neovim.sus
-    spark file bash/bash.sus
+    spark file terminal/terminal.sus
     spark file emacs/emacs.sus
 }

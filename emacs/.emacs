@@ -119,6 +119,9 @@
 ;; save curson position
 (save-place-mode 1)
 
+;; always follow symlinks, even in vc
+(setq vc-follow-symlinks t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Keybindings and commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
