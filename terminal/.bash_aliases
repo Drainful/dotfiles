@@ -1,4 +1,5 @@
 alias e="$EDITOR --create-frame"
+alias nixconf="emacsclient --create-frame -e '(find-file \"/sudo::/etc/nixos/configuration.nix\")'"
 alias md="mkdir"
 alias ~="cd ~"
 alias ..="cd .."

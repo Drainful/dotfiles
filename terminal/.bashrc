@@ -1,7 +1,5 @@
 source ~/.bash_aliases
 
-export NIXCONF=/etc/nixos/
-
 # Src - source bashrc
 Src() {
     source ~/.bashrc
