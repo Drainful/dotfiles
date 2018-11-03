@@ -1,0 +1,2 @@
+;; (ql:quickload :cffi)
+;; (pushnew #P"/home/adrian/.nix-profile/lib/" cffi:*foreign-library-directories*)

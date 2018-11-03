@@ -2,7 +2,7 @@
 ;;
 ;; Sections:
 ;;    -> Packages
-;;    -> General
+;;    -> General / Hydra
 ;;    -> Keybindings and commands
 ;;    -> EMACS user interface
 ;;    -> EVIL configuration
@@ -25,7 +25,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; initialize use-package (installed with nix)
+(require 'package)
+(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
+                    (not (gnutls-available-p))))
+       (proto (if no-ssl "http" "https")))
+  ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
+  (add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
+  ;;(add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
+  (when (< emacs-major-version 24)
+    ;; For important compatibility libraries like cl-lib
+    (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
 (package-initialize)
+
 ;; use use-package
 (eval-when-compile (require 'use-package))
 ;; use melpa archive
@@ -43,19 +54,45 @@
 ;; easy mode line config
 (use-package delight)
 
-;; use Superior Lisp Interaction Mode
-(use-package slime
-  ;;:bind ("C-b" . 'slime)
-  :config
-  (general-define-key
-   :states 'normal
-   :keymaps 'override
-   "C-s" 'slime)
-  (setq inferior-lisp-program "sbcl")
-  (setq slime-contribs '(slime-fancy)))
-
 ;; better keybindings
 (use-package general)
+
+;; common lisp autocompletion with slime and company
+;; (use-package slime-company)
+
+;; clojure mode
+(use-package clojure-mode)
+
+;; CIDER like slime for clojure
+(use-package cider
+  :config
+  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
+  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
+
+;; ;; linting clojure
+;; (use-package flycheck-clojure
+;;   :config
+;;   (eval-after-load 'flycheck '(flycheck-clojure-setup))
+;;   (add-hook 'after-init-hook #'global-flycheck-mode)
+;;   ;; navigate clojure errors with flycheck functions
+;;   (add-hook 'cider-mode-hook
+;;   (lambda () (setq next-error-function #'flycheck-next-error-function))))
+
+;; ;; avoid clash between cider eldoc and flycheck-clojure
+;; (use-package flycheck-pos-tip
+;;   :config
+;;   (eval-after-load 'flycheck
+;;     '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
+
+;; use Sylvester the Cat's Common Lisp IDE for Emacs
+(use-package sly-repl-ansi-color)
+(use-package sly
+  ;;:bind ("C-b" . 'slime)
+  :config
+  (push 'sly-repl-ansi-color sly-contribs)
+  ;;(load (expand-file-name "~/quicklisp/slime-helper.el"))
+  (setq inferior-lisp-program "quicklisp run"))
+
 
 ;; autocomplete
 (use-package company
@@ -63,8 +100,13 @@
   :config
   (add-to-list 'company-frontends 'company-tng-frontend)
   (add-to-list 'completion-styles 'initials t)
+  ;;(add-to-list 'completion-styles 'substring t)
+  (define-key company-active-map (kbd "M-.") 'company-show-location)
+  (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
   (setq company-minimum-prefix-length 2)
-  (global-company-mode 1))
+  ;;(setq company-dabbrev-downcase 0)
+  (setq company-idle-delay 0)
+  (global-company-mode nil))
 
 ;; linting
 (use-package flycheck
@@ -73,10 +115,45 @@
 
 ;; vim emulation
 (use-package evil
+  :init
+  ;; settings for evil-collection integration
+  (setq evil-want-keybinding nil)
+  (setq evil-want-integration t)
   :config
   (evil-mode 1)
   ;; no broken undo tree
   (global-undo-tree-mode -1))
+
+(use-package evil-collection
+  :init
+  (setq evil-want-keybinding nil)
+  :after evil
+  :config
+  (evil-collection-init))
+
+;; vim like folding
+(add-hook 'prog-mode-hook #'hs-minor-mode)
+;; (use-package evil-vimish-fold
+;;   :config
+;;   (evil-vimish-fold-mode 1))
+
+;; better lisp editing
+(use-package lispy)
+
+;; lispy-evil integration
+(use-package lispyville
+  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode) . lispyville-mode)
+  :config
+   (lispyville-set-key-theme
+    '(operators
+      atom-motions
+      prettify
+      wrap
+      slurp-cp
+      barf-cp
+      c-w
+      (escape insert)
+      (additional-movement normal visual motion))))
 
 ;; like vim powerline
 (use-package powerline)
@@ -100,7 +177,6 @@
 ;;      :config
 ;;      (solaire-mode-swap-bg))
 
-
 ;; projectile project managment
 (use-package projectile
   :delight projectile-mode
@@ -108,9 +184,13 @@
   (general-define-key
    :states 'normal
    :keymaps 'override
-   "C-p" 'projectile-find-file)
+   "C-p" 'helm-projectile-find-file)
   (projectile-mode +1))
   
+;; show matching paren fast
+;; (use-package mic-paren
+;;   :config
+;;   (paren-activate))
 
 ;; helm framework
 (use-package helm
@@ -118,8 +198,7 @@
   :bind (("M-x" . helm-M-x)
          ("C-x C-f" . helm-find-files)
          ("C-x C-b" . helm-mini))
-  :config
-  (helm-mode +1))
+  :config (helm-mode t))
 
 ;; use helm for projectile
 (use-package helm-projectile
@@ -168,11 +247,17 @@
   ;;       (lambda (args) (apply 'nix-shell-command (nix-current-sandbox) args)))
   )
 
+;; rainbow delimiters
+;; (use-package rainbowdelimiters
+;;   :hook (lispyville-mode-hook . rainbow-delimiters-mode))
+;;OK so use package can only install it once, then bugs, so just install and use this add hook.
+(add-hook 'prog-mode-hook #'rainbow-delimiters-mode)
 
 ;; nix language autocomplete
 (use-package company-nixos-options
   :config
-  (add-to-list 'company-backends 'company-nixos-options))
+  ;;(add-to-list 'company-backends 'company-nixos-options)
+  )
 
 ;; nix language support
 (use-package nix-mode
@@ -200,13 +285,13 @@
 (use-package elm-mode)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => General
+;; => General / Hydra
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; run as server
 (server-mode 1)
 
-;; save curson position
+;; save cursor position
 (save-place-mode 1)
 
 ;; always follow symlinks, even in vc
@@ -231,6 +316,52 @@
  "C-k" 'evil-window-up
  "C-l" 'evil-window-right)
 
+;; leader key
+(defconst leader-key ",")
+
+(general-create-definer leader-key-def
+  :prefix leader-key)
+
+(general-create-definer eval-key-def
+  :prefix (concat leader-key " e"))
+
+(general-create-definer start-key-def
+  :prefix (concat leader-key " s"))
+
+(general-create-definer space-def)
+
+;; general leader definitions
+(leader-key-def 'normal
+  "q" 'kill-this-buffer ; ",q" to kill buffer not window.
+  "b" 'helm-mini
+  "o" 'occur
+  "i" 'imenu) ; ",b" to switch buffers.
+
+;; sly
+(leader-key-def 'normal sly-mode-map
+  "z" 'sly-switch-to-output-buffer
+  "c" 'sly-compile-file
+  "l" 'sly-load-file)
+
+(start-key-def 'normal sly-mode-map
+  "s" 'sly
+  "c" 'sly-connect)
+
+(eval-key-def 'normal sly-mode-map
+  "b" 'sly-eval-buffer
+  "f" 'sly-eval-defun)
+
+;; cider
+(leader-key-def 'normal clojure-mode-map
+  "s" 'cider-jack-in
+  "z" 'cider-switch-to-repl-buffer
+  "c" 'cider-close-ancillary-buffers)
+
+(eval-key-def 'normal clojure-mode-map
+  "b" 'cider-eval-buffer
+  "f" 'cider-eval-defun-at-point)
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => EMACS user interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -243,10 +374,14 @@
 
 ;; display line numbers
 (global-display-line-numbers-mode 1)
+(display-line-numbers-mode 1)
 
 ;; disable startup screen and scratch message
 (setq inhibit-splash-screen t
       initial-scratch-message nil)
+
+;; set scratch buffer to sly common lisp
+(setq initial-major-mode 'sly-mode)
 
 ;; type y or n, not yes or no.
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -258,7 +393,23 @@
 (setq select-enable-clipboard nil)
 
 ;; match parens
-(electric-pair-mode t)
+(electric-pair-mode nil)
+
+;;show expression
+(show-paren-mode t)
+(setq show-paren-delay 0)
+(setq show-paren-style 'parenthesis)
+;; highlight parens when inside them (thanks to https://stackoverflow.com/questions/34846531/show-parentheses-when-inside-them-emacs)
+(define-advice show-paren-function (:around (fn) fix)
+  "Highlight enclosing parens."
+  (cond ((looking-at-p "\\s(") (funcall fn))
+        (t (save-excursion
+             (ignore-errors (backward-up-list))
+             (funcall fn)))))
+
+
+;; show paren match
+(show-paren-mode nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Colors and fonts
@@ -315,11 +466,10 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
- '(helm-mode t)
+    ("3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(package-selected-packages
    (quote
-    (darkroom elm-mode flycheck-elm haskell-mode nix-mode company-nixos-options nix-sandbox helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (sly-repl-ansi-color sly sly-quicklisp helm-ag flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispyville lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode nix-sandbox helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
