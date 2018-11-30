@@ -13,7 +13,7 @@
 ;;    -> Moving around, splits, windows and buffers
 ;;    -> Editing mappings
 ;;    -> vimgrep searching and cope displaying
-;;    -> Spell checking
+
 ;;    -> Misc
 ;;    -> Helper functions
 ;;
@@ -29,6 +29,12 @@
 (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                     (not (gnutls-available-p))))
        (proto (if no-ssl "http" "https")))
+  (when no-ssl (warn "\
+Your version of Emacs does not support SSL connections,
+which is unsafe because it allows man-in-the-middle attacks.
+There are two things you can do about this warning:
+1. Install an Emacs version that does support SSL and be safe.
+2. Remove this warning from your init file so you won't see it again."))
   ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
   (add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
   ;;(add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
@@ -36,13 +42,19 @@
     ;; For important compatibility libraries like cl-lib
     (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
 (package-initialize)
+;;(package-refresh-contents)
 
 ;; use use-package
 (eval-when-compile (require 'use-package))
-;; use melpa archive
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+
 ;; auto download packages
 (setq use-package-always-ensure t)
+
+(use-package quelpa)
+
+(use-package quelpa-use-package)
+
+(quelpa-use-package-activate-advice)
 
 ;; automatically update packages
 (use-package auto-package-update
@@ -51,8 +63,9 @@
   (setq auto-package-update-hide-results t)
   (auto-package-update-maybe))
 
-;; easy mode line config
-(use-package delight)
+(use-package delight :quelpa (:stable t)
+  :config
+  (delight 'eldoc-mode nil "eldoc"))
 
 ;; better keybindings
 (use-package general)
@@ -62,6 +75,9 @@
 
 ;; clojure mode
 (use-package clojure-mode)
+
+;; spinner for cider
+(use-package spinner :quelpa (:stable t))
 
 ;; CIDER like slime for clojure
 (use-package cider
@@ -84,28 +100,33 @@
 ;;   (eval-after-load 'flycheck
 ;;     '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
 
-;; use Sylvester the Cat's Common Lisp IDE for Emacs
-(use-package sly-repl-ansi-color)
+;; use sly
 (use-package sly
-  ;;:bind ("C-b" . 'slime)
+  :quelpa (:stable t)
   :config
-  (push 'sly-repl-ansi-color sly-contribs)
-  ;;(load (expand-file-name "~/quicklisp/slime-helper.el"))
   (setq inferior-lisp-program "quicklisp run"))
+
+;;julia mode
+(use-package julia-mode)
+(use-package julia-repl
+  :config
+  (add-hook 'julia-mode-hook 'julia-repl-mode))
 
 
 ;; autocomplete
 (use-package company
-  :delight company-mode
+  :delight
   :config
   (add-to-list 'company-frontends 'company-tng-frontend)
   (add-to-list 'completion-styles 'initials t)
   ;;(add-to-list 'completion-styles 'substring t)
   (define-key company-active-map (kbd "M-.") 'company-show-location)
   (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
-  (setq company-minimum-prefix-length 2)
   ;;(setq company-dabbrev-downcase 0)
+  (setq company-minimum-prefix-length 2)
   (setq company-idle-delay 0)
+  (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
+                                             (setq company-minimum-prefix-length 3))))
   (global-company-mode nil))
 
 ;; linting
@@ -131,8 +152,22 @@
   :config
   (evil-collection-init))
 
+;; evil snipe
+(use-package evil-snipe
+  :delight
+  :config
+  (setq evil-snipe-scope 'visible)
+  (setq evil-snipe-tab-increment t)
+  (setq evil-snipe-repeat-keys nil)
+  (push '(?\[ "[[{(]") evil-snipe-aliases)
+  (push '(?\] "[]})]") evil-snipe-aliases)
+  (evil-snipe-mode +1)
+  (evil-snipe-override-mode +1))
+
 ;; vim like folding
 (add-hook 'prog-mode-hook #'hs-minor-mode)
+(delight 'hs-minor-mode nil "hideshow")
+
 ;; (use-package evil-vimish-fold
 ;;   :config
 ;;   (evil-vimish-fold-mode 1))
@@ -142,11 +177,12 @@
 
 ;; lispy-evil integration
 (use-package lispyville
+  :delight
   :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode) . lispyville-mode)
   :config
    (lispyville-set-key-theme
     '(operators
-      atom-motions
+      ;; atom-motions
       prettify
       wrap
       slurp-cp
@@ -179,13 +215,20 @@
 
 ;; projectile project managment
 (use-package projectile
-  :delight projectile-mode
+  :delight "P"
   :config
   (general-define-key
    :states 'normal
    :keymaps 'override
    "C-p" 'helm-projectile-find-file)
   (projectile-mode +1))
+
+;; nice splash screen with projects
+(use-package dashboard
+  :config
+  (dashboard-setup-startup-hook)
+  (setq dashboard-startup-banner 'logo)
+  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*"))))
   
 ;; show matching paren fast
 ;; (use-package mic-paren
@@ -194,7 +237,7 @@
 
 ;; helm framework
 (use-package helm
-  :delight helm-mode
+  :delight
   :bind (("M-x" . helm-M-x)
          ("C-x C-f" . helm-find-files)
          ("C-x C-b" . helm-mini))
@@ -227,9 +270,6 @@
         org-fontify-done-headline t
         org-fontify-quote-and-verse-blocks t))
 
-;; distraction free writing
-(use-package darkroom)
-
 ;; easily restart emacs daemon
 (use-package restart-emacs)
 
@@ -248,16 +288,14 @@
   )
 
 ;; rainbow delimiters
-;; (use-package rainbowdelimiters
-;;   :hook (lispyville-mode-hook . rainbow-delimiters-mode))
+(use-package rainbow-delimiters
+  :hook (lispyville-mode-hook . rainbow-delimiters-mode))
 ;;OK so use package can only install it once, then bugs, so just install and use this add hook.
 (add-hook 'prog-mode-hook #'rainbow-delimiters-mode)
 
 ;; nix language autocomplete
 (use-package company-nixos-options
-  :config
-  ;;(add-to-list 'company-backends 'company-nixos-options)
-  )
+  :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
 
 ;; nix language support
 (use-package nix-mode
@@ -283,10 +321,6 @@
   (add-hook 'flycheck-mode-hook 'flycheck-elm-setup))
   
 (use-package elm-mode)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => General / Hydra
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; run as server
 (server-mode 1)
@@ -314,7 +348,8 @@
  "C-h" 'evil-window-left
  "C-j" 'evil-window-down
  "C-k" 'evil-window-up
- "C-l" 'evil-window-right)
+ "C-l" 'evil-window-right
+ "C--" 'helm-projectile-grep)
 
 ;; leader key
 (defconst leader-key ",")
@@ -333,9 +368,15 @@
 ;; general leader definitions
 (leader-key-def 'normal
   "q" 'kill-this-buffer ; ",q" to kill buffer not window.
+  ;;"b" 'switch-to-buffer
   "b" 'helm-mini
   "o" 'occur
   "i" 'imenu) ; ",b" to switch buffers.
+
+;; emacs
+(eval-key-def 'normal emacs-lisp-mode-map
+  "b" 'eval-buffer
+  "f" 'eval-defun)
 
 ;; sly
 (leader-key-def 'normal sly-mode-map
@@ -379,9 +420,6 @@
 ;; disable startup screen and scratch message
 (setq inhibit-splash-screen t
       initial-scratch-message nil)
-
-;; set scratch buffer to sly common lisp
-(setq initial-major-mode 'sly-mode)
 
 ;; type y or n, not yes or no.
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -466,10 +504,12 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
+    ("3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
+ '(debug-on-error nil)
+ '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (sly-repl-ansi-color sly sly-quicklisp helm-ag flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispyville lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode nix-sandbox helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode evil-snipe company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

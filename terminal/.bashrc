@@ -1,8 +1,14 @@
 source ~/.bash_aliases
 
+#export PS1="\W \$"
+
 # Src - source bashrc
 Src() {
     source ~/.bashrc
+}
+
+emacs-daemon-workspace() {
+    "emacs --daemon=$1"
 }
 
 ## Functions with fzf ## (many from https://github.com/junegunn/fzf/wiki/examples)
