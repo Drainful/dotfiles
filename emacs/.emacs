@@ -137,6 +137,8 @@ There are two things you can do about this warning:
 ;; vim emulation
 (use-package evil
   :init
+  ;; highlight all search results
+  (setq evil-search-module 'evil-search)
   ;; settings for evil-collection integration
   (setq evil-want-keybinding nil)
   (setq evil-want-integration t)
@@ -152,17 +154,17 @@ There are two things you can do about this warning:
   :config
   (evil-collection-init))
 
-;; evil snipe
+;; 2 character find. TODO integration with easymotion.
 (use-package evil-snipe
-  :delight
+  ;; :after evil-easymotion
+  ;; :config
+  ;; (evilem-define (kbd "SPC s") 'evil-snipe-s)
+  )
+
+;; easymotion
+(use-package evil-easymotion
   :config
-  (setq evil-snipe-scope 'visible)
-  (setq evil-snipe-tab-increment t)
-  (setq evil-snipe-repeat-keys nil)
-  (push '(?\[ "[[{(]") evil-snipe-aliases)
-  (push '(?\] "[]})]") evil-snipe-aliases)
-  (evil-snipe-mode +1)
-  (evil-snipe-override-mode +1))
+  (evilem-default-keybindings "SPC"))
 
 ;; vim like folding
 (add-hook 'prog-mode-hook #'hs-minor-mode)
@@ -345,11 +347,21 @@ There are two things you can do about this warning:
 (evil-ex-define-cmd "Restart" 'restart-emacs)
 
 (general-nmap
- "C-h" 'evil-window-left
- "C-j" 'evil-window-down
- "C-k" 'evil-window-up
- "C-l" 'evil-window-right
- "C--" 'helm-projectile-grep)
+  "C-h" 'evil-window-left
+  "C-j" 'evil-window-down
+  "C-k" 'evil-window-up
+  "C-l" 'evil-window-right
+  "C--" 'helm-projectile-grep
+  ;; Move a line of text using ALT+[jk]
+  "M-j" (kbd ":move + RET")
+  "M-k" (kbd ":move .-2 RET")
+  "M-j" 'move-line-down
+  "M-k" 'move-line-up)
+
+(general-vmap
+  ;; Move a visual block of text using ALT+[jk]
+  "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
+  "M-j" (kbd ":move '> + RET `< my `> mz gv`yo`z")
 
 ;; leader key
 (defconst leader-key ",")
@@ -368,10 +380,10 @@ There are two things you can do about this warning:
 ;; general leader definitions
 (leader-key-def 'normal
   "q" 'kill-this-buffer ; ",q" to kill buffer not window.
-  ;;"b" 'switch-to-buffer
   "b" 'helm-mini
   "o" 'occur
-  "i" 'imenu) ; ",b" to switch buffers.
+  "i" 'imenu
+  "RET" (kbd ":noh")) ; ",b" to switch buffers.
 
 ;; emacs
 (eval-key-def 'normal emacs-lisp-mode-map
@@ -449,6 +461,11 @@ There are two things you can do about this warning:
 ;; show paren match
 (show-paren-mode nil)
 
+;; Mouse scroll settings
+(setq mouse-wheel-progressive-speed nil) ;; don't accelerate scrolling
+
+(setq mouse-wheel-follow-mouse 't) ;; scroll window under mouse
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Colors and fonts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -491,6 +508,21 @@ There are two things you can do about this warning:
   (interactive)
   (load-file user-init-file))
 
+(defun move-line-up ()
+  "Move up the current line."
+  (interactive)
+  (transpose-lines 1)
+  (forward-line -2)
+  (indent-according-to-mode))
+
+(defun move-line-down ()
+  "Move down the current line."
+  (interactive)
+  (forward-line 1)
+  (transpose-lines 1)
+  (forward-line -1)
+  (indent-according-to-mode))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -504,12 +536,12 @@ There are two things you can do about this warning:
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
+    ("251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(debug-on-error nil)
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode evil-snipe company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

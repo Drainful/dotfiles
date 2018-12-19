@@ -1,4 +1,4 @@
-alias e="emacsclient -c -e \"(progn (raise-frame) (x-focus-frame (selected-frame)))\""
+alias e="emacsclient -c"
 alias edw="emacs-daemon-workspace"
 alias nixconf="emacsclient --create-frame -e '(find-file \"/sudo::/etc/nixos/configuration.nix\")'"
 alias md="mkdir"
