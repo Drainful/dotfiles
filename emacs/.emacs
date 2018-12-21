@@ -42,7 +42,7 @@ There are two things you can do about this warning:
     ;; For important compatibility libraries like cl-lib
     (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
 (package-initialize)
-;;(package-refresh-contents)
+(package-refresh-contents)
 
 ;; use use-package
 (eval-when-compile (require 'use-package))
@@ -136,6 +136,11 @@ There are two things you can do about this warning:
 (use-package flycheck
   :config
   (global-flycheck-mode))
+
+;; git integration
+(use-package magit)
+;; evil-friendly commands for magit
+(use-package evil-magit)
 
 ;; vim emulation
 (use-package evil
@@ -378,20 +383,30 @@ There are two things you can do about this warning:
 (general-create-definer start-key-def
   :prefix (concat leader-key " s"))
 
+(general-create-definer git-key-def
+  :prefix (concat leader-key " m"))
+
 (general-create-definer space-def)
 
 ;; general leader definitions
 (leader-key-def 'normal
   "q" 'kill-this-buffer ; ",q" to kill buffer not window.
   "b" 'helm-mini
-  "o" 'occur
+  "o" 'occur ; ",b" to switch buffers.
   "i" 'imenu
-  "RET" (kbd ":noh")) ; ",b" to switch buffers.
+  "RET" (kbd ":noh") ; ,RET to clear highlighted search results.
+  )
 
-;; emacs
+;; magit
+(git-key-def 'normal
+  "m" 'magit)
+
+;; emacs lisp
 (eval-key-def 'normal emacs-lisp-mode-map
   "b" 'eval-buffer
   "f" 'eval-defun)
+(eval-key-def 'visual emacs-lisp-mode-map
+  "r" 'eval-region)
 
 ;; sly
 (leader-key-def 'normal sly-mode-map
@@ -406,12 +421,14 @@ There are two things you can do about this warning:
 (eval-key-def 'normal sly-mode-map
   "b" 'sly-eval-buffer
   "f" 'sly-eval-defun)
+(eval-key-def 'visual 'sly-mode-map
+  "r" 'sly-eval-region)
 
 ;; cider
 (leader-key-def 'normal clojure-mode-map
   "s" 'cider-jack-in
   "z" 'cider-switch-to-repl-buffer
-  "c" 'cider-close-ancillary-buffers)
+  "a" 'cider-close-ancillary-buffers)
 
 (eval-key-def 'normal clojure-mode-map
   "b" 'cider-eval-buffer
@@ -544,7 +561,7 @@ There are two things you can do about this warning:
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

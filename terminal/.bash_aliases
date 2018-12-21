@@ -1,6 +1,7 @@
 alias e="emacsclient -c"
 alias edw="emacs-daemon-workspace"
 alias nixconf="emacsclient --create-frame -e '(find-file \"/sudo::/etc/nixos/configuration.nix\")'"
+alias econf="emacsclient --create-frame ~/.emacs"
 alias md="mkdir"
 alias ~="cd ~"
 alias ..="cd .."

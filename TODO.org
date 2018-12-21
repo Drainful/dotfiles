@@ -1,0 +1,2 @@
+* Emacs
+The "kill this buffer" commend doesn't seem to work.
