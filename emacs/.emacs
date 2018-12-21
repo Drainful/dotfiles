@@ -7,9 +7,8 @@
 ;;    -> User interface
 ;;    -> Emacs client/server settings
 ;;    -> Colors, Themes, Fonts, and other aesthetic settings
-;;    -> Files and backups
 ;;    -> Text, tab and indent related
-;;    -> Moving around, splits, windows and buffers
+;;    -> Moving around, buffers, windows and splits
 ;;    -> Programming tools and settings
 ;;    -> Application specific tools and settings
 ;;       - Lisps
@@ -23,6 +22,7 @@
 ;;       - Org
 ;;       - Nix
 ;;       - Bash
+;;    -> Files and backups
 ;;    -> Helper functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -294,7 +294,7 @@ There are two things you can do about this warning:
               indent-tabs-mode nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Moving around, buffers, windows and splits
+;; => Moving around, buffers, windows, and splits
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; winner mode lets you switch between window configurations with C-c left and right.
@@ -548,7 +548,7 @@ There are two things you can do about this warning:
 (add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Files and backups (ohhh ghooost)
+;; => Files and backups
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; dont make backups
@@ -558,7 +558,6 @@ There are two things you can do about this warning:
 ;; => Helper functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; function to reload config
 (defun reload-init-file ()
   "Load all elisp from 'user-init-file'."
   (interactive)
