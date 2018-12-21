@@ -1,2 +1,5 @@
 * Emacs
-The "kill this buffer" commend doesn't seem to work.
+- The "kill this buffer" commend doesn't seem to work.
+- rebind winner mode controls to C-left and C-right.
+- Add flycheck file and #autosave# or whatever file to projectile exclusions
+- Add rust editing tools

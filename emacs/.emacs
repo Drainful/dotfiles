@@ -2,19 +2,27 @@
 ;;
 ;; Sections:
 ;;    -> Packages
-;;    -> General / Hydra
+;;    -> Evil
 ;;    -> Keybindings and commands
-;;    -> EMACS user interface
-;;    -> EVIL configuration
-;;    -> Colors and Fonts
+;;    -> User interface
+;;    -> Emacs client/server settings
+;;    -> Colors, Themes, Fonts, and other aesthetic settings
 ;;    -> Files and backups
 ;;    -> Text, tab and indent related
-;;    -> Visual mode related
 ;;    -> Moving around, splits, windows and buffers
-;;    -> Editing mappings
-;;    -> vimgrep searching and cope displaying
-
-;;    -> Misc
+;;    -> Programming tools and settings
+;;    -> Application specific tools and settings
+;;       - Lisps
+;;       - Emacs lisp
+;;       - Common Lisp
+;;       - Clojure
+;;       - Rust
+;;       - Julia
+;;       - Haskell
+;;       - Elm
+;;       - Org
+;;       - Nix
+;;       - Bash
 ;;    -> Helper functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,84 +71,9 @@ There are two things you can do about this warning:
   (setq auto-package-update-hide-results t)
   (auto-package-update-maybe))
 
-(use-package delight :quelpa (:stable t)
-  :config
-  (delight 'eldoc-mode nil "eldoc"))
-
-;; better keybindings
-(use-package general)
-
-;; common lisp autocompletion with slime and company
-;; (use-package slime-company)
-
-;; clojure mode
-(use-package clojure-mode)
-
-;; spinner for cider
-(use-package spinner :quelpa (:stable t))
-
-;; CIDER like slime for clojure
-(use-package cider
-  :config
-  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
-  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
-
-;; ;; linting clojure
-;; (use-package flycheck-clojure
-;;   :config
-;;   (eval-after-load 'flycheck '(flycheck-clojure-setup))
-;;   (add-hook 'after-init-hook #'global-flycheck-mode)
-;;   ;; navigate clojure errors with flycheck functions
-;;   (add-hook 'cider-mode-hook
-;;   (lambda () (setq next-error-function #'flycheck-next-error-function))))
-
-;; ;; avoid clash between cider eldoc and flycheck-clojure
-;; (use-package flycheck-pos-tip
-;;   :config
-;;   (eval-after-load 'flycheck
-;;     '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
-
-;; use sly
-(use-package sly
-  :quelpa (:stable t)
-  :after evil
-  :config
-  (setq inferior-lisp-program "quicklisp run")
-  ;; Open sly debug buffers in emacs state, rather than evil state.
-  (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
-
-;;julia mode
-(use-package julia-mode)
-(use-package julia-repl
-  :config
-  (add-hook 'julia-mode-hook 'julia-repl-mode))
-
-
-;; autocomplete
-(use-package company
-  :delight
-  :config
-  (add-to-list 'company-frontends 'company-tng-frontend)
-  (add-to-list 'completion-styles 'initials t)
-  ;;(add-to-list 'completion-styles 'substring t)
-  (define-key company-active-map (kbd "M-.") 'company-show-location)
-  (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
-  ;;(setq company-dabbrev-downcase 0)
-  (setq company-minimum-prefix-length 2)
-  (setq company-idle-delay 0)
-  (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
-                                             (setq company-minimum-prefix-length 3))))
-  (global-company-mode nil))
-
-;; linting
-(use-package flycheck
-  :config
-  (global-flycheck-mode))
-
-;; git integration
-(use-package magit)
-;; evil-friendly commands for magit
-(use-package evil-magit)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Evil
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; vim emulation
 (use-package evil
@@ -152,9 +85,10 @@ There are two things you can do about this warning:
   (setq evil-want-integration t)
   :config
   (evil-mode 1)
-  ;; no broken undo tree
+  ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
   (global-undo-tree-mode -1))
 
+;; vim keybindings for a variety of modes
 (use-package evil-collection
   :init
   (setq evil-want-keybinding nil)
@@ -174,181 +108,12 @@ There are two things you can do about this warning:
   :config
   (evilem-default-keybindings "SPC"))
 
-;; vim like folding
-(add-hook 'prog-mode-hook #'hs-minor-mode)
-(delight 'hs-minor-mode nil "hideshow")
-
-;; (use-package evil-vimish-fold
-;;   :config
-;;   (evil-vimish-fold-mode 1))
-
-;; better lisp editing
-(use-package lispy)
-
-;; lispy-evil integration
-(use-package lispyville
-  :delight
-  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode) . lispyville-mode)
-  :config
-   (lispyville-set-key-theme
-    '(operators
-      ;; atom-motions
-      prettify
-      wrap
-      slurp-cp
-      barf-cp
-      c-w
-      (escape insert)
-      (additional-movement normal visual motion))))
-
-;; like vim powerline
-(use-package powerline)
-
-;; themes for powerline
-(use-package airline-themes)
-
-;; themes from doom emacs
-(use-package doom-themes
-  :config
-  ;; flash mode line when emacs bell rings
-  (doom-themes-visual-bell-config))
-
-;; buffer local themes
-(use-package load-theme-buffer-local)
-
-;;  ;; lighter shade for buffers which represent open files. Praise the sun.
-;;  (use-package solaire-mode
-;;      ;; turn on solaire mode
-;;      :hook ((change-major-mode after-revert) . turn-on-solaire-mode)
-;;      :config
-;;      (solaire-mode-swap-bg))
-
-;; projectile project managment
-(use-package projectile
-  :delight "P"
-  :config
-  (general-define-key
-   :states 'normal
-   :keymaps 'override
-   "C-p" 'helm-projectile-find-file)
-  (projectile-mode +1))
-
-;; nice splash screen with projects
-(use-package dashboard
-  :config
-  (dashboard-setup-startup-hook)
-  (setq dashboard-startup-banner 'logo)
-  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*"))))
-  
-;; show matching paren fast
-;; (use-package mic-paren
-;;   :config
-;;   (paren-activate))
-
-;; helm framework
-(use-package helm
-  :delight
-  :bind (("M-x" . helm-M-x)
-         ("C-x C-f" . helm-find-files)
-         ("C-x C-b" . helm-mini))
-  :config (helm-mode t))
-
-;; use helm for projectile
-(use-package helm-projectile
-  :config
-  (helm-projectile-on))
-
-;; ORG MODE
-(use-package org
-  :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
-  :config
-  (setq header-line-format " ")
-  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
-  ;; (lambda () (progn
-  ;;              (setq left-margin-width 2)
-  ;;              (setq right-margin-width 2)
-  ;;              (set-window-buffer nil (current-buffer))))
-  ;;(setq line-spacing 0.1)
-  (setq org-startup-indented t
-        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-        ;;org-ellipsis "  " ;; folding symbol
-        org-pretty-entities t
-        org-hide-emphasis-markers t
-        ;; show actually italicized text instead of /italicized text/
-        ;;;org-agenda-block-separator ""
-        org-fontify-whole-heading-line t
-        org-fontify-done-headline t
-        org-fontify-quote-and-verse-blocks t))
-
-;; easily restart emacs daemon
-(use-package restart-emacs)
-
-;; integration with nix shell
-(use-package nix-sandbox
-  :config
-  ;; ;; allows flycheck to find executables from nix shell
-  ;; (setq flycheck-command-wrapper-function
-  ;;       (lambda (command) (apply 'nix-shell-command (nix-current-sandbox) command))
-  ;;       flycheck-executable-find
-  ;;       (lambda (cmd) (nix-executable-find (nix-current-sandbox) cmd)))
-
-  ;; ;; allows haskell-mode to find ghc in current nix shell
-  ;; (setq haskell-process-wrapper-function
-  ;;       (lambda (args) (apply 'nix-shell-command (nix-current-sandbox) args)))
-  )
-
-;; rainbow delimiters
-(use-package rainbow-delimiters
-  :hook (lispyville-mode-hook . rainbow-delimiters-mode))
-;;OK so use package can only install it once, then bugs, so just install and use this add hook.
-(add-hook 'prog-mode-hook #'rainbow-delimiters-mode)
-
-;; nix language autocomplete
-(use-package company-nixos-options
-  :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
-
-;; nix language support
-(use-package nix-mode
-  :config
-  (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
-  (add-hook 'nix-mode-hook
-            (lambda ()
-              (setq-local indent-line-function #'indent-relative))))
-
-;; haskell language support
-(use-package haskell-mode
-  :config
-  ;; allows capf and dabbrev backends while using haskell
-  (add-hook 'haskell-mode-hook
-            (lambda ()
-              (set (make-local-variable 'company-backends)
-                   (append '((company-capf company-dabbrev-code))
-                           company-backends)))))
-
-;; elm language support
-(use-package flycheck-elm
-  :config
-  (add-hook 'flycheck-mode-hook 'flycheck-elm-setup))
-  
-(use-package elm-mode)
-
-;; run as server
-(server-mode 1)
-
-;; save cursor position
-(save-place-mode 1)
-
-;; always follow symlinks, even in vc
-(setq vc-follow-symlinks t)
-
-;; enter mode for bash on .profile, .bash_aliases, .inputrc
-(add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
-(add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
-(add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Keybindings and commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Easily create keybindings
+(use-package general)
 
 (general-evil-setup)
 (evil-ex-define-cmd "Src" 'reload-init-file)
@@ -383,9 +148,6 @@ There are two things you can do about this warning:
 (general-create-definer start-key-def
   :prefix (concat leader-key " s"))
 
-(general-create-definer git-key-def
-  :prefix (concat leader-key " m"))
-
 (general-create-definer space-def)
 
 ;; general leader definitions
@@ -397,47 +159,45 @@ There are two things you can do about this warning:
   "RET" (kbd ":noh") ; ,RET to clear highlighted search results.
   )
 
-;; magit
-(git-key-def 'normal
-  "" 'magit)
-
-;; emacs lisp
-(eval-key-def 'normal emacs-lisp-mode-map
-  "b" 'eval-buffer
-  "f" 'eval-defun)
-(eval-key-def 'visual emacs-lisp-mode-map
-  "r" 'eval-region)
-
-;; sly
-(leader-key-def 'normal sly-mode-map
-  "z" 'sly-switch-to-output-buffer
-  "c" 'sly-compile-file
-  "l" 'sly-load-file)
-
-(start-key-def 'normal sly-mode-map
-  "s" 'sly
-  "c" 'sly-connect)
-
-(eval-key-def 'normal sly-mode-map
-  "b" 'sly-eval-buffer
-  "f" 'sly-eval-defun)
-(eval-key-def 'visual 'sly-mode-map
-  "r" 'sly-eval-region)
-
-;; cider
-(leader-key-def 'normal clojure-mode-map
-  "s" 'cider-jack-in
-  "z" 'cider-switch-to-repl-buffer
-  "a" 'cider-close-ancillary-buffers)
-
-(eval-key-def 'normal clojure-mode-map
-  "b" 'cider-eval-buffer
-  "f" 'cider-eval-defun-at-point)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => EMACS user interface
+;; => User interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Hide info on mode line
+(use-package delight :quelpa (:stable t)
+  :config
+  (delight 'eldoc-mode nil "eldoc"))
+
+;; use helm narrowing framework framework for many narrowing tasks
+(use-package helm
+  :delight
+  :bind (("M-x" . helm-M-x)
+         ("C-x C-f" . helm-find-files)
+         ("C-x C-b" . helm-mini))
+  :config (helm-mode t))
+
+;; disable startup screen and scratch message
+(setq inhibit-splash-screen t
+      initial-scratch-message nil)
+
+;; nice splash screen which allows access to recent projects and files
+(use-package dashboard
+  :config
+  (dashboard-setup-startup-hook)
+  (setq dashboard-startup-banner 'logo)
+  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*"))))
+
+;; folding, not quite as good as vim
+(add-hook 'prog-mode-hook #'hs-minor-mode)
+(delight 'hs-minor-mode nil "hideshow")
+
+;; (use-package evil-vimish-fold
+;;   :config
+;;   (evil-vimish-fold-mode 1))
+
+;; makes the modeline like vim powerline
+(use-package powerline)
 
 ;; disable garbage UI elements
 (tool-bar-mode -1)
@@ -449,10 +209,6 @@ There are two things you can do about this warning:
 (global-display-line-numbers-mode 1)
 (display-line-numbers-mode 1)
 
-;; disable startup screen and scratch message
-(setq inhibit-splash-screen t
-      initial-scratch-message nil)
-
 ;; type y or n, not yes or no.
 (fset 'yes-or-no-p 'y-or-n-p)
 
@@ -462,7 +218,7 @@ There are two things you can do about this warning:
 ;; vim-like clipboard
 (setq select-enable-clipboard nil)
 
-;; match parens
+;; automatically create matching delimiters as you write
 (electric-pair-mode nil)
 
 ;;show expression
@@ -478,17 +234,50 @@ There are two things you can do about this warning:
              (funcall fn)))))
 
 
-;; show paren match
-(show-paren-mode nil)
-
 ;; Mouse scroll settings
 (setq mouse-wheel-progressive-speed nil) ;; don't accelerate scrolling
 
 (setq mouse-wheel-follow-mouse 't) ;; scroll window under mouse
 
+;; save cursor position in a file between sessions
+(save-place-mode 1)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Colors and fonts
+;; => Emacs client/server settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; run as server
+(server-mode 1)
+
+;; easily restart emacs daemon
+(use-package restart-emacs)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Colors, Themes, Fonts, and other aesthetic settings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;  ;; lighter shade for buffers which represent open files.
+;;  (use-package solaire-mode
+;;      ;; turn on solaire mode
+;;      :hook ((change-major-mode after-revert) . turn-on-solaire-mode)
+;;      :config
+;;      (solaire-mode-swap-bg))
+
+;; Hilight the parenthesis corresponding to the one under the cursor
+(show-paren-mode nil)
+
+;;;; Themes
+;; themes from doom emacs
+(use-package doom-themes
+  :config
+  ;; flash mode line when emacs bell rings
+  (doom-themes-visual-bell-config))
+
+;; themes for powerline
+(use-package airline-themes)
+
+;; allows the loading of themes on a per-buffer basis.
+(use-package load-theme-buffer-local)
 
 ;; main theme
 (load-theme 'doom-one t)
@@ -500,19 +289,266 @@ There are two things you can do about this warning:
 ;; => Text, tab and indent related
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; dont print tabs
+;; dont indent with tabs, indent witn 4 spaces.
 (setq-default tab-width 4
               indent-tabs-mode nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Moving around, splits, windows and buffers
+;; => Moving around, buffers, windows and splits
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; winner mode lets you switch between window configurations with C-c left and right.
+;; TODO rebind to C-left and C-right.
 (winner-mode 1)
 
+;; project navigation
+(use-package projectile
+  :delight "P"
+  :after general
+  :config
+  (general-define-key
+   :states 'normal
+   :keymaps 'override
+   "C-p" 'helm-projectile-find-file)
+  (projectile-mode +1))
+
+;; use helm for projectile
+(use-package helm-projectile
+  :config
+  (helm-projectile-on))
+
+;; always follow symlinks, even in vc
+(setq vc-follow-symlinks t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Files and backups
+;; => Programming tools and settings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; autocomplete
+(use-package company
+  :delight
+  :config
+  (add-to-list 'company-frontends 'company-tng-frontend)
+  (add-to-list 'completion-styles 'initials t)
+  ;;(add-to-list 'completion-styles 'substring t)
+  (define-key company-active-map (kbd "M-.") 'company-show-location)
+  (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
+  ;;(setq company-dabbrev-downcase 0)
+  (setq company-minimum-prefix-length 2)
+  (setq company-idle-delay 0)
+  (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
+                                             (setq company-minimum-prefix-length 3))))
+  (global-company-mode nil))
+
+;; linting
+(use-package flycheck
+  :config
+  (global-flycheck-mode))
+
+;; git integration
+(use-package magit)
+;; evil-friendly commands for magit
+(use-package evil-magit)
+
+;; magit keybindings
+(general-create-definer git-key-def
+  :prefix (concat leader-key " m"))
+(git-key-def 'normal
+  "" 'magit)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Application specific tools and settings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;; Lisp
+
+;; better lisp editing
+(use-package lispy)
+
+;; lispy-evil integration. I use lispyville mode as the de-facto minor mode
+;; for editing lisp related languages.
+(use-package lispyville
+  :delight
+  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode) . lispyville-mode)
+  :config
+   (lispyville-set-key-theme
+    '(operators
+      ;; atom-motions
+      prettify
+      wrap
+      slurp-cp
+      barf-cp
+      c-w
+      (escape insert)
+      (additional-movement normal visual motion))))
+
+;; Each depth layer of delimiter is given a different color (useful for lisps)
+(use-package rainbow-delimiters
+  :hook (lispyville-mode-hook . rainbow-delimiters-mode))
+
+;;;; Emacs Lisp
+
+;; emacs lisp keybindings
+(eval-key-def 'normal emacs-lisp-mode-map
+  "b" 'eval-buffer
+  "f" 'eval-defun)
+(eval-key-def 'visual emacs-lisp-mode-map
+  "r" 'eval-region)
+
+;;;; Common Lisp
+
+;; I use Sly, a common lisp IDE and fork of SLIME.
+(use-package sly
+  :quelpa (:stable t)
+  :after evil
+  :config
+  (setq inferior-lisp-program "quicklisp run")
+  ;; Open sly debug buffers in emacs state, rather than evil state.
+  (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
+
+;; ;; common lisp autocompletion with slime and company
+;; (use-package slime-company)
+
+;; sly keybindings
+(leader-key-def 'normal sly-mode-map
+  "z" 'sly-switch-to-output-buffer
+  "c" 'sly-compile-file
+  "l" 'sly-load-file)
+
+(start-key-def 'normal sly-mode-map
+  "s" 'sly
+  "c" 'sly-connect)
+
+(eval-key-def 'normal sly-mode-map
+  "b" 'sly-eval-buffer
+  "f" 'sly-eval-defun)
+(eval-key-def 'visual 'sly-mode-map
+  "r" 'sly-eval-region)
+
+
+;;;; Clojure
+(use-package clojure-mode)
+
+;; CIDER like slime for clojure
+(use-package cider
+  :config
+  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
+  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
+
+;; spinner for cider
+(use-package spinner :quelpa (:stable t))
+
+;; ;; linting clojure
+;; (use-package flycheck-clojure
+;;   :config
+;;   (eval-after-load 'flycheck '(flycheck-clojure-setup))
+;;   (add-hook 'after-init-hook #'global-flycheck-mode)
+;;   ;; navigate clojure errors with flycheck functions
+;;   (add-hook 'cider-mode-hook
+;;   (lambda () (setq next-error-function #'flycheck-next-error-function))))
+
+;; ;; avoid clash between cider eldoc and flycheck-clojure
+;; (use-package flycheck-pos-tip
+;;   :config
+;;   (eval-after-load 'flycheck
+;;     '(setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)))
+
+;; cider keybindings
+(leader-key-def 'normal clojure-mode-map
+  "s" 'cider-jack-in
+  "z" 'cider-switch-to-repl-buffer
+  "a" 'cider-close-ancillary-buffers)
+
+(eval-key-def 'normal clojure-mode-map
+  "b" 'cider-eval-buffer
+  "f" 'cider-eval-defun-at-point)
+
+;;;; Rust
+
+;;TODO
+
+;;;; Julia
+(use-package julia-mode)
+(use-package julia-repl
+  :config
+  (add-hook 'julia-mode-hook 'julia-repl-mode))
+
+;;;; Haskell
+(use-package haskell-mode
+  :config
+  ;; allows capf and dabbrev backends while using haskell
+  (add-hook 'haskell-mode-hook
+            (lambda ()
+              (set (make-local-variable 'company-backends)
+                   (append '((company-capf company-dabbrev-code))
+                           company-backends)))))
+
+;;;; Elm
+(use-package flycheck-elm
+  :config
+  (add-hook 'flycheck-mode-hook 'flycheck-elm-setup))
+  
+(use-package elm-mode)
+
+;;;; Org
+(use-package org
+  :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
+  :config
+  (setq header-line-format " ")
+  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
+  ;; (lambda () (progn
+  ;;              (setq left-margin-width 2)
+  ;;              (setq right-margin-width 2)
+  ;;              (set-window-buffer nil (current-buffer))))
+  ;;(setq line-spacing 0.1)
+  (setq org-startup-indented t
+        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+        ;;org-ellipsis "  " ;; folding symbol
+        org-pretty-entities t
+        org-hide-emphasis-markers t
+        ;; show actually italicized text instead of /italicized text/
+        ;;;org-agenda-block-separator ""
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t))
+
+;;;; Nix
+
+;; integration with nix shell
+(use-package nix-sandbox
+  :config
+  ;; ;; allows flycheck to find executables from nix shell
+  ;; (setq flycheck-command-wrapper-function
+  ;;       (lambda (command) (apply 'nix-shell-command (nix-current-sandbox) command))
+  ;;       flycheck-executable-find
+  ;;       (lambda (cmd) (nix-executable-find (nix-current-sandbox) cmd)))
+
+  ;; ;; allows haskell-mode to find ghc in current nix shell
+  ;; (setq haskell-process-wrapper-function
+  ;;       (lambda (args) (apply 'nix-shell-command (nix-current-sandbox) args)))
+  )
+
+;; nix language autocomplete
+(use-package company-nixos-options
+  :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
+
+;; nix language support
+(use-package nix-mode
+  :config
+  (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
+  (add-hook 'nix-mode-hook
+            (lambda ()
+              (setq-local indent-line-function #'indent-relative))))
+
+;;;; Bash
+;; enter mode for bash on .profile, .bash_aliases, .inputrc
+(add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
+(add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
+(add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Files and backups (ohhh ghooost)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; dont make backups
