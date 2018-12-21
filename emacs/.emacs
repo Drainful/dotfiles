@@ -103,8 +103,11 @@ There are two things you can do about this warning:
 ;; use sly
 (use-package sly
   :quelpa (:stable t)
+  :after evil
   :config
-  (setq inferior-lisp-program "quicklisp run"))
+  (setq inferior-lisp-program "quicklisp run")
+  ;; Open sly debug buffers in emacs state, rather than evil state.
+  (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
 
 ;;julia mode
 (use-package julia-mode)
