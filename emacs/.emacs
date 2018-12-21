@@ -399,7 +399,7 @@ There are two things you can do about this warning:
 
 ;; magit
 (git-key-def 'normal
-  "m" 'magit)
+  "" 'magit)
 
 ;; emacs lisp
 (eval-key-def 'normal emacs-lisp-mode-map
