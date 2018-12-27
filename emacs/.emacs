@@ -15,6 +15,7 @@
 ;;       - Emacs lisp
 ;;       - Common Lisp
 ;;       - Clojure
+;;       - C/C++
 ;;       - Rust
 ;;       - Julia
 ;;       - Haskell
@@ -343,7 +344,7 @@ There are two things you can do about this warning:
 ;; linting
 (use-package flycheck
   :config
-  (global-flycheck-mode))
+  (setq flycheck-global-modes '(not c-mode c++-mode)))
 
 ;; git integration
 (use-package magit)
@@ -351,10 +352,16 @@ There are two things you can do about this warning:
 (use-package evil-magit)
 
 ;; magit keybindings
-(general-create-definer git-key-def
-  :prefix (concat leader-key " m"))
-(git-key-def 'normal
-  "" 'magit)
+(leader-key-def 'normal
+  "m" 'magit)
+
+;; language server protocol
+(use-package lsp-mode
+  :commands lsp
+  :init)
+
+(use-package lsp-ui :commands lsp-ui-mode)
+(use-package company-lsp :commands company-lsp)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -403,7 +410,8 @@ There are two things you can do about this warning:
   :quelpa (:stable t)
   :after evil
   :config
-  (setq inferior-lisp-program "quicklisp run")
+  ;; (setq inferior-lisp-program "quicklisp run")
+  (setq inferior-lisp-program "ecl --load /home/adrian/quicklisp/setup.lisp")
   ;; Open sly debug buffers in emacs state, rather than evil state.
   (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
 
@@ -463,6 +471,64 @@ There are two things you can do about this warning:
 (eval-key-def 'normal clojure-mode-map
   "b" 'cider-eval-buffer
   "f" 'cider-eval-defun-at-point)
+
+;;;; C/C++
+;; C/C++ language server which leverages lsp-mode
+(use-package cquery
+  :after projectile
+  :init
+  (add-hook 'c-mode-hook #'cquery//enable)
+  (add-hook 'c++-mode-hook #'cquery//enable)
+  :config
+  (setq cquery-executable "cquery")
+  (setq cquery-extra-init-params '(:cacheFormat "msgpack"))
+  (setq projectile-project-root-files-top-down-recurring
+        (append '("compile_commands.json"
+                  ".cquery")
+                projectile-project-root-files-top-down-recurring)))
+
+(leader-key-def 'normal c-mode-base-map
+  "f" 'ff-find-other-file)
+
+
+;; (use-package rtags
+;;   :config
+
+;;   ;; rtags must be installed
+;;   (unless (rtags-executable-find "rc") (error "Binary rc is not installed!"))
+;;   (unless (rtags-executable-find "rdm") (error "Binary rdm is not installed!"))
+
+;;   ;; start daemon if not started when editing c
+;;   (add-hook 'c-mode-hook 'rtags-start-process-unless-running)
+;;   (add-hook 'c++-mode-hook 'rtags-start-process-unless-running)
+;;   (add-hook 'objc-mode-hook 'rtags-start-process-unless-running)
+
+;;   (setq rtags-use-helm t))
+
+;; (use-package company-rtags
+;;   :after company rtags
+;;   :config 
+;;   (setq rtags-autostart-diagnostics t)
+;;   (rtags-diagnostics)
+;;   (setq rtags-completions-enabled t)
+;;   (push 'company-rtags company-backends))
+
+;; (use-package flycheck-rtags
+;;   :after flycheck rtags
+;;   :config
+;;   (defun setup-flycheck-rtags ()
+;;       (flycheck-select-checker 'rtags)
+;;       (setq-local flycheck-highlighting-mode nil) ; RTags creates more accurate overlays.
+;;       (setq-local flycheck-check-syntax-automatically nil)
+;;       (rtags-set-periodic-reparse-timeout 2.0)  ; Run flycheck 2 seconds after being idle.
+;;       )
+;;   (add-hook 'c-mode-hook #'setup-flycheck-rtags)
+;;   (add-hook 'c++-mode-hook #'setup-flycheck-rtags))
+
+;; (use-package helm-rtags
+;;   :after helm rtags
+;;   :config
+;;   (setq rtags-display-result-backend 'helm))
 
 ;;;; Rust
 
@@ -593,10 +659,11 @@ There are two things you can do about this warning:
    (quote
     ("251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(debug-on-error nil)
+ '(electric-pair-mode t)
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
