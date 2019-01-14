@@ -46,7 +46,7 @@ There are two things you can do about this warning:
 2. Remove this warning from your init file so you won't see it again."))
   ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
   (add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
-  ;;(add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
+  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
   (when (< emacs-major-version 24)
     ;; For important compatibility libraries like cl-lib
     (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
@@ -61,16 +61,20 @@ There are two things you can do about this warning:
 
 (use-package quelpa)
 
+;; don't auto upgrade quelpa stuff
+(setq quelpa-upgrade-p nil)
+
 (use-package quelpa-use-package)
 
 (quelpa-use-package-activate-advice)
 
-;; automatically update packages
-(use-package auto-package-update
-  :config
-  (setq auto-package-update-delete-old-versions t)
-  (setq auto-package-update-hide-results t)
-  (auto-package-update-maybe))
+;; risky
+;; ;; automatically update packages
+;; (use-package auto-package-update
+;;   :config
+;;   (setq auto-package-update-delete-old-versions t)
+;;   (setq auto-package-update-hide-results t)
+;;   (auto-package-update-maybe))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Evil
@@ -184,6 +188,7 @@ There are two things you can do about this warning:
 
 ;; nice splash screen which allows access to recent projects and files
 (use-package dashboard
+  :ensure t
   :config
   (dashboard-setup-startup-hook)
   (setq dashboard-startup-banner 'logo)
@@ -310,7 +315,7 @@ There are two things you can do about this warning:
   (general-define-key
    :states 'normal
    :keymaps 'override
-   "C-p" 'helm-projectile-find-file)
+ "C-p" 'helm-projectile-find-file)
   (projectile-mode +1))
 
 ;; use helm for projectile
@@ -370,6 +375,10 @@ There are two things you can do about this warning:
 
 ;;;; Lisp
 
+;; ivy is required for lispy
+(use-package ivy
+  :quelpa (:stable t))
+
 ;; better lisp editing
 (use-package lispy)
 
@@ -392,6 +401,7 @@ There are two things you can do about this warning:
 
 ;; Each depth layer of delimiter is given a different color (useful for lisps)
 (use-package rainbow-delimiters
+  :delight
   :hook (lispyville-mode-hook . rainbow-delimiters-mode))
 
 ;;;; Emacs Lisp
@@ -663,7 +673,7 @@ There are two things you can do about this warning:
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate dashboard emacs-dashboard cider sly macrostep lispyville evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general auto-package-update sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters lispy evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (lispyville lispy ivy sly dashboard company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
