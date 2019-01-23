@@ -43,6 +43,12 @@ Plug 'mhinz/vim-startify'
 " More colorschemes
 Plug 'flazz/vim-colorschemes'
 
+" Html
+Plug 'mattn/emmet-vim'
+let g:user_emmet_leader_key='<C-M>'
+
+Plug 'tmhedberg/matchit'
+
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 nnoremap <C-p> :Files<cr>
@@ -118,9 +124,9 @@ set tm=500
 syntax enable 
 
 " 24 bit color
-set termguicolors
+" set termguicolors
 
-colorscheme onedark
+" colorscheme onedark
 
 " Set utf8 as standard encoding and en_US as the standard language
 set encoding=utf8
