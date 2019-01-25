@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t; -*-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Sections:
@@ -28,6 +29,18 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; for startup speed (from doom emacs faq)
+;; turn off GC before config 
+(setq gc-cons-threshold 402653184
+      gc-cons-percentage 0.6)
+
+(defvar temp-file-name-handler-alist file-name-handler-alist)
+(setq file-name-handler-alist nil)
+
+;; not ready for this shit
+;; (setq package-enable-at-startup nil ; don't auto-initialize!
+;;       ;; don't add that `custom-set-variables' block to my initl!
+;;       package--init-file-ensured t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Packages
@@ -50,11 +63,14 @@ There are two things you can do about this warning:
   (when (< emacs-major-version 24)
     ;; For important compatibility libraries like cl-lib
     (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
+
 (package-initialize)
-(package-refresh-contents)
+
+
+;;(package-refresh-contents) ; don't need every time emacs starts
 
 ;; use use-package
-(eval-when-compile (require 'use-package))
+;; (eval-when-compile (require 'use-package))
 
 ;; auto download packages
 (setq use-package-always-ensure t)
@@ -113,6 +129,30 @@ There are two things you can do about this warning:
   :config
   (evilem-default-keybindings "SPC"))
 
+;; equivalent of surround.vim
+(use-package "evil-surround"
+  :config
+  (global-evil-surround-mode 1))
+
+;;; creation of text objects
+
+;; this macro was copied from here: https://stackoverflow.com/a/22418983/4921402
+(defmacro define-and-bind-quoted-text-object (name key start-regex end-regex)
+  (let ((inner-name (make-symbol (concat "evil-inner-" name)))
+        (outer-name (make-symbol (concat "evil-a-" name))))
+    `(progn
+       (evil-define-text-object ,inner-name (count &optional beg end type)
+         (evil-select-paren ,start-regex ,end-regex beg end type count nil))
+       (evil-define-text-object ,outer-name (count &optional beg end type)
+         (evil-select-paren ,start-regex ,end-regex beg end type count t))
+       (define-key evil-inner-text-objects-map ,key #',inner-name)
+       (define-key evil-outer-text-objects-map ,key #',outer-name))))
+
+(defalias 'textobj 'define-and-bind-quoted-text-object)
+
+(textobj "pipe" "|" "|" "|")
+(textobj "slash" "/" "/" "/")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Keybindings and commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -158,8 +198,10 @@ There are two things you can do about this warning:
 ;; general leader definitions
 (leader-key-def 'normal
   "q" 'kill-this-buffer ; ",q" to kill buffer not window.
-  "b" 'helm-mini
-  "o" 'occur ; ",b" to switch buffers.
+  "b" 'helm-mini ; ",b" to switch buffers.
+  "f" 'helm-find-files ; ",f" to find file (replace :e)
+  "h" '(lambda () (interactive) (fzf/start "~/")) ; ",h" to fuzzy find from home directory
+  "o" 'occur 
   "i" 'imenu
   "RET" (kbd ":noh") ; ,RET to clear highlighted search results.
   )
@@ -169,6 +211,9 @@ There are two things you can do about this warning:
 ;; => User interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; find file with fzf
+(use-package fzf)
+
 ;; Hide info on mode line
 (use-package delight :quelpa (:stable t)
   :config
@@ -177,22 +222,24 @@ There are two things you can do about this warning:
 ;; use helm narrowing framework framework for many narrowing tasks
 (use-package helm
   :delight
-  :bind (("M-x" . helm-M-x)
-         ("C-x C-f" . helm-find-files)
-         ("C-x C-b" . helm-mini))
+  :bind (("M-x" . helm-M-x))
   :config (helm-mode t))
 
 ;; disable startup screen and scratch message
 (setq inhibit-splash-screen t
       initial-scratch-message nil)
 
+;; inital major mode
+(setq initial-major-mode 'emacs-lisp-mode)
+
+;; prefer scratch buffer
 ;; nice splash screen which allows access to recent projects and files
-(use-package dashboard
-  :ensure t
-  :config
-  (dashboard-setup-startup-hook)
-  (setq dashboard-startup-banner 'logo)
-  (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*"))))
+;; (use-package dashboard
+;;   :ensure t
+;;   :config
+;;   (dashboard-setup-startup-hook)
+;;   (setq dashboard-startup-banner 'logo)
+;;   (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*"))))
 
 ;; folding, not quite as good as vim
 (add-hook 'prog-mode-hook #'hs-minor-mode)
@@ -203,7 +250,7 @@ There are two things you can do about this warning:
 ;;   (evil-vimish-fold-mode 1))
 
 ;; makes the modeline like vim powerline
-(use-package powerline)
+;; (use-package powerline)
 
 ;; disable garbage UI elements
 (tool-bar-mode -1)
@@ -214,6 +261,9 @@ There are two things you can do about this warning:
 ;; display line numbers
 (global-display-line-numbers-mode 1)
 (display-line-numbers-mode 1)
+
+;; display column numbers
+(setq column-number-mode t)
 
 ;; type y or n, not yes or no.
 (fset 'yes-or-no-p 'y-or-n-p)
@@ -273,6 +323,17 @@ There are two things you can do about this warning:
 (show-paren-mode nil)
 
 ;;;; Themes
+
+;; poet theme for org etc.
+(use-package poet-theme
+  :config
+  (add-hook 'text-mode-hook
+            (lambda ()
+              (variable-pitch-mode 1)))
+  (set-face-attribute 'default nil :family "Iosevka" :height 100)
+  (set-face-attribute 'fixed-pitch nil :family "Iosevka")
+  (set-face-attribute 'variable-pitch nil :family "Baskerville"))
+
 ;; themes from doom emacs
 (use-package doom-themes
   :config
@@ -280,16 +341,17 @@ There are two things you can do about this warning:
   (doom-themes-visual-bell-config))
 
 ;; themes for powerline
-(use-package airline-themes)
+;; (use-package airline-themes)
 
 ;; allows the loading of themes on a per-buffer basis.
 (use-package load-theme-buffer-local)
 
 ;; main theme
-(load-theme 'doom-one t)
+(load-theme 'poet t)
+(rainbow-delimiters-mode)
 
 ;; powerline theme
-(load-theme 'airline-doom-one t)
+;; (load-theme 'airline-doom-molokai t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Text, tab and indent related
@@ -420,8 +482,15 @@ There are two things you can do about this warning:
   :quelpa (:stable t)
   :after evil
   :config
-  ;; (setq inferior-lisp-program "quicklisp run")
-  (setq inferior-lisp-program "ecl --load /home/adrian/quicklisp/setup.lisp")
+
+  ;; make functions for using specific lisp implementations.
+  (defmacro define-sly-lisp (name command)
+    `(defun ,name ()  (interactive)  (sly ,command)))
+
+  (define-sly-lisp sbcl "sbcl --load /home/adrian/quicklisp/setup.lisp")
+  (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
+
+  (setq inferior-lisp-program "quicklisp run")
   ;; Open sly debug buffers in emacs state, rather than evil state.
   (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
 
@@ -545,7 +614,7 @@ There are two things you can do about this warning:
 ;;TODO
 
 ;;;; Julia
-(use-package julia-mode)
+;;(use-package julia-mode)
 (use-package julia-repl
   :config
   (add-hook 'julia-mode-hook 'julia-repl-mode))
@@ -654,6 +723,15 @@ There are two things you can do about this warning:
   (forward-line -1)
   (indent-according-to-mode))
 
+;;; for startup speed (from doom emacs faq)
+;; re-enable GC 
+(add-hook 'emacs-startup-hook
+  (setq gc-cons-threshold 16777216
+        gc-cons-percentage 0.1))
+
+(add-hook 'emacs-startup-hook
+  (setq file-name-handler-alist temp-file-name-handler-alist))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -667,13 +745,12 @@ There are two things you can do about this warning:
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
- '(debug-on-error nil)
+    ("99b2fdc7de612b74fcb76eb3a1962092cf729909223434f256c7007d490d787a" "3e2fd26606cba08448283cc16860c1deab138ede73c38c91fdaf4e5c60ece485" "07ed389142fef99649ebcfe1f835cf564fc40bb342d8d2f4e13f05302378a47a" "3eb93cd9a0da0f3e86b5d932ac0e3b5f0f50de7a0b805d4eb1f67782e9eb67a4" "5e5345ea15d0c2234356bc5958a224776b83198f0c3df7155d1f7575405ce990" "251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(electric-pair-mode t)
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (lispyville lispy ivy sly dashboard company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl julia-mode company-nixos-options load-theme-buffer-local doom-themes airline-themes powerline company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (fzf sql-indent poet-theme evil-surround lispyville lispy ivy sly company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl company-nixos-options load-theme-buffer-local doom-themes company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
