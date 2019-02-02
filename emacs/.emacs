@@ -193,6 +193,9 @@ There are two things you can do about this warning:
 (general-create-definer eval-key-def
   :prefix (concat leader-key " e"))
 
+(general-create-definer xpand-key-def
+  :prefix (concat leader-key " x"))
+
 (general-create-definer start-key-def
   :prefix (concat leader-key " s"))
 
@@ -369,15 +372,15 @@ There are two things you can do about this warning:
 
 ;; main theme
 ;; automatic time-based theme change 
-(use-package theme-changer
+(when (display-graphic-p)
+  (use-package theme-changer
   :after poet-theme doom-themes
   :config
   (setq calendar-location-name "Rochester, NY")
   (setq calendar-latitude 43.16103)
   (setq calendar-longitude -77.6109219)
-  (change-theme 'doom-one-light 'doom-one))
+  (change-theme 'doom-one-light 'doom-one)))
 ;; (load-theme 'poet t)
-(rainbow-delimiters-mode)
 
 ;; powerline theme
 ;; (load-theme 'airline-doom-molokai t)
@@ -743,6 +746,16 @@ There are two things you can do about this warning:
 (add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
 (add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
 (add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
+
+;;;; Web
+(use-package emmet-mode
+  :delight
+  :config
+  (xpand-key-def 'normal emmet-mode-map
+    "e" 'emmet-expand-line)
+  (add-hook 'sgml-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
+  (add-hook 'css-mode-hook  'emmet-mode)) ;; enable Emmet's css abbreviation.
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Excessive BS
