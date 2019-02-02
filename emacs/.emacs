@@ -6,12 +6,13 @@
 ;;    -> Evil
 ;;    -> Keybindings and commands
 ;;    -> User interface
+;;    -> Shell
 ;;    -> Emacs client/server settings
 ;;    -> Colors, Themes, Fonts, and other aesthetic settings
 ;;    -> Text, tab and indent related
 ;;    -> Moving around, buffers, windows and splits
 ;;    -> Programming tools and settings
-;;    -> Application specific tools and settings
+;;    -> Language specific tools and settings
 ;;       - Lisps
 ;;       - Emacs lisp
 ;;       - Common Lisp
@@ -24,6 +25,7 @@
 ;;       - Org
 ;;       - Nix
 ;;       - Bash
+;;    -> Excessive BS
 ;;    -> Files and backups
 ;;    -> Helper functions
 ;;
@@ -183,6 +185,7 @@ There are two things you can do about this warning:
 
 ;; leader key
 (defconst leader-key ",")
+(defconst alt-leader "SPC")
 
 (general-create-definer leader-key-def
   :prefix leader-key)
@@ -193,26 +196,20 @@ There are two things you can do about this warning:
 (general-create-definer start-key-def
   :prefix (concat leader-key " s"))
 
-(general-create-definer space-def)
-
 ;; general leader definitions
 (leader-key-def 'normal
-  "q" 'kill-this-buffer ; ",q" to kill buffer not window.
-  "b" 'helm-mini ; ",b" to switch buffers.
-  "f" 'helm-find-files ; ",f" to find file (replace :e)
-  "h" '(lambda () (interactive) (fzf/start "~/")) ; ",h" to fuzzy find from home directory
+  "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
+  "b" 'helm-mini                     ; ",b" to switch buffers.
+  "f" 'helm-find-files               ; ",f" to find file (replace :e)
+  "p" '(lambda () (interactive) (fzf/start "~/")) ; ",p" to fuzzy find from home directory
   "o" 'occur 
   "i" 'imenu
-  "RET" (kbd ":noh") ; ,RET to clear highlighted search results.
-  )
+  "RET" (kbd ":noh")) ; ,RET to clear highlighted search results.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => User interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; find file with fzf
-(use-package fzf)
 
 ;; Hide info on mode line
 (use-package delight :quelpa (:stable t)
@@ -299,6 +296,26 @@ There are two things you can do about this warning:
 (save-place-mode 1)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Shell
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package multi-term
+  :config
+  (global-set-key [f1] 'multi-term)
+  ;; access shift arrow keys
+  (define-key global-map "\eO2D" (kbd "S-<left>"))
+  (define-key global-map "\eO2C" (kbd "S-<right>"))
+  ;; term movement
+  (general-define-key
+   :states 'normal
+   :keymaps 'term-mode-map
+   "S-<right>" 'multi-term-next
+   "S-<left>" 'multi-term-prev
+   ;; was overridden
+   "C-j" 'evil-window-down
+   "C-k" 'evil-window-up))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Emacs client/server settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -307,6 +324,10 @@ There are two things you can do about this warning:
 
 ;; easily restart emacs daemon
 (use-package restart-emacs)
+
+;; focus any new frames
+(add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Colors, Themes, Fonts, and other aesthetic settings
@@ -347,7 +368,15 @@ There are two things you can do about this warning:
 (use-package load-theme-buffer-local)
 
 ;; main theme
-(load-theme 'poet t)
+;; automatic time-based theme change 
+(use-package theme-changer
+  :after poet-theme doom-themes
+  :config
+  (setq calendar-location-name "Rochester, NY")
+  (setq calendar-latitude 43.16103)
+  (setq calendar-longitude -77.6109219)
+  (change-theme 'doom-one-light 'doom-one))
+;; (load-theme 'poet t)
 (rainbow-delimiters-mode)
 
 ;; powerline theme
@@ -384,6 +413,9 @@ There are two things you can do about this warning:
 (use-package helm-projectile
   :config
   (helm-projectile-on))
+
+;; file finding
+(use-package fzf)
 
 ;; always follow symlinks, even in vc
 (setq vc-follow-symlinks t)
@@ -432,7 +464,7 @@ There are two things you can do about this warning:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; => Application specific tools and settings
+;; => Language specific tools and settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;; Lisp
@@ -448,7 +480,7 @@ There are two things you can do about this warning:
 ;; for editing lisp related languages.
 (use-package lispyville
   :delight
-  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode) . lispyville-mode)
+  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode) . lispyville-mode)
   :config
    (lispyville-set-key-theme
     '(operators
@@ -489,6 +521,8 @@ There are two things you can do about this warning:
 
   (define-sly-lisp sbcl "sbcl --load /home/adrian/quicklisp/setup.lisp")
   (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
+  (define-sly-lisp ccl "ccl")
+  (define-sly-lisp clisp "clisp")
 
   (setq inferior-lisp-program "quicklisp run")
   ;; Open sly debug buffers in emacs state, rather than evil state.
@@ -513,6 +547,23 @@ There are two things you can do about this warning:
 (eval-key-def 'visual 'sly-mode-map
   "r" 'sly-eval-region)
 
+;;;; Shen
+(use-package shen-mode)
+
+(leader-key-def 'normal shen-mode-map
+  "z" 'switch-to-shen
+  "c" 'shen-compile-file
+  "l" 'shen-load-file)
+
+(start-key-def 'normal shen-mode-map
+  "s" 'run-shen)
+
+(eval-key-def 'normal shen-mode-map
+  "b" 'shen-eval-buffer
+  "f" 'shen-eval-defun)
+
+(eval-key-def 'visual 'shen-mode-map
+  "r" 'shen-eval-region)
 
 ;;;; Clojure
 (use-package clojure-mode)
@@ -684,13 +735,35 @@ There are two things you can do about this warning:
   (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
   (add-hook 'nix-mode-hook
             (lambda ()
-              (setq-local indent-line-function #'indent-relative))))
+              (setq tab-always-indent nil)
+              (setq indent-tabs-mode t))))
 
 ;;;; Bash
 ;; enter mode for bash on .profile, .bash_aliases, .inputrc
 (add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
 (add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
 (add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Excessive BS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; control spotify running on any device from emacs
+(use-package spot4e :load-path "~/code/elisp/spot4e"
+  :after general
+  :requires helm url json
+  :config
+  (setq spot4e-refresh-token "AQCOzkgs6cLWmIWZ-ucPLPwMoEOC6HCRfeqhs7DIRMVmmCeG6g5hi7EGR7Dvms5kZf925jH0UzhhQ8xYdiCPLt3Nw-lW4A8_eDlN1rKrr9FEAHv4MhaasQn6-ai9wiC12Ex4XA")
+  (run-with-timer 0 (* 60 59) 'spot4e-refresh)
+  (general-create-definer spotify-key-def
+    :prefix (concat alt-leader " s"))
+  (spotify-key-def 'normal
+                   "b" 'spot4e-helm-search-user-tracks
+                   "r" 'spot4e-helm-search-recommendations-track
+                   "s" 'spot4e-player-pause
+                   "p" 'spot4e-player-play
+                   "n" 'spot4e-player-next
+                   "N" 'spot4e-player-previous))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Files and backups
@@ -745,12 +818,13 @@ There are two things you can do about this warning:
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    (quote
-    ("99b2fdc7de612b74fcb76eb3a1962092cf729909223434f256c7007d490d787a" "3e2fd26606cba08448283cc16860c1deab138ede73c38c91fdaf4e5c60ece485" "07ed389142fef99649ebcfe1f835cf564fc40bb342d8d2f4e13f05302378a47a" "3eb93cd9a0da0f3e86b5d932ac0e3b5f0f50de7a0b805d4eb1f67782e9eb67a4" "5e5345ea15d0c2234356bc5958a224776b83198f0c3df7155d1f7575405ce990" "251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
+    ("7e78a1030293619094ea6ae80a7579a562068087080e01c2b8b503b27900165c" "99b2fdc7de612b74fcb76eb3a1962092cf729909223434f256c7007d490d787a" "3e2fd26606cba08448283cc16860c1deab138ede73c38c91fdaf4e5c60ece485" "07ed389142fef99649ebcfe1f835cf564fc40bb342d8d2f4e13f05302378a47a" "3eb93cd9a0da0f3e86b5d932ac0e3b5f0f50de7a0b805d4eb1f67782e9eb67a4" "5e5345ea15d0c2234356bc5958a224776b83198f0c3df7155d1f7575405ce990" "251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(electric-pair-mode t)
+ '(inferior-shen-program "~/Projects/common-lisp/my-forks/shen-cl/bin/sbcl/shen" t)
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (fzf sql-indent poet-theme evil-surround lispyville lispy ivy sly company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl company-nixos-options load-theme-buffer-local doom-themes company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (multi-term helm-fzf theme-changer circe shen-emacs shen-mode fzf sql-indent poet-theme evil-surround lispyville lispy ivy sly company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl company-nixos-options load-theme-buffer-local doom-themes company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
