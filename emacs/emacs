@@ -7,6 +7,7 @@
 ;;    -> Keybindings and commands
 ;;    -> User interface
 ;;    -> Shell
+;;    -> Tramp
 ;;    -> Emacs client/server settings
 ;;    -> Colors, Themes, Fonts, and other aesthetic settings
 ;;    -> Text, tab and indent related
@@ -16,6 +17,9 @@
 ;;       - Lisps
 ;;       - Emacs lisp
 ;;       - Common Lisp
+;;       - Scheme
+;;       - Racket
+;;       - Shen
 ;;       - Clojure
 ;;       - C/C++
 ;;       - Rust
@@ -117,6 +121,7 @@ There are two things you can do about this warning:
   (setq evil-want-keybinding nil)
   :after evil
   :config
+  (evil-collection-minibuffer-setup)
   (evil-collection-init))
 
 ;; 2 character find. TODO integration with easymotion.
@@ -171,6 +176,14 @@ There are two things you can do about this warning:
   "C-j" 'evil-window-down
   "C-k" 'evil-window-up
   "C-l" 'evil-window-right
+  "s-h" 'evil-window-left
+  "s-j" 'evil-window-down
+  "s-k" 'evil-window-up
+  "s-l" 'evil-window-right
+  "s-H" 'evil-window-move-far-left
+  "s-J" 'evil-window-move-very-bottom
+  "s-K" 'evil-window-move-very-top
+  "s-L" 'evil-window-move-far-right
   "C--" 'helm-projectile-grep
   ;; Move a line of text using ALT+[jk]
   "M-j" (kbd ":move + RET")
@@ -214,6 +227,10 @@ There are two things you can do about this warning:
 ;; => User interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; mode line time + battery
+;; (display-time-mode 1)
+;; (display-battery-mode 1)
+
 ;; Hide info on mode line
 (use-package delight :quelpa (:stable t)
   :config
@@ -255,6 +272,7 @@ There are two things you can do about this warning:
 ;; disable garbage UI elements
 (tool-bar-mode -1)
 (menu-bar-mode -1)
+(toggle-scroll-bar -1)
 (add-to-list 'default-frame-alist
              '(vertical-scroll-bars . nil))
 
@@ -298,13 +316,71 @@ There are two things you can do about this warning:
 ;; save cursor position in a file between sessions
 (save-place-mode 1)
 
+;; "Discoverable" (or rediscoverable) keybindings. Like spacemacs.
+(use-package which-key
+  :config
+  (which-key-add-prefix-title
+    ", e" "eval"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Shell
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; I prefer shell because comint mode works well with evil.
+;;; Eshell
+(require 'eshell)
+(require 'em-smart)
+(setq eshell-where-to-jump 'begin)
+(setq eshell-review-quick-commands nil)
+(setq eshell-smart-space-goes-to-end t)
 
+;; from https://www.emacswiki.org/emacs/EshellMultipleEshellBuffers
+(defun eshell-new()
+  "Open a new instance of eshell."
+  (interactive)
+  (eshell 'N))
+
+(global-set-key [f2] 'eshell)
+;; Let me use C-j/k
+(add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
+          (lambda ()
+            (general-define-key :states 'normal :keymaps 'eshell-mode-map
+                                "C-j" 'evil-window-down
+                                "C-k" 'evil-window-up)))
+;; set proper beginning of line so that evil commends don't get interrupted.
+(defun restrict-bol (string)
+  (propertize string 'inhibit-line-move-field-capture t
+                     'rear-nonsticky t
+                     'field 'output
+                     'front-sticky '(field inhibit-line-move-field-capture)))
+
+;; (setq eshell-prompt-regexp (regexp-quote "^\b$")
+;;       eshell-prompt-function
+;;       (lambda nil ""))
+
+;; (setq old-eshell-prompt-function (lambda nil (eshell-prompt-function)))
+;; (setq old-eshell-prompt-function (symbol-value 'eshell-prompt-function))
+;; (setq eshell-prompt-function
+;;       (lambda nil
+;;         (restrict-bol (old-eshell-prompt-function))))
+(setq eshell-prompt-function
+      (lambda nil
+        (restrict-bol (concat
+                   (eshell/pwd)
+                   " $ "))))
+
+;;; Shell
+(setq comint-prompt-read-only t ; Don't let me delete the comint prompt duh
+      comint-move-point-for-output nil ; reduce frequent redisplays
+      comint-scroll-show-maximum-output nil)
+(global-set-key [f1] 'shell)
+(general-define-key :states 'normal :keymaps 'shell-mode-map
+   "C-j" 'evil-window-down
+   "C-k" 'evil-window-up)
+
+;; multiple terminals if necessary
 (use-package multi-term
   :config
-  (global-set-key [f1] 'multi-term)
+  ;; (global-set-key [f1] 'multi-term)
   ;; access shift arrow keys
   (define-key global-map "\eO2D" (kbd "S-<left>"))
   (define-key global-map "\eO2C" (kbd "S-<right>"))
@@ -317,6 +393,14 @@ There are two things you can do about this warning:
    ;; was overridden
    "C-j" 'evil-window-down
    "C-k" 'evil-window-up))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; => Tramp
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun connect-to-serenity ()
+  (interactive)
+  (dired "/ssh:axf1557@serenity.ist.rit.edu:/home/MAIN/axf1557/"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Emacs client/server settings
@@ -349,14 +433,14 @@ There are two things you can do about this warning:
 ;;;; Themes
 
 ;; poet theme for org etc.
-(use-package poet-theme
-  :config
-  (add-hook 'text-mode-hook
-            (lambda ()
-              (variable-pitch-mode 1)))
-  (set-face-attribute 'default nil :family "Iosevka" :height 100)
-  (set-face-attribute 'fixed-pitch nil :family "Iosevka")
-  (set-face-attribute 'variable-pitch nil :family "Baskerville"))
+;; (use-package poet-theme
+;;   :config
+;;   (add-hook 'text-mode-hook
+;;             (lambda ()
+;;               (variable-pitch-mode 1)))
+;;   (set-face-attribute 'default nil :family "Iosevka" :height 100)
+;;   (set-face-attribute 'fixed-pitch nil :family "Iosevka")
+;;   (set-face-attribute 'variable-pitch nil :family "Baskerville"))
 
 ;; themes from doom emacs
 (use-package doom-themes
@@ -370,17 +454,16 @@ There are two things you can do about this warning:
 ;; allows the loading of themes on a per-buffer basis.
 (use-package load-theme-buffer-local)
 
-;; main theme
+; main theme
 ;; automatic time-based theme change 
 (when (display-graphic-p)
   (use-package theme-changer
-  :after poet-theme doom-themes
+  :after doom-themes
   :config
   (setq calendar-location-name "Rochester, NY")
   (setq calendar-latitude 43.16103)
   (setq calendar-longitude -77.6109219)
   (change-theme 'doom-one-light 'doom-one)))
-;; (load-theme 'poet t)
 
 ;; powerline theme
 ;; (load-theme 'airline-doom-molokai t)
@@ -423,6 +506,16 @@ There are two things you can do about this warning:
 ;; always follow symlinks, even in vc
 (setq vc-follow-symlinks t)
 
+;; swap to most recent buffer, from https://emacsredux.com/blog/2013/04/28/switch-to-previous-buffer/
+(defun er-switch-to-previous-buffer ()
+  "Switch to previously open buffer.
+Repeated invocations toggle between the two most recently open buffers."
+  (interactive)
+  (switch-to-buffer (other-buffer (current-buffer) 1)))
+
+(general-define-key :states 'normal :keymaps 'override
+                    "<tab>" 'er-switch-to-previous-buffer)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Programming tools and settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -431,7 +524,7 @@ There are two things you can do about this warning:
 (use-package company
   :delight
   :config
-  (add-to-list 'company-frontends 'company-tng-frontend)
+  (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
   (add-to-list 'completion-styles 'initials t)
   ;;(add-to-list 'completion-styles 'substring t)
   (define-key company-active-map (kbd "M-.") 'company-show-location)
@@ -449,7 +542,9 @@ There are two things you can do about this warning:
   (setq flycheck-global-modes '(not c-mode c++-mode)))
 
 ;; git integration
-(use-package magit)
+(use-package magit
+  :config
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain))
 ;; evil-friendly commands for magit
 (use-package evil-magit)
 
@@ -460,11 +555,24 @@ There are two things you can do about this warning:
 ;; language server protocol
 (use-package lsp-mode
   :commands lsp
-  :init)
+  :config
+  (setq lsp-prefer-flymake nil))
 
 (use-package lsp-ui :commands lsp-ui-mode)
 (use-package company-lsp :commands company-lsp)
 
+(add-hook 'lsp-mode-hook 'lsp-ui-mode)
+
+;; compile by recursively looking for makefile
+;; inspired by https://emacs.stackexchange.com/questions/7475/recursively-go-up-to-find-makefile-and-compile
+(cl-defun compile-rec (&key (filename "Makefile") (command "make -k"))
+  "Traveling up the path, find a Makefile and `compile'."
+  (interactive)
+  (let ((makefile-dir (locate-dominating-file default-directory filename)))
+    (when makefile-dir
+      (with-temp-buffer
+        (cd makefile-dir)
+        (compile command)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Language specific tools and settings
@@ -522,12 +630,12 @@ There are two things you can do about this warning:
   (defmacro define-sly-lisp (name command)
     `(defun ,name ()  (interactive)  (sly ,command)))
 
-  (define-sly-lisp sbcl "sbcl --load /home/adrian/quicklisp/setup.lisp")
+  (define-sly-lisp sbcl "sbcl")
   (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
   (define-sly-lisp ccl "ccl")
   (define-sly-lisp clisp "clisp")
 
-  (setq inferior-lisp-program "quicklisp run")
+  (setq inferior-lisp-program "sbcl")
   ;; Open sly debug buffers in emacs state, rather than evil state.
   (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
 
@@ -549,6 +657,35 @@ There are two things you can do about this warning:
   "f" 'sly-eval-defun)
 (eval-key-def 'visual 'sly-mode-map
   "r" 'sly-eval-region)
+
+;;;; Scheme
+(use-package geiser
+  :config
+  (setq geiser-active-implementations '(racket))
+  ;; geiser keybindings
+  (leader-key-def 'normal geiser-mode-map
+    "z" 'geiser-mode-switch-to-repl
+    "c" 'geiser-compile-file
+    "l" 'geiser-load-file)
+  
+  (start-key-def 'normal geiser-mode-map
+    "s" 'geiser
+    "c" 'geiser-connect)
+  
+  (eval-key-def 'normal geiser-mode-map
+    "b" 'geiser-eval-buffer
+    "f" 'geiser-eval-definition)
+  (eval-key-def 'visual 'geiser-mode-map
+    "r" 'geiser-eval-region)
+  (general-define-key
+   :states 'normal
+   :keymaps 'geiser-repl-mode-map
+   ;; was overridden
+   "C-j" 'evil-window-down
+   "C-k" 'evil-window-up))
+
+;;;; Racket
+;; (use-package racket-mode)
 
 ;;;; Shen
 (use-package shen-mode)
@@ -605,8 +742,13 @@ There are two things you can do about this warning:
   "b" 'cider-eval-buffer
   "f" 'cider-eval-defun-at-point)
 
-;;;; C/C++
-;; C/C++ language server which leverages lsp-mode
+;;;; C/C++/CPP/Cpp/Sepples
+C/C++ language server which leverages lsp-mode
+(defun cquery//enable ()
+  (condition-case nil
+      (lsp)
+    (user-error nil)))
+
 (use-package cquery
   :after projectile
   :init
@@ -620,8 +762,21 @@ There are two things you can do about this warning:
                   ".cquery")
                 projectile-project-root-files-top-down-recurring)))
 
+(use-package modern-cpp-font-lock
+  :config
+  (modern-c++-font-lock-global-mode t))
+
+;; (add-hook 'c++-mode-hook #'lsp)
+(add-hook 'c++-mode-hook 'flycheck-mode)
+
 (leader-key-def 'normal c-mode-base-map
-  "f" 'ff-find-other-file)
+  "s" 'ff-find-other-file
+  "c" 'compile-rec
+  "r" '(lambda () (interactive) (compile-rec :command "make run")))
+
+(setq-default c-basic-offset 4
+              c-default-style "linux")
+
 
 
 ;; (use-package rtags
@@ -778,6 +933,62 @@ There are two things you can do about this warning:
                    "n" 'spot4e-player-next
                    "N" 'spot4e-player-previous))
 
+;; emacs window manager
+(use-package exwm
+  :config
+  (fringe-mode 1)
+  (require 'exwm-config)
+  (add-hook 'exwm-update-class-hook
+            (lambda ()
+              (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                          (string= "gimp" exwm-instance-name))
+                (exwm-workspace-rename-buffer exwm-class-name))))
+  (add-hook 'exwm-update-title-hook
+            (lambda ()
+              (when (or (not exwm-instance-name)
+                        (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                        (string= "gimp" exwm-instance-name))
+                (exwm-workspace-rename-buffer exwm-title))))
+  (setq exwm-input-global-keys
+        `(
+          ;; Bind "s-r" to exit char-mode and fullscreen mode.
+          ([?\s-r] . exwm-reset)
+          ;; Bind "s-c" to enter char mode
+          ([?\s-c] . exwm-input-release-keyboard)
+          ;; Bind "s-w" to switch workspace interactively.
+          ([?\s-w] . exwm-workspace-switch)
+          ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
+          ,@(mapcar (lambda (i)
+                      `(,(kbd (format "s-%d" i)) .
+                        (lambda ()
+                          (interactive)
+                          (exwm-workspace-switch-create ,i))))
+                    (number-sequence 0 9))
+          ;; Bind "s- " to launch applications
+          ([?\s- ] . (lambda (command)
+		               (interactive (list (read-shell-command "$ ")))
+		               (start-process-shell-command command nil command)))
+          ;; Bind "s-<f2>" to "slock", a simple X display locker.
+          ;; ([s-f2] . (lambda ()
+		  ;;             (interactive)
+		  ;;             (start-process "" nil "/usr/bin/slock")))
+          ))
+  ;; logout function
+  (defun exwm-logout ()
+    (interactive)
+    (recentf-save-list)
+    (save-some-buffers)
+    (start-process-shell-command "logout" nil "lxsession-logout"))
+  ;; start in char mode by default
+  ;; (setq exwm-manage-configurations '((t char-mode t)))
+  ;; sys tray with network
+  (require 'exwm-systemtray)
+  (exwm-systemtray-enable)
+  (shell-command "nm-applet")
+  ;; set prefix keys
+  (setq my-exwm-prefix-keys (list ?\s-f ?\s-h ?\s-j ?\s-k ?\s-l ?\s-H ?\s-J ?\s-K ?\s-L ?\: ?\,))
+  (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; => Files and backups
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -829,15 +1040,42 @@ There are two things you can do about this warning:
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-names-vector
+   ["#1b1d1e" "#d02b61" "#60aa00" "#d08928" "#6c9ef8" "#b77fdb" "#00aa80" "#DFDFDF"])
  '(custom-safe-themes
    (quote
-    ("7e78a1030293619094ea6ae80a7579a562068087080e01c2b8b503b27900165c" "99b2fdc7de612b74fcb76eb3a1962092cf729909223434f256c7007d490d787a" "3e2fd26606cba08448283cc16860c1deab138ede73c38c91fdaf4e5c60ece485" "07ed389142fef99649ebcfe1f835cf564fc40bb342d8d2f4e13f05302378a47a" "3eb93cd9a0da0f3e86b5d932ac0e3b5f0f50de7a0b805d4eb1f67782e9eb67a4" "5e5345ea15d0c2234356bc5958a224776b83198f0c3df7155d1f7575405ce990" "251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
+    ("93a0885d5f46d2aeac12bf6be1754faa7d5e28b27926b8aa812840fe7d0b7983" "75d3dde259ce79660bac8e9e237b55674b910b470f313cdf4b019230d01a982a" "9129c2759b8ba8e8396fe92535449de3e7ba61fd34569a488dd64e80f5041c9f" "7e78a1030293619094ea6ae80a7579a562068087080e01c2b8b503b27900165c" "99b2fdc7de612b74fcb76eb3a1962092cf729909223434f256c7007d490d787a" "3e2fd26606cba08448283cc16860c1deab138ede73c38c91fdaf4e5c60ece485" "07ed389142fef99649ebcfe1f835cf564fc40bb342d8d2f4e13f05302378a47a" "3eb93cd9a0da0f3e86b5d932ac0e3b5f0f50de7a0b805d4eb1f67782e9eb67a4" "5e5345ea15d0c2234356bc5958a224776b83198f0c3df7155d1f7575405ce990" "251348dcb797a6ea63bbfe3be4951728e085ac08eee83def071e4d2e3211acc3" "3fa07dd06f4aff80df2d820084db9ecbc007541ce7f15474f1d956c846a3238f" "b563a87aa29096e0b2e38889f7a5e3babde9982262181b65de9ce8b78e9324d5" "158013ec40a6e2844dbda340dbabda6e179a53e0aea04a4d383d69c329fba6e6" "3a3de615f80a0e8706208f0a71bbcc7cc3816988f971b6d237223b6731f91605" "0cd56f8cd78d12fc6ead32915e1c4963ba2039890700458c13e12038ec40f6f5" "151bde695af0b0e69c3846500f58d9a0ca8cb2d447da68d7fbf4154dcf818ebc" "d1b4990bd599f5e2186c3f75769a2c5334063e9e541e37514942c27975700370" "4697a2d4afca3f5ed4fdf5f715e36a6cac5c6154e105f3596b44a4874ae52c45" "f0dc4ddca147f3c7b1c7397141b888562a48d9888f1595d69572db73be99a024" "64ca5a1381fa96cb86fd6c6b4d75b66dc9c4e0fc1288ee7d914ab8d2638e23a9" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "b54826e5d9978d59f9e0a169bbd4739dd927eead3ef65f56786621b53c031a7c" "af717ca36fe8b44909c984669ee0de8dd8c43df656be67a50a1cf89ee41bde9a" "01e067188b0b53325fc0a1c6e06643d7e52bc16b6653de2926a480861ad5aa78" "b59d7adea7873d58160d368d42828e7ac670340f11f36f67fa8071dbf957236a" "a94f1a015878c5f00afab321e4fef124b2fc3b823c8ddd89d360d710fc2bddfc" "6b2636879127bf6124ce541b1b2824800afc49c6ccd65439d6eb987dbf200c36" default)))
  '(electric-pair-mode t)
  '(inferior-shen-program "~/Projects/common-lisp/my-forks/shen-cl/bin/sbcl/shen" t)
+ '(jdee-db-active-breakpoint-face-colors (cons "#1b1d1e" "#fc20bb"))
+ '(jdee-db-requested-breakpoint-face-colors (cons "#1b1d1e" "#60aa00"))
+ '(jdee-db-spec-breakpoint-face-colors (cons "#1b1d1e" "#505050"))
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote
-    (multi-term helm-fzf theme-changer circe shen-emacs shen-mode fzf sql-indent poet-theme evil-surround lispyville lispy ivy sly company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl company-nixos-options load-theme-buffer-local doom-themes company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package))))
+    (modern-cpp-font-lock which-key emacs-which-key geiser comint exwm-systemtray poet-theme exwm sly emmet-mode multi-term helm-fzf theme-changer circe shen-emacs shen-mode fzf sql-indent evil-surround lispyville lispy ivy company-lsp lsp-ui cquery markdown-mode evil-magit magit sublimity-scroll evil-snipe snipe evil-easymotion evil-search-highlight-persisist color-theme-approximate emacs-dashboard cider macrostep evil-collection quelpa ac-slime julia-repl company-nixos-options load-theme-buffer-local doom-themes company clojure-mode general sly-quicklisp flycheck-pos-tip rainbowdelimiters rainbow-delimiters mic-paren evil-vimish-fold rainbow-delimeters evil-cleverparens darkroom elm-mode flycheck-elm haskell-mode nix-mode helm-projectile flycheck restart-emacs projectile delight evil use-package)))
+ '(vc-annotate-background "#1b1d1e")
+ '(vc-annotate-color-map
+   (list
+    (cons 20 "#60aa00")
+    (cons 40 "#859f0d")
+    (cons 60 "#aa931a")
+    (cons 80 "#d08928")
+    (cons 100 "#d38732")
+    (cons 120 "#d6863d")
+    (cons 140 "#da8548")
+    (cons 160 "#ce8379")
+    (cons 180 "#c281aa")
+    (cons 200 "#b77fdb")
+    (cons 220 "#bf63b2")
+    (cons 240 "#c74789")
+    (cons 260 "#d02b61")
+    (cons 280 "#b0345c")
+    (cons 300 "#903d58")
+    (cons 320 "#704654")
+    (cons 340 "#505050")
+    (cons 360 "#505050")))
+ '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

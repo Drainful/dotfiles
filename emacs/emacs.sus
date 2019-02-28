@@ -2,4 +2,11 @@ card emacs {
     into ~
 
     .emacs
+
+    spark card eshell
+}
+
+card eshell {
+    into ~/.emacs.d/eshell
+    eshell_aliases -> alias
 }

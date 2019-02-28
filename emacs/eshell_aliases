@@ -1,0 +1,4 @@
+alias rd rmdir $*
+alias md mkdir $*
+alias ... cd ../..
+alias e emacsclient $*

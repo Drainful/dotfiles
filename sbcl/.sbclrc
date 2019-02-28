@@ -6,5 +6,15 @@
 ;;   (when (probe-file quicklisp-init)
 ;;     (load quicklisp-init)))
 
-;; (ql:quickload :cffi)
-;; (pushnew #P"/home/adrian/.nix-profile/lib/" cffi:*foreign-library-directories* :test #'equal)
+(load "/home/adrian/quicklisp/setup.lisp")
+
+(with-open-file (*standard-output*
+                 "/dev/null"
+                 :direction :output
+                 :if-exists :supersede)
+  (ql:quickload :cffi)
+  (ql:quickload :slynk))
+
+(pushnew #P"/home/adrian/.nix-profile/lib/" cffi:*foreign-library-directories* :test #'equal)
+(defun slynk (&optional (port 4005))
+       (slynk:create-server :port port))
