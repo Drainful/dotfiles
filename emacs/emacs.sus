@@ -2,6 +2,7 @@ card emacs {
     into ~
 
     .emacs
+    emacs.org
 
     spark card eshell
 }
