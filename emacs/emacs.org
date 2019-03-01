@@ -306,9 +306,8 @@ These are visual mode mappings not specific to any major mode.
 #+END_SRC
 ** Leader
 The leader key is an old technique common among Vim users. A number of
-sequential key commands for various purposes are hidden behind a
-single key. For those who are familiar with Hydra.el, this is a
-similar concept.
+sequential key commands are hidden behind a single key. For those who
+are familiar with Hydra.el, this is a similar concept.
 *** Definitions
 #+BEGIN_SRC emacs-lisp
 (defconst leader-key ",")
@@ -353,7 +352,10 @@ I disable the default startup screen and splash message.
       initial-scratch-message nil)
 #+END_SRC
 *** Scratch buffer
-In leiu of a startup screen
+Set the initial mode in the scratch buffer to emacs.
+#+BEGIN_SRC emacs-lisp
+(setq initial-major-mode 'emacs-lisp-mode)(setq initial-major-mode 'emacs-lisp-mode)
+#+END_SRC
 ** Mode line
 The mode line is the line at the bottom of each buffer. It contains
 useful information.
@@ -954,7 +956,7 @@ It's like SLIME for Clojure! Kinda.
   "f" 'cider-eval-defun-at-point)
 #+END_SRC
 ** C/C++/CPP/Cpp/Sepples
-*** Query
+*** CQuery
 A language server back end for C/++
 #+BEGIN_SRC emacs-lisp
 (use-package cquery
@@ -1047,7 +1049,6 @@ Organize your life.
         org-fontify-done-headline t
         org-fontify-quote-and-verse-blocks t))
 #+END_SRC
-*** TIC
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
 (use-package toc-org
@@ -1084,7 +1085,6 @@ Enter mode for bash on .profile, .bash_aliases, and .inputrc
 (add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
 #+END_SRC
 * Excessive BS
-Ok, now we've gone a bit too far.
 ** Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
