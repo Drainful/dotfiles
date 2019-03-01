@@ -1,7 +1,5 @@
 #+TITLE: Emacs Configuration
 
-
-
 Emacs is a truly fantastic piece of software. Part REPL, part
 with Emacs, slowly carving it into the perfect interface for allmost
 everything my computer has to offer; and yet I feel as if I have only
@@ -13,6 +11,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#lexical-scope][Lexical Scope]]
   - [[#garbage-collector-threshold][Garbage Collector Threshold]]
   - [[#filename-handlers][Filename Handlers]]
+  - [[#load-secrets][Load secrets]]
 - [[#packages][Packages]]
   - [[#package-initialization][Package Initialization]]
   - [[#use-package][Use-Package]]
@@ -121,6 +120,13 @@ startup. This trick also comes from [[https://github.com/hlissner/doom-emacs/wik
   (setq file-name-handler-alist temp-file-name-handler-alist))
 #+END_SRC
 
+** Load secrets
+Secrets are stored in ~~/.emacs.d/.secrets.el~.
+#+BEGIN_SRC emacs-lisp
+  (let ((secret.el (expand-file-name ".secrets.el" user-emacs-directory)))
+    (when (file-exists-p secret.el)
+      (load secret.el)))
+#+END_SRC
 * Packages
 ** Package Initialization
 Before I can install packages I must first initialize package sources
@@ -559,9 +565,9 @@ Tramp is a truly one of the great gems of Emacs. It allows me to
 access remote files as if they were part of my filesystem within
 Emacs.
 #+BEGIN_SRC emacs-lisp
-(defun connect-to-serenity ()
-  (interactive)
-  (dired "/ssh:axf1557@serenity.ist.rit.edu:/home/MAIN/axf1557/"))
+  (defun connect-to-serenity ()
+    (interactive)
+    (dired me/serenity-path))
 #+END_SRC
 * Emacs client/server settings
 One of the personal breakthroughs I made when starting with Emacs was
@@ -656,16 +662,16 @@ package manager due to a bug.
 ** Theme
 The theme loaded depends upon time of day.
 #+BEGIN_SRC emacs-lisp
-(unless (display-graphic-p)
-  (mapcar #'disable-theme custom-enabled-themes))
+  (unless (display-graphic-p)
+    (mapcar #'disable-theme custom-enabled-themes))
 
-(use-package theme-changer
-:after doom-themes
-:config
-(setq calendar-location-name "Rochester, NY")
-(setq calendar-latitude 43.16103)
-(setq calendar-longitude -77.6109219)
-(change-theme 'doom-one-light 'doom-one))
+  (use-package theme-changer
+  :after doom-themes
+  :config
+  (setq calendar-location-name me/calendar-location-name)
+  (setq calendar-latitude me/calendar-latitude)
+  (setq calendar-longitude me/calendar-longitude)
+  (change-theme 'doom-one-light 'doom-one))
 #+END_SRC
 * Text, tab and indent related
 I use 4 spaces by default.
@@ -1088,21 +1094,21 @@ Enter mode for bash on .profile, .bash_aliases, and .inputrc
 ** Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
-(use-package spot4e :load-path "~/code/elisp/spot4e"
-  :after general
-  :requires helm url json
-  :config
-  (setq spot4e-refresh-token "AQCOzkgs6cLWmIWZ-ucPLPwMoEOC6HCRfeqhs7DIRMVmmCeG6g5hi7EGR7Dvms5kZf925jH0UzhhQ8xYdiCPLt3Nw-lW4A8_eDlN1rKrr9FEAHv4MhaasQn6-ai9wiC12Ex4XA")
-  (run-with-timer 0 (* 60 59) 'spot4e-refresh)
-  (general-create-definer spotify-key-def
-    :prefix (concat alt-leader " s"))
-  (spotify-key-def 'normal
-                   "b" 'spot4e-helm-search-user-tracks
-                   "r" 'spot4e-helm-search-recommendations-track
-                   "s" 'spot4e-player-pause
-                   "p" 'spot4e-player-play
-                   "n" 'spot4e-player-next
-                   "N" 'spot4e-player-previous))
+  (use-package spot4e :load-path "~/code/elisp/spot4e"
+    :after general
+    :requires helm url json
+    :config
+    (setq spot4e-refresh-token me/spotify-refresh-token)
+    (run-with-timer 0 (* 60 59) 'spot4e-refresh)
+    (general-create-definer spotify-key-def
+      :prefix (concat alt-leader " s"))
+    (spotify-key-def 'normal
+                     "b" 'spot4e-helm-search-user-tracks
+                     "r" 'spot4e-helm-search-recommendations-track
+                     "s" 'spot4e-player-pause
+                     "p" 'spot4e-player-play
+                     "n" 'spot4e-player-next
+                     "N" 'spot4e-player-previous))
 #+END_SRC
 ** Emacs window manager
 Yep. No, I don't currently use it.
