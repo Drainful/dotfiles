@@ -65,7 +65,6 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#git][Git]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
-  - [[#polymode][Polymode]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -173,7 +172,7 @@ bleeding edge versions of packages which have yet to reach Melpa.
 
 ** COMMENT Automatic Upgrades
 I decided that I prefer stability, but I could evaluate the following code to enable it.
-#+BEGIN_COMMENT emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (setq quelpa-upgrade-p t)
 
 (package-refresh-contents)
@@ -183,7 +182,7 @@ I decided that I prefer stability, but I could evaluate the following code to en
   (setq auto-package-update-delete-old-versions t)
   (setq auto-package-update-hide-results t)
   (auto-package-update-maybe))
-#+END_COMMENT
+#+END_SRC
 * Evil
 These are settings for the emulation of Vim in Emacs. I would not be
 using emacs today if it were not for Evil mode. I really do love Vim.
@@ -232,12 +231,12 @@ delimiters when they automatically close.
 #+END_SRC
 ** COMMENT Evil snipe
 At one point I used ~evil-snipe~, a tool for jumping to pairs of characters.
-#+BEGIN_COMMENT emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
   :after evil-easymotion
   :config
   (evilem-define (kbd "SPC s") 'evil-snipe-s))
-#+END_COMMENT
+#+END_SRC
 ** The creation of text objects
 This macro was copied from [[https://stackoverflow.com/a/22418983/4921402][this]] Stackoverflow thread, and facilitates
 the creation of Evil text objects.
@@ -432,13 +431,14 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
              (funcall fn)))))
 #+END_SRC
 
+*** Matching parens
 Thanks to the above code, I no longer need the following code to show
 the matching parenthesis.
-#+BEGIN_COMMENT emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (show-paren-mode t)
 (setq show-paren-delay 0)
 (setq show-paren-style 'parenthesis)
-#+END_COMMENT
+#+END_SRC
 
 ** Mouse settings
 Don't accelerate while mouse scrolling.
@@ -494,11 +494,11 @@ Function for making a new Eshell instance. From [[https://www.emacswiki.org/emac
   (eshell 'N))
 #+END_SRC
 
-*** Beginning of line behavior
+*** COMMENT Beginning of line behavior
 Eshell doesn't play with Evil regarding the beginning of line
 behavior. This is some scratch code I wrote which attempts and fails
 to fix the problem.
-#+BEGIN_COMMENT emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (setq eshell-prompt-regexp (regexp-quote "^\b$")
       eshell-prompt-function
       (lambda nil ""))
@@ -513,7 +513,7 @@ to fix the problem.
         (restrict-bol (concat
                    (eshell/pwd)
                    " $ "))))
-#+END_COMMEN
+#+END_SRC
 ** Comint Mode
 Comint mode is a generalized mode for repl-like interfaces.
 #+BEGIN_SRC emacs-lisp
@@ -788,14 +788,14 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** Polymode
+** COMMENT Polymode
 This is a very cool package that provides support for multiple major
 modes in the same buffer. Sadly I had frequent crashes while using it,
 so I will leave it commented out.
-#+BEGIN_COMMENT emacs-lisp
+#+BEGIN_SRC emacs-lisp
 (use-package polymode)
 (use-package poly-org)
-#+END_COMMENT
+#+END_SRC
 * Language specific tools and settings
 ** Lisps
 *** Lispy/ville
