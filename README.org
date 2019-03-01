@@ -1,0 +1,3 @@
+* dotfiles
+My personal dotfiles.
+Access my literate Emacs configuration [[https://github.com/Drainful/dotfiles/blob/master/emacs/emacs.org][here]].
