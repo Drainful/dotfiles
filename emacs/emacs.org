@@ -327,16 +327,17 @@ are familiar with Hydra.el, this is a similar concept.
 #+END_SRC
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
-(leader-key-def 'normal
-  "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
-  "b" 'helm-mini                     ; ",b" to switch buffers.
-  "f" 'helm-find-files               ; ",f" to find file (replace :e)
-  "p" '(lambda () (interactive)
-         ;; ",p" to fuzzy find directory from home directory
-         (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null")) 
-  "o" 'occur 
-  "i" 'imenu
-  "RET" (kbd ":noh"))
+  (leader-key-def 'normal
+    "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
+    "Q" 'kill-this-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
+    "b" 'helm-mini                     ; ",b" to switch buffers.
+    "f" 'helm-find-files               ; ",f" to find file (replace :e)
+    "p" '(lambda () (interactive)
+           ;; ",p" to fuzzy find directory from home directory
+           (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null")) 
+    "o" 'occur 
+    "i" 'imenu
+    "RET" (kbd ":noh"))
 #+END_SRC
 *** Visual Mode
 #+BEGIN_SRC emacs-lisp
@@ -478,13 +479,13 @@ And configuration:
 
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-(global-set-key [f2] 'eshell)
-;; Let me use C-j/k
-(add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
-          (lambda ()
-            (general-define-key :states 'normal :keymaps 'eshell-mode-map
-                                "C-j" 'evil-window-down
-                                "C-k" 'evil-window-up)))
+  (global-set-key [f2] 'eshell)
+  ;; Let me use C-j/k
+  (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
+            (lambda ()
+              (general-define-key :states 'normal :keymaps 'eshell-mode-map
+                                  "C-j" 'evil-window-down
+                                  "C-k" 'evil-window-up)))
 #+END_SRC
 
 *** Helper Function
@@ -1027,26 +1028,27 @@ Enable Flycheck
 ~org-mode~ is a markup mode with many features, including creating
 literate source files like this one.
 #+BEGIN_SRC emacs-lisp
-(use-package org
-  ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
-  :config
-  (setq header-line-format " ")
-  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
-  ;; (lambda () (progn
-  ;;              (setq left-margin-width 2)
-  ;;              (setq right-margin-width 2)
-  ;;              (set-window-buffer nil (current-buffer))))
-  ;;(setq line-spacing 0.1)
-  (setq org-startup-indented t
-        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-        ;;org-ellipsis "  " ;; folding symbol
-        org-pretty-entities t
-        org-hide-emphasis-markers t
-        ;; show actually italicized text instead of /italicized text/
-        ;;;org-agenda-block-separator ""
-        org-fontify-whole-heading-line t
-        org-fontify-done-headline t
-        org-fontify-quote-and-verse-blocks t))
+  (use-package org
+    ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
+    :config
+    (setq header-line-format " ")
+    ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
+    ;; (lambda () (progn
+    ;;              (setq left-margin-width 2)
+    ;;              (setq right-margin-width 2)
+    ;;              (set-window-buffer nil (current-buffer))))
+    ;;(setq line-spacing 0.1)
+    (setq org-startup-indented t
+          ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+          ;;org-ellipsis "  " ;; folding symbol
+          org-pretty-entities t
+          org-hide-emphasis-markers t
+          ;; show actually italicized text instead of /italicized text/
+          ;;;org-agenda-block-separator ""
+          org-fontify-whole-heading-line t
+          org-fontify-done-headline t
+          org-fontify-quote-and-verse-blocks t
+          org-src-ask-before-returning-to-edit-buffer nil))
 #+END_SRC
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
@@ -1063,16 +1065,16 @@ Features for dealing with nix-shell in Emacs.
 #+END_SRC
 *** Nix language support
 #+BEGIN_SRC emacs-lisp
-(use-package company-nixos-options
-  :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
+  (use-package company-nixos-options
+    :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
 
-(use-package nix-mode
-  :config
-  (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
-  (add-hook 'nix-mode-hook
-            (lambda ()
-              (setq tab-always-indent nil)
-              (setq indent-tabs-mode t))))
+  (use-package nix-mode
+    :config
+    (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
+    (add-hook 'nix-mode-hook
+              (lambda ()
+                (setq tab-always-indent nil)
+                (setq indent-tabs-mode t))))
 
 #+END_SRC
 ** Bash
