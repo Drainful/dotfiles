@@ -641,8 +641,6 @@ given Nix environment.
     (error "No nix environment was found")))
 #+END_SRC
 * Colors, Themes, Fonts, and other aesthetic settings
-Style is very important to me. If I'm going to be working in this text
-editor as often as I am, I want it to look good.
 ** Doom Themes
 Doom Emacs looks good. I want those themes.
 #+BEGIN_SRC emacs-lisp
