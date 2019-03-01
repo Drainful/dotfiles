@@ -17,12 +17,10 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#package-initialization][Package Initialization]]
   - [[#use-package][Use-Package]]
   - [[#quelpa][Quelpa]]
-  - [[#automatic-upgrades-unused][Automatic Upgrades [unused]]]
 - [[#evil][Evil]]
   - [[#evil-collection][Evil collection]]
   - [[#evil-easymotion][Evil easymotion]]
   - [[#evil-surround][Evil surround]]
-  - [[#evil-snipe-unused][Evil snipe [unused]]]
   - [[#the-creation-of-text-objects][The creation of text objects]]
 - [[#keybindings-and-commands][Keybindings and commands]]
   - [[#generalel][General.el]]
@@ -173,7 +171,7 @@ bleeding edge versions of packages which have yet to reach Melpa.
 (quelpa-use-package-activate-advice)
 #+END_SRC
 
-** Automatic Upgrades [unused]
+** COMMENT Automatic Upgrades
 I decided that I prefer stability, but I could evaluate the following code to enable it.
 #+BEGIN_COMMENT emacs-lisp
 (setq quelpa-upgrade-p t)
@@ -232,7 +230,7 @@ delimiters when they automatically close.
   :config
   (global-evil-surround-mode 1))
 #+END_SRC
-** Evil snipe [unused]
+** COMMENT Evil snipe
 At one point I used ~evil-snipe~, a tool for jumping to pairs of characters.
 #+BEGIN_COMMENT emacs-lisp
 (use-package evil-snipe
