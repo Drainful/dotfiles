@@ -704,7 +704,7 @@ speed of recursive search.
 (use-package fzf)
 #+END_SRC
 ** File navigation
-I prefer to always follow symbolic links under version control.
+I prefer to follow symbolic links under version control.
 #+BEGIN_SRC emacs-lisp
 (setq vc-follow-symlinks t)
 #+END_SRC
