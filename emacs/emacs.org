@@ -268,8 +268,8 @@ commands. It integrates well with evil.
 (general-evil-setup)
 #+END_SRC
 ** Commands
-I don't have too much use for Evil commands, but early on before I
-understood emacs I created a couple.
+I don't have too much use for Evil commands, but early on I created a
+couple.
 #+BEGIN_SRC emacs-lisp
 (evil-ex-define-cmd "Src" 'reload-init-file)
 (evil-ex-define-cmd "Restart" 'restart-emacs)
