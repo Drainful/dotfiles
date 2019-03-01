@@ -709,7 +709,7 @@ I prefer to always follow symbolic links under version control.
 (setq vc-follow-symlinks t)
 #+END_SRC
 This is a function and keybinding for toggling between 2
-buffers. Quite faster than =,-b\r=. From [[https://emacsredux.com/blog/2013/04/28/switch-to-previous-buffer/][here]].
+buffers. Faster than =,-b\r=. From [[https://emacsredux.com/blog/2013/04/28/switch-to-previous-buffer/][here]].
 #+BEGIN_SRC emacs-lisp
 (defun er-switch-to-previous-buffer ()
   "Switch to previously open buffer.
