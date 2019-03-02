@@ -84,6 +84,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#spotify][Spotify]]
   - [[#emacs-window-manager][Emacs window manager]]
 - [[#files-and-backups][Files and backups]]
+- [[#after-startup][After startup]]
 - [[#helper-functions][Helper functions]]
 
 * Startup
@@ -1268,6 +1269,12 @@ Save cursor position in a file between sessions.
 #+BEGIN_SRC emacs-lisp
 (save-place-mode 1)
 #+END_SRC
+* After startup
+Load themes after everything else because it seems that the faces are
+incorrect otherwise.
+#+BEGIN_SRC emacs-lisp :noweb strip-export
+<<themes>>
+#+END_SRC
 * Helper functions
 Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
@@ -1295,12 +1302,4 @@ Various small functions which are evaluated before anything else in the file.
   (transpose-lines 1)
   (forward-line -1)
   (indent-according-to-mode))
-#+END_SRC
-
-#+BEGIN_COMMENT
-Load themes after everything else because it seems that the faces are
-incorrect otherwise
-#+END_COMMENT
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<themes>>
 #+END_SRC
