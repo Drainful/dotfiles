@@ -685,7 +685,7 @@ given Nix environment.
       (error "No nix environment was found")))
 
   (defun nix-daemon-frame ()
-    "Start a daemon and frame in the current nix project."
+    "Start a frame from the relevant nix Emacs daemon in the current nix project."
     (interactive)
     (if (nix-current-sandbox)
         (let ((default-directory (nix-current-sandbox))
