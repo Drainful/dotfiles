@@ -3,8 +3,8 @@
 - rebind winner mode controls to C-left and C-right. ?
 - Add flycheck file and #autosave# or whatever file to projectile exclusions
 - Add rust editing tools
-- Move config to literate org file.
 - Actually add projectile support to startup screen
+- Add links between linked concepts
 - Create a command to start a second daemon for nix project DONE
   - Name the daemon after the nix project DONE
   - some kind of daemon switching facility 

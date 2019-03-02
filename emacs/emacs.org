@@ -62,8 +62,10 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
   - [[#git][Git]]
+  - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
+  - [[#polymode][Polymode]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -90,8 +92,9 @@ My first move is to enable lexical scope. This not only improves
 execution time, but also allows lexical techniques such as closure to
 be used. This declaration is contained within a comment because
 lexical scope was only introduced to Emacs in version 24.1
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :noweb strip-export
 ;; -*- lexical-binding: t; -*-
+<<helper-functions>>
 #+END_SRC
 
 ** Garbage Collector Threshold
@@ -315,6 +318,7 @@ The leader key is an old technique common among Vim users. A number of
 sequential key commands are hidden behind a single key. For those who
 are familiar with Hydra.el, this is a similar concept.
 *** Definitions
+First I define the leader keys,
 #+BEGIN_SRC emacs-lisp
 (defconst leader-key ",")
 (defconst alt-leader "SPC")
@@ -322,20 +326,47 @@ are familiar with Hydra.el, this is a similar concept.
 (general-create-definer leader-key-def
   :prefix leader-key)
 
-(general-create-definer eval-key-def
-  :prefix (concat leader-key " e"))
+(general-create-definer alt-leader-key-def
+  :prefix alt-leader-key)
+#+END_SRC
 
-(general-create-definer xpand-key-def
-  :prefix (concat leader-key " x"))
+then some helper functions to create functions to create leader
+keybindings through ~general-create-definer~.
+#+BEGIN_SRC emacs-lisp
+(cl-defun leader-prefix (str &optional (prefix leader-key))
+  "Appends a leader key to the given string"
+  (concat prefix " " str))
 
-(general-create-definer start-key-def
-  :prefix (concat leader-key " s"))
+(cl-defmacro define--subleader (key name general-definer-name &key (leader leader-key))
+  "Both create a general definer, and a which-key replacement for the given subleader."
+  `(progn
+     (which-key-add-key-based-replacements
+       (leader-prefix ,key ,leader) ,name)
+     (general-create-definer ,general-definer-name
+       :prefix (leader-prefix ,key ,leader))))
+
+;; the format for the input of this function is inspired by general's
+;; easy to use functions.
+(cl-defmacro define-subleader (&rest args &key (leader leader-key) &allow-other-keys)
+  "Both create a general definer, and a which-key replacement for
+the given subleader. Accepts arguments in threes with no
+delimiter."
+  `(progn ,@(mapcar '(lambda (elt)
+                       `(define--subleader ,@elt :leader ,leader))
+                    (seq-partition (remove-keyword-args args) 3))))
+#+END_SRC
+Usage:
+#+BEGIN_SRC emacs-lisp
+(define-subleader
+  "e" "eval" eval-key-def
+  "s" "start" start-key-def
+  "x" "xpand" xpand-key-def)
 #+END_SRC
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
     "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
-    "Q" 'kill-this-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
+    "Q" 'evil-delete-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "p" '(lambda () (interactive)
@@ -460,12 +491,11 @@ Scroll the window currently under the mouse
 #+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
-key press.
+key press. LINK!!!!
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
   :config
-  (which-key-add-prefix-title
-    ", e" "eval"))
+  (which-key-mode t))
 #+END_SRC
 * Shell
 ** Eshell
@@ -769,6 +799,36 @@ and a leader shortcut.
 (leader-key-def 'normal
   "m" 'magit)
 #+END_SRC
+** Snippets
+YAsnippet allows the creation of snippets to automate repetitive typing.
+#+BEGIN_SRC emacs-lisp
+(use-package yasnippet
+  :config
+  (yas-global-mode t)
+  ;; (setq yas-snippet-dirs
+  ;;       '("~/.dotfiles/emacs/snippets"))
+  ;; (general-define-key :keymap 'yas-minor-mode-map
+  ;;                     "<tab>" nil
+  ;;                     "TAB" nil)
+  ;; (general-define-key :states 'insert
+  ;;                     :keymap 'yas-minor-mode-map
+  ;;                     "<C-return>" #'yas-expand)
+  ;; (general-define-key :keymap 'yas-keymap
+  ;;                     "<tab>" nil
+  ;;                     "TAB" nil
+  ;;                     "<backtab>" nil
+  ;;                     "<shift tab>" nil) 
+  ;; (general-define-key :states 'insert
+  ;;                      :keymap 'yas-keymap
+  ;;                      "C-n" 'yas-next-field-or-maybe-expand
+  ;;                      "C-p" 'yas-prev-field)
+  )
+#+END_SRC
+A large collection of snippets is found in the ~yasnippet-snippets~ package.
+#+BEGIN_SRC emacs-lisp
+(use-package yasnippet-snippets
+  :quelpa (:stable t))
+#+END_SRC
 ** Language client features
 The language server protocol can provide IDE-like features for many
 languages. LSP mode also serves as a backend for Company and Flycheck.
@@ -796,10 +856,10 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** COMMENT Polymode
+** Polymode
 This is a very cool package that provides support for multiple major
-modes in the same buffer. Sadly I had frequent crashes while using it,
-so I will leave it commented out.
+modes in the same buffer. It seems to crash sometimes when editing org
+mode files
 #+BEGIN_SRC emacs-lisp
 (use-package polymode)
 (use-package poly-org)
@@ -1100,15 +1160,16 @@ Control spotify running on any device from Emacs.
     :config
     (setq spot4e-refresh-token me/spotify-refresh-token)
     (run-with-timer 0 (* 60 59) 'spot4e-refresh)
-    (general-create-definer spotify-key-def
-      :prefix (concat alt-leader " s"))
-    (spotify-key-def 'normal
-                     "b" 'spot4e-helm-search-user-tracks
-                     "r" 'spot4e-helm-search-recommendations-track
-                     "s" 'spot4e-player-pause
-                     "p" 'spot4e-player-play
-                     "n" 'spot4e-player-next
-                     "N" 'spot4e-player-previous))
+
+    (define-subleader :leader alt-leader
+      "s" "spotify" spotify-key-def)
+    (spotify-key-def 'normal emacs-lisp-mode-map
+      "b" 'spot4e-helm-search-user-tracks
+      "r" 'spot4e-helm-search-recommendations-track
+      "s" 'spot4e-player-pause
+      "p" 'spot4e-player-play
+      "n" 'spot4e-player-next
+      "N" 'spot4e-player-previous))
 #+END_SRC
 ** Emacs window manager
 Yep. No, I don't currently use it.
@@ -1178,8 +1239,13 @@ Save cursor position in a file between sessions.
 (save-place-mode 1)
 #+END_SRC
 * Helper functions
-Various small functions.
+Various small functions which are evaluated before anything else in the file.
+#+NAME: helper-functions
 #+BEGIN_SRC emacs-lisp
+(defun remove-keyword-args (list)
+  "Removes keyword arguments from the given list"
+  (car (general--remove-keyword-args list)))
+
 (defun reload-init-file ()
   "Load all elisp from 'user-init-file'."
   (interactive)
