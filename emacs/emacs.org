@@ -335,7 +335,6 @@ First I define the leader keys,
   :prefix alt-leader-key)
 #+END_SRC
 
-<<which-key-replacements>>
 then some helper functions to create functions to create subleader
 keybindings through ~general-create-definer~. Key-based replacements are
 also generated for [[#which-key][ ~which-key~ ]].
@@ -497,7 +496,7 @@ Scroll the window currently under the mouse
 #+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
-key press. ~which-key~ key replacements are generated [[which-key-replacements][here]].
+key press. ~which-key~ key replacements are generated [[#leader][here]].
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
   :config
