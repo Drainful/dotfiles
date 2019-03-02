@@ -607,9 +607,6 @@ wanted to edit a file. By running Emacs as a daemon, frames could be
 opened instantaneously. Of course at this point I almost never close
 my Emacs frame in the first place.
 #+BEGIN_SRC emacs-lisp
-;; run as server
-(server-mode 1)
-
 ;; easily restart emacs daemon
 (use-package restart-emacs)
 
@@ -621,62 +618,81 @@ I wrote this code to help manage daemons. It is usually fine to
 operate within a single daemon, but when I need to have more than one
 it's nice to be able to manage them as inferior processes.
 #+BEGIN_SRC emacs-lisp
-(cl-defun make-daemon-frame (socket-name &rest args)
-  "Make a new emacs frame for the daemon with the given socket name."
-  (apply 'start-process
-         (concat socket-name "-frame")
-         nil
-         "emacsclient" "--create-frame" (concat "--socket-name=" socket-name)
-         args))
+  (cl-defun make-daemon-frame (socket-name &rest args)
+    "Make a new emacs frame for the daemon with the given socket name."
+    (apply 'start-process
+           (concat socket-name "-frame")
+           nil
+           "emacsclient" "--create-frame" (concat "--socket-name=" socket-name)
+           args))
 
-(cl-defun make-daemon (socket-name &key (create-buffer t) before after (theme 'doom-nord-light))
-  "Make a new emacs daemon with the given socket name."
-  (message "Loading inferior emacs")
-  (let ((daemon-name (concat socket-name "-daemon")))
-    (start-process-shell-command
-     daemon-name (when create-buffer daemon-name)
-     (concat before
-             "emacs --daemon=" socket-name
-             ;; "--execute \"(load-theme '"
-             ;; (symbol-name theme)
-             ;; " t)\""
-             ";"
-             after))))
+  (cl-defun make-daemon (socket-name &key (create-buffer t) before after (theme 'doom-nord-light))
+    "Make a new emacs daemon with the given socket name."
+    (message "Loading inferior emacs")
+    (let ((daemon-name (concat socket-name "-daemon")))
+      (start-process-shell-command
+       daemon-name (when create-buffer daemon-name)
+       (concat before
+               "emacs --daemon=" socket-name
+               ;; "--execute \"(load-theme '"
+               ;; (symbol-name theme)
+               ;; " t)\""
+               ";"
+               after))))
 #+END_SRC
 
 I wrote some other ugly but useful functions to spawn daemons within a
 given Nix environment.
 #+BEGIN_SRC emacs-lisp
-(defun nix-daemon ()
-  "Start a daemon and frame in the current nix project."
-  (interactive)
-  (if (nix-current-sandbox)
-      (let ((default-directory (nix-current-sandbox))
-            (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
-        (if (get-buffer-process (get-buffer (concat daemon-name "-daemon")))
-            (nix-daemon-frame)
-          (make-daemon daemon-name
-                     ;; :create-buffer nil
-                     :theme 'doom-opera
-                     :before "nix-shell --command \""
-                     :after (concat "emacsclient --create-frame "
-                                    (concat "--socket-name=" daemon-name)
-                                    "\""))))
-    (error "No nix environment was found")))
+  (cl-defun nix-daemon-running-p (&optional (socket "server"))
+    "Check if a daemon which was started from nix-shell is running
+  on the given socket. Default unnamed socket."
+    ;; nix-shell starts daemosn in /run/user/
+    (interactive)
+    (let ((running? (file-exists-p (concat "/run/user/1000/emacs1000/" socket))))
+      (when (interactive-p) (message (if running? "yes" "no")))
+      running?))
 
-(defun nix-daemon-frame ()
-  "Start a daemon and frame in the current nix project."
-  (interactive)
-  (if (nix-current-sandbox)
-      (let ((default-directory (nix-current-sandbox))
-            (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
-        (unless (get-buffer-process (get-buffer (concat daemon-name "-daemon")))
-          (error "The daemon is not active"))
-        (start-process-shell-command
-         (concat daemon-name "-frame") nil
-         (concat "nix-shell --command "
-                 (concat "\"emacsclient --create-frame --socket-name=" daemon-name "\""))))
-    (error "No nix environment was found")))
+  (cl-defun non-nix-daemon-running-p (&optional (socket "server"))
+    "Check if a daemon which was NOT started from nix-shell is running
+  on the given socket. Default unnamed socket."
+    ;; daemons started outside of nix-shell exist in /tmp/
+    (interactive)
+    (let ((running? (file-exists-p (concat "/tmp/emacs1000/" socket))))
+      (when (interactive-p) (message (if running? "yes" "no")))
+      running?))
+
+  (defun nix-daemon ()
+    "Start a daemon and frame in the current nix project."
+    (interactive)
+    (if (nix-current-sandbox)
+        (let ((default-directory (nix-current-sandbox))
+              (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
+          (if (nix-daemon-running-p daemon-name) 
+              (nix-daemon-frame)
+            (make-daemon daemon-name
+                       ;; :create-buffer nil
+                       :theme 'doom-opera
+                       :before "nix-shell --command \""
+                       :after (concat "emacsclient --create-frame "
+                                      (concat "--socket-name=" daemon-name) "; "
+                                      "return"
+                                      "\""))))
+      (error "No nix environment was found")))
+
+  (defun nix-daemon-frame ()
+    "Start a daemon and frame in the current nix project."
+    (interactive)
+    (if (nix-current-sandbox)
+        (let ((default-directory (nix-current-sandbox))
+              (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
+          (unless (nix-daemon-running-p daemon-name)
+            (error "The daemon is not active"))
+          (start-process-shell-command
+           (concat daemon-name "-frame") nil
+           (concat "nix-shell --command "
+                   (concat "\"emacsclient --create-frame --socket-name=" daemon-name "\""))))
+      (error "No nix environment was found")))
 #+END_SRC
 * Colors, Themes, Fonts, and other aesthetic settings
 ** Doom Themes
@@ -692,17 +708,18 @@ I also use the ~poet~ theme, but I install it through the built-in
 package manager rather than through ~use-package~ due to a bug.
 ** Theme
 The theme loaded depends upon time of day.
+#+NAME: themes
 #+BEGIN_SRC emacs-lisp
-(unless (display-graphic-p)
-    (mapcar #'disable-theme custom-enabled-themes))
+  (unless (display-graphic-p)
+      (mapcar #'disable-theme custom-enabled-themes))
 
   (use-package theme-changer
-  :after doom-themes
-  :config
-  (setq calendar-location-name me/calendar-location-name)
-  (setq calendar-latitude me/calendar-latitude)
-  (setq calendar-longitude me/calendar-longitude)
-  (change-theme 'doom-one-light 'doom-one))
+    :after doom-themes
+    :config
+    (setq calendar-location-name me/calendar-location-name)
+    (setq calendar-latitude me/calendar-latitude)
+    (setq calendar-longitude me/calendar-longitude)
+    (change-theme 'doom-one-light 'doom-one))
 #+END_SRC
 * Text, tab and indent related
 I use 4 spaces by default.
@@ -1121,8 +1138,8 @@ literate source files like this one.
           org-fontify-done-headline t
           org-fontify-quote-and-verse-blocks t
           org-src-ask-before-returning-to-edit-buffer nil)
-    (general-define-key :states 'normal :keymaps 'org-mode-map
-     "C-`" 'org-edit-special)
+    (general-define-key :states 'normal :mode 'org-mode-map
+                        "C-`" 'org-edit-special)
     (leader-key-def 'normal org-src-mode-map
       "w" 'org-edit-src-exit))
 #+END_SRC
@@ -1278,4 +1295,12 @@ Various small functions which are evaluated before anything else in the file.
   (transpose-lines 1)
   (forward-line -1)
   (indent-according-to-mode))
+#+END_SRC
+
+#+BEGIN_COMMENT
+Load themes after everything else because it seems that the faces are
+incorrect otherwise
+#+END_COMMENT
+#+BEGIN_SRC emacs-lisp :noweb strip-export
+<<themes>>
 #+END_SRC
