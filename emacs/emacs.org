@@ -65,7 +65,6 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
-  - [[#polymode][Polymode]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -133,7 +132,7 @@ Secrets are stored in ~~/.emacs.d/.secrets.el~.
 * Packages
 ** Package Initialization
 Before I can install packages I must first initialize package sources
-and installation tools. Here I source Elpa and Melpa.
+and installation tools. Here I source ~elpa~ and ~melpa~.
 #+BEGIN_SRC emacs-lisp
 
 (require 'package)
@@ -166,9 +165,9 @@ causes ~use-package~ expressions to be automatically downloaded.
 #+END_SRC
 
 ** Quelpa
-Quelpa is a package installation facility that allows packages to be
+~quelpa~ is a package installation facility that allows packages to be
 installed from arbitrary sources. This is convenient for getting
-bleeding edge versions of packages which have yet to reach Melpa.
+bleeding edge versions of packages which have yet to reach ~melpa~.
 #+BEGIN_SRC emacs-lisp
 (use-package quelpa)
 
@@ -180,7 +179,7 @@ bleeding edge versions of packages which have yet to reach Melpa.
 #+END_SRC
 
 ** COMMENT Automatic Upgrades
-I decided that I prefer stability, but I could evaluate the following code to enable it.
+This code enables automatic package upgrades.
 #+BEGIN_SRC emacs-lisp
 (setq quelpa-upgrade-p t)
 
@@ -194,7 +193,7 @@ I decided that I prefer stability, but I could evaluate the following code to en
 #+END_SRC
 * Evil
 These are settings for the emulation of Vim in Emacs. I would not be
-using emacs today if it were not for Evil mode. I really do love Vim.
+using emacs today if it were not for ~evil-mode~. I really love Vim.
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :init
@@ -209,7 +208,7 @@ using emacs today if it were not for Evil mode. I really do love Vim.
   (global-undo-tree-mode -1))
 #+END_SRC
 ** Evil collection
-This provides Evil-friendly keybindings for a variety of modes.
+This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-collection
   :init
@@ -223,7 +222,7 @@ This provides Evil-friendly keybindings for a variety of modes.
 
 ** Evil easymotion
 This package helps with the issue of not knowing how many times to
-repeat an evil motion by providing jumpable tags at the location of
+repeat an ~evil~ motion by providing a tag at the location of
 each possible motion result.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-easymotion
@@ -248,7 +247,7 @@ At one point I used ~evil-snipe~, a tool for jumping to pairs of characters.
 #+END_SRC
 ** The creation of text objects
 This macro was copied from [[https://stackoverflow.com/a/22418983/4921402][this]] Stackoverflow thread, and facilitates
-the creation of Evil text objects.
+the creation of ~evil~ text objects.
 #+BEGIN_SRC emacs-lisp
 (defmacro define-and-bind-quoted-text-object (name key start-regex end-regex)
   (let ((inner-name (make-symbol (concat "evil-inner-" name)))
@@ -270,14 +269,14 @@ Usage:
 #+END_SRC
 * Keybindings and commands
 ** General.el
-I mainly use the the package General to define keybindings and
-commands. It integrates well with evil.
+I mainly use the the package ~general~ to define keybindings and
+commands. It integrates well with ~evil~.
 #+BEGIN_SRC emacs-lisp
 (use-package general)
 (general-evil-setup)
 #+END_SRC
 ** Commands
-I don't have too much use for Evil commands, but early on I created a
+I don't have too much use for ~evil~ commands, but early on I created a
 couple.
 #+BEGIN_SRC emacs-lisp
 (evil-ex-define-cmd "Src" 'reload-init-file)
@@ -307,7 +306,7 @@ These are normal mode mappings not specific to any major mode.
   "M-k" 'move-line-up)
 #+END_SRC
 ** Visual Mode
-These are visual mode mappings not specific to any major mode.
+And these are visual mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
 (general-vmap
   ;; Move a visual block of text using ALT+[jk]
@@ -316,7 +315,7 @@ These are visual mode mappings not specific to any major mode.
 ** Leader
 The leader key is an old technique common among Vim users. A number of
 sequential key commands are hidden behind a single key. For those who
-are familiar with Hydra.el, this is a similar concept.
+are familiar with ~hydra~, this is a similar concept.
 *** Definitions
 First I define the leader keys,
 #+BEGIN_SRC emacs-lisp
@@ -330,8 +329,10 @@ First I define the leader keys,
   :prefix alt-leader-key)
 #+END_SRC
 
-then some helper functions to create functions to create leader
-keybindings through ~general-create-definer~.
+<<which-key-replacements>>
+then some helper functions to create functions to create subleader
+keybindings through ~general-create-definer~. Key-based replacements are
+also generated for [[#which-key][ ~which-key~ ]].
 #+BEGIN_SRC emacs-lisp
 (cl-defun leader-prefix (str &optional (prefix leader-key))
   "Appends a leader key to the given string"
@@ -406,7 +407,7 @@ blurbs.
   (delight 'eldoc-mode nil "eldoc"))
 #+END_SRC
 ** Helm
-Helm is a framework for incremental narrowing searching interfaces
+~helm~ is a framework for incremental narrowing searching interfaces
 which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
 (use-package helm
@@ -415,7 +416,7 @@ which integrates well across Emacs.
   :config (helm-mode t))
 #+END_SRC
 ** Hideshow
-Hideshow mode provides vim-like folds (but not as good).
+~hideshow~ mode provides vim-like folds (but not as good).
 #+BEGIN_SRC emacs-lisp
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (delight 'hs-minor-mode nil "hideshow")
@@ -472,8 +473,7 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
 #+END_SRC
 
 *** COMMENT Matching parens
-Thanks to the above code, I no longer need the following code to show
-the matching parenthesis.
+Highlight the parentheis whose pair is under the point.
 #+BEGIN_SRC emacs-lisp
 (show-paren-mode t)
 (setq show-paren-delay 0)
@@ -491,7 +491,7 @@ Scroll the window currently under the mouse
 #+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
-key press. LINK!!!!
+key press. ~which-key~ key replacements are generated [[which-key-replacements][here]].
 #+BEGIN_SRC emacs-lisp
 (use-package which-key
   :config
@@ -499,7 +499,7 @@ key press. LINK!!!!
 #+END_SRC
 * Shell
 ** Eshell
-Eshell is an Emacs Lisp shell. Very cool.
+~eshell~ is an Emacs Lisp shell. Very cool.
 #+BEGIN_SRC emacs-lisp
 (require 'eshell)
 (require 'em-smart)
@@ -534,7 +534,7 @@ Function for making a new Eshell instance. From [[https://www.emacswiki.org/emac
 #+END_SRC
 
 *** COMMENT Beginning of line behavior
-Eshell doesn't play with Evil regarding the beginning of line
+~eshell~ doesn't play with ~evil~ regarding the beginning of line
 behavior. This is some scratch code I wrote which attempts and fails
 to fix the problem.
 #+BEGIN_SRC emacs-lisp
@@ -554,16 +554,16 @@ to fix the problem.
                    " $ "))))
 #+END_SRC
 ** Comint Mode
-Comint mode is a generalized mode for repl-like interfaces.
+~comint mode~ is a generalized mode for repl-like interfaces.
 #+BEGIN_SRC emacs-lisp
 (setq comint-prompt-read-only t ; Don't let me delete the comint prompt duh
       comint-move-point-for-output nil ; reduce frequent redisplays
       comint-scroll-show-maximum-output nil)
 #+END_SRC
 ** Shell
-I prefer Shell-Mode to any newer terminal emulator because
-Comint-Mode, the mode which Shell-Mode is based on, plays well with
-Evil.
+I prefer ~shell-mode~ to any newer terminal emulator because
+~comint-mode~, the mode which ~shell-mode~ is based on, plays well with
+~evil~.
 #+BEGIN_SRC emacs-lisp
 (global-set-key [f1] 'shell)
 (general-define-key :states 'normal :keymaps 'shell-mode-map
@@ -571,8 +571,8 @@ Evil.
    "C-k" 'evil-window-up)
 #+END_SRC
 ** Multi-Term
-If for some reason I need Ansi Term instead of Shell, and for some
-reason I need multiple of them, I have this plugin.
+If for some reason I need ~ansi-term~ instead of ~shell-mode~, and for some
+reason I need multiple, I have this plugin.
 #+BEGIN_SRC emacs-lisp
 (use-package multi-term
   :config
@@ -591,7 +591,7 @@ reason I need multiple of them, I have this plugin.
    "C-k" 'evil-window-up))
 #+END_SRC
 * Tramp
-Tramp is a truly one of the great gems of Emacs. It allows me to
+~tramp~ is a truly one of the great gems of Emacs. It allows me to
 access remote files as if they were part of my filesystem within
 Emacs.
 #+BEGIN_SRC emacs-lisp
@@ -687,12 +687,12 @@ Doom Emacs looks good. I want those themes.
   (doom-themes-visual-bell-config))
 #+END_SRC
 ** Poet Theme
-I also use the poet theme, but I install it through the built-in
-package manager due to a bug.
+I also use the ~poet~ theme, but I install it through the built-in
+package manager rather than through ~use-package~ due to a bug.
 ** Theme
 The theme loaded depends upon time of day.
 #+BEGIN_SRC emacs-lisp
-  (unless (display-graphic-p)
+(unless (display-graphic-p)
     (mapcar #'disable-theme custom-enabled-themes))
 
   (use-package theme-changer
@@ -711,12 +711,12 @@ I use 4 spaces by default.
 #+END_SRC
 * Moving around, buffers, windows and splits
 ** Winner Mode
-Winner mode lets me switch between window configurations with C-c left and right.
+~winner-mode~ lets me switch between window configurations with C-c left and right.
 #+BEGIN_SRC emacs-lisp
 (winner-mode 1)
 #+END_SRC
 ** Projectile
-Projectile is a powerful package which facilitates navigation within a
+~projectile~ is a powerful package which facilitates navigation within a
 project.
 #+BEGIN_SRC emacs-lisp
 (use-package projectile
@@ -735,7 +735,7 @@ project.
   (helm-projectile-on))
 #+END_SRC
 ** FZF
-As powerful as Projectile and Helm are, FZF still takes the cake on
+As powerful as ~projectile~ and ~helm~ are, ~fzf~ still takes the cake on
 speed of recursive search.
 #+BEGIN_SRC emacs-lisp
 (use-package fzf)
@@ -759,7 +759,7 @@ Repeated invocations toggle between the two most recently open buffers."
 #+END_SRC
 * Programming tools and settings
 ** Autocompletion
-I, like many others, use Company.
+I, like many others, use ~company~.
 #+BEGIN_SRC emacs-lisp
 (use-package company
   :delight
@@ -777,20 +777,20 @@ I, like many others, use Company.
   (global-company-mode nil))
 #+END_SRC
 ** Linting
-I also, like many others, use Flycheck.
+I also, like many others, use ~flycheck~.
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck
   :config
   (setq flycheck-global-modes '(not c-mode c++-mode)))
 #+END_SRC
 ** Git
-I also also, like many others, use Magit, a very nice Git interface.
+I also also, like many others, use ~magit~, a very nice Git interface.
 #+BEGIN_SRC emacs-lisp
 (use-package magit
   :config
   (setq ediff-window-setup-function 'ediff-setup-windows-plain))
 #+END_SRC
-With Evil-friendly keybindings,
+With ~evil~ friendly keybindings.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-magit)
 #+END_SRC
@@ -800,7 +800,7 @@ and a leader shortcut.
   "m" 'magit)
 #+END_SRC
 ** Snippets
-YAsnippet allows the creation of snippets to automate repetitive typing.
+~yasnippet~ allows the creation of snippets to automate repetitive typing.
 #+BEGIN_SRC emacs-lisp
 (use-package yasnippet
   :config
@@ -831,7 +831,7 @@ A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+END_SRC
 ** Language client features
 The language server protocol can provide IDE-like features for many
-languages. LSP mode also serves as a backend for Company and Flycheck.
+languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~.
 #+BEGIN_SRC emacs-lisp
 (use-package lsp-mode
   :commands lsp
@@ -856,10 +856,10 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** Polymode
+** COMMENT Polymode
 This is a very cool package that provides support for multiple major
 modes in the same buffer. It seems to crash sometimes when editing org
-mode files
+files.
 #+BEGIN_SRC emacs-lisp
 (use-package polymode)
 (use-package poly-org)
@@ -867,7 +867,7 @@ mode files
 * Language specific tools and settings
 ** Lisps
 *** Lispy/ville
-~lispy~ is my S-expr editing tool of choice. It integrates with Evil
+~lispy~ is my S-expr editing tool of choice. It integrates with ~evil~
 through ~lispyville~ minor mode.
 #+BEGIN_SRC emacs-lisp
 (use-package lispyville
@@ -902,7 +902,7 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
 #+END_SRC
 ** Common Lisp
 *** Sly
-Sly is a Common Lisp IDE for Emacs and a featureful fork of SLIME.
+~sly~ is a Common Lisp IDE for Emacs and a featureful fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
 (use-package sly
   :quelpa (:stable t)
@@ -945,7 +945,7 @@ Sly is a Common Lisp IDE for Emacs and a featureful fork of SLIME.
 #+END_SRC
 ** Scheme
 *** Geiser
-It's like SLIME for Scheme. Kinda.
+It's like ~slime~ for Scheme. Kinda.
 #+BEGIN_SRC emacs-lisp
 (use-package geiser
   :config
@@ -994,12 +994,12 @@ things.
   "r" 'shen-eval-region)
 #+END_SRC
 ** Clojure
-A popular lisp? Blasphemy.
+A popular lisp on the JVM.
 #+BEGIN_SRC emacs-lisp
 (use-package clojure-mode)
 #+END_SRC
 *** Cider
-It's like SLIME for Clojure! Kinda.
+It's like ~slime~ for Clojure! Kinda.
 #+BEGIN_SRC emacs-lisp
 (use-package cider
   :config
@@ -1042,14 +1042,14 @@ A language server back end for C/++
                 projectile-project-root-files-top-down-recurring)))
 #+END_SRC
 *** Font lock
-Font lock for modern C++
+Corrects font lock for modern C++.
 #+BEGIN_SRC emacs-lisp
 (use-package modern-cpp-font-lock
   :config
   (modern-c++-font-lock-global-mode t))
 #+END_SRC
 *** Linting
-Enable Flycheck
+Enable ~flycheck~
 #+BEGIN_SRC emacs-lisp
 (add-hook 'c++-mode-hook 'flycheck-mode)
 #+END_SRC
@@ -1144,7 +1144,8 @@ Features for dealing with nix-shell in Emacs.
 
 #+END_SRC
 ** Bash
-Enter mode for bash on .profile, .bash_aliases, and .inputrc
+#+BEGIN_COMMENT I use a zero width space here to escape the underscore #+END_COMMENT
+Enter mode for bash on .profile, .bash_​aliases, and .inputrc
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
 (add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
