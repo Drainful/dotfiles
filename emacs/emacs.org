@@ -1144,7 +1144,9 @@ Features for dealing with nix-shell in Emacs.
 
 #+END_SRC
 ** Bash
-#+BEGIN_COMMENT I use a zero width space here to escape the underscore #+END_COMMENT
+#+BEGIN_COMMENT 
+I use a zero width space here to escape the underscore 
+#+END_COMMENT
 Enter mode for bash on .profile, .bash_​aliases, and .inputrc
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
