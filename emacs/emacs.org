@@ -9,9 +9,9 @@ this file constitutes my emacs configuration. Please enjoy!
 * Table of contents                                                     :TOC:
 - [[#startup][Startup]]
   - [[#lexical-scope][Lexical Scope]]
-  - [[#load-helper-functions][Load helper functions]]
   - [[#garbage-collector-threshold][Garbage Collector Threshold]]
   - [[#filename-handlers][Filename Handlers]]
+  - [[#load-helper-functions][Load helper functions]]
   - [[#load-secrets][Load secrets]]
 - [[#packages][Packages]]
   - [[#package-initialization][Package Initialization]]
@@ -98,10 +98,6 @@ lexical scope was only introduced to Emacs in version 24.1
 ;; -*- lexical-binding: t; -*-
 #+END_SRC
 
-** Load helper functions
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<helper-functions>>
-#+END_SRC
 ** Garbage Collector Threshold
 In search of faster startup times, I discovered a technique that
 involves increasing the garbage collection threshold during starup. I
@@ -128,6 +124,10 @@ startup. This trick also comes from [[https://github.com/hlissner/doom-emacs/wik
   (setq file-name-handler-alist temp-file-name-handler-alist))
 #+END_SRC
 
+** Load helper functions
+#+BEGIN_SRC emacs-lisp :noweb strip-export
+<<helper-functions>>
+#+END_SRC
 ** Load secrets
 Secrets are stored in ~~/.emacs.d/.secrets.el~.
 #+BEGIN_SRC emacs-lisp
