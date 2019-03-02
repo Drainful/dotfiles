@@ -39,7 +39,6 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#confirmation][Confirmation]]
   - [[#clipboard][Clipboard]]
   - [[#delimiters][Delimiters]]
-  - [[#mouse-settings][Mouse settings]]
   - [[#which-key][Which-key]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -469,30 +468,20 @@ Close delimiters automatically as I write.
 *** Highlight parentheses
 Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/questions/34846531/show-parentheses-when-inside-them-emacs][this]] thread.
 #+BEGIN_SRC emacs-lisp
-(define-advice show-paren-function (:around (fn) fix)
-  "Highlight enclosing parens."
-  (cond ((looking-at-p "\\s(") (funcall fn))
-        (t (save-excursion
-             (ignore-errors (backward-up-list))
-             (funcall fn)))))
+  (define-advice show-paren-function (:around (fn) fix)
+    "Highlight enclosing parens."
+    (cond ((looking-at-p "\\s(") (funcall fn))
+          (t (save-excursion
+               (ignore-errors (backward-up-list))
+               (funcall fn)))))
 #+END_SRC
 
-*** COMMENT Matching parens
+*** Matching parens
 Highlight the parentheis whose pair is under the point.
 #+BEGIN_SRC emacs-lisp
-(show-paren-mode t)
-(setq show-paren-delay 0)
-(setq show-paren-style 'parenthesis)
-#+END_SRC
-
-** Mouse settings
-Don't accelerate while mouse scrolling.
-#+BEGIN_SRC emacs-lisp
-(setq mouse-wheel-progressive-speed nil)
-#+END_SRC
-Scroll the window currently under the mouse
-#+BEGIN_SRC emacs-lisp
-(setq mouse-wheel-follow-mouse 't)
+  (show-paren-mode t)
+  (setq show-paren-delay 0)
+  (setq show-paren-style 'parenthesis)
 #+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
@@ -666,22 +655,30 @@ given Nix environment.
       (when (interactive-p) (message (if running? "yes" "no")))
       running?))
 
-  (defun nix-daemon ()
+  (cl-defun nix-daemon (&optional (theme 'doom-opera))
     "Start a daemon and frame in the current nix project."
     (interactive)
     (if (nix-current-sandbox)
-        (let ((default-directory (nix-current-sandbox))
-              (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
-          (if (nix-daemon-running-p daemon-name) 
+        (let* ((default-directory (nix-current-sandbox))
+               (socket-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1))
+               (daemon-name (concat socket-name "-daemon")))
+          (if (nix-daemon-running-p socket-name) 
               (nix-daemon-frame)
-            (make-daemon daemon-name
-                       ;; :create-buffer nil
-                       :theme 'doom-opera
-                       :before "nix-shell --command \""
-                       :after (concat "emacsclient --create-frame "
-                                      (concat "--socket-name=" daemon-name) "; "
-                                      "return"
-                                      "\""))))
+            (message "Loading inferior nix emacs")
+            (start-process-shell-command
+             daemon-name daemon-name
+             (concat "nix-shell --command \""
+                       "emacs --daemon=" socket-name
+                       " --execute \\\"
+                         (load-theme '"
+                         (symbol-name theme)
+                         " t)\\\""
+                       "; "
+                       "emacsclient --create-frame "
+                       (concat "--socket-name=" socket-name)
+                     "; "
+                     "return"
+                     "\""))))
       (error "No nix environment was found")))
 
   (defun nix-daemon-frame ()
@@ -689,13 +686,13 @@ given Nix environment.
     (interactive)
     (if (nix-current-sandbox)
         (let ((default-directory (nix-current-sandbox))
-              (daemon-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
-          (unless (nix-daemon-running-p daemon-name)
+              (socket-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
+          (unless (nix-daemon-running-p socket-name)
             (error "The daemon is not active"))
           (start-process-shell-command
-           (concat daemon-name "-frame") nil
+           (concat socket-name "-frame") nil
            (concat "nix-shell --command "
-                   (concat "\"emacsclient --create-frame --socket-name=" daemon-name "\""))))
+                   (concat "\"emacsclient --create-frame --socket-name=" socket-name "\""))))
       (error "No nix environment was found")))
 #+END_SRC
 * Colors, Themes, Fonts, and other aesthetic settings
