@@ -65,6 +65,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
+  - [[#documentation][Documentation]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -335,7 +336,7 @@ keybindings through ~general-create-definer~. Key-based replacements are
 also generated for [[#which-key][ ~which-key~ ]].
 #+BEGIN_SRC emacs-lisp
 (cl-defun leader-prefix (str &optional (prefix leader-key))
-  "Appends a leader key to the given string"
+  "Append a leader key to the given string"
   (concat prefix " " str))
 
 (cl-defmacro define--subleader (key name general-definer-name &key (leader leader-key))
@@ -367,7 +368,7 @@ Usage:
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
     "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
-    "Q" 'evil-delete-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
+    "w" 'evil-delete-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "p" '(lambda () (interactive)
@@ -565,10 +566,10 @@ I prefer ~shell-mode~ to any newer terminal emulator because
 ~comint-mode~, the mode which ~shell-mode~ is based on, plays well with
 ~evil~.
 #+BEGIN_SRC emacs-lisp
-(global-set-key [f1] 'shell)
-(general-define-key :states 'normal :keymaps 'shell-mode-map
-   "C-j" 'evil-window-down
-   "C-k" 'evil-window-up)
+  (global-set-key [f1] 'shell)
+  (general-define-key :states 'normal :keymaps 'shell-mode-map
+     "C-j" 'evil-window-down
+     "C-k" 'evil-window-up)
 #+END_SRC
 ** Multi-Term
 If for some reason I need ~ansi-term~ instead of ~shell-mode~, and for some
@@ -856,6 +857,11 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
+** Documentation
+A keybinding to access documentation.
+#+BEGIN_SRC emacs-lisp
+  (global-set-key [f3] (lambda () (interactive) (manual-entry (current-word))))
+#+END_SRC
 ** COMMENT Polymode
 This is a very cool package that provides support for multiple major
 modes in the same buffer. It seems to crash sometimes when editing org
@@ -1114,7 +1120,11 @@ literate source files like this one.
           org-fontify-whole-heading-line t
           org-fontify-done-headline t
           org-fontify-quote-and-verse-blocks t
-          org-src-ask-before-returning-to-edit-buffer nil))
+          org-src-ask-before-returning-to-edit-buffer nil)
+    (general-define-key :states 'normal :keymaps 'org-mode-map
+     "C-`" 'org-edit-special)
+    (leader-key-def 'normal org-src-mode-map
+      "w" 'org-edit-src-exit))
 #+END_SRC
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
