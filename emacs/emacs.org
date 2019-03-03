@@ -506,7 +506,6 @@ And configuration:
 (setq eshell-review-quick-commands nil)
 (setq eshell-smart-space-goes-to-end t)
 #+END_SRC
-
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
   (global-set-key [f2] 'eshell)
@@ -517,8 +516,18 @@ And configuration:
                                   "C-j" 'evil-window-down
                                   "C-k" 'evil-window-up)))
 #+END_SRC
-
-*** Helper Function
+*** Helm support
+~helm~ can be used for ~eshell~ completions with the following code.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-mode-hook
+            (lambda ()
+              (eshell-cmpl-initialize)
+              (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete)
+              (define-key eshell-mode-map (kbd "M-s f") 'helm-eshell-prompts-all)))
+  (general-define-key :mode 'eshell-mode-map
+                      "M-r" 'helm-eshell-history)))
+#+END_SRC
+*** Start Function
 Function for making a new Eshell instance. From [[https://www.emacswiki.org/emacs/EshellMultipleEshellBuffers][this]] thread.
 #+BEGIN_SRC emacs-lisp
 (defun eshell-new()
@@ -526,26 +535,62 @@ Function for making a new Eshell instance. From [[https://www.emacswiki.org/emac
   (interactive)
   (eshell 'N))
 #+END_SRC
-
-*** COMMENT Beginning of line behavior
-~eshell~ doesn't play with ~evil~ regarding the beginning of line
-behavior. This is some scratch code I wrote which attempts and fails
-to fix the problem.
+*** Protect Prompt
+~eshell~ doesn't play with ~evil~ with commands such as ~dd~ which target
+tej whole line. This code (inspired by spacemacs shell layer) solves
+that problem.
 #+BEGIN_SRC emacs-lisp
-(setq eshell-prompt-regexp (regexp-quote "^\b$")
-      eshell-prompt-function
-      (lambda nil ""))
+  (defun protect-eshell-prompt ()
+    (interactive)
+    (let ((inhibit-field-text-motion t)
+          (inhibit-read-only t))
+      (add-text-properties
+       (point-at-bol)
+       (point)
+       '(rear-nonsticky t
+                        inhibit-line-move-fiold-capture t
+                        field output
+                        read-only t
+                        front-sticky (field inhibit-line-move-field-capture)))))
 
-(setq old-eshell-prompt-function (lambda nil (eshell-prompt-function)))
-(setq old-eshell-prompt-function (symbol-value 'eshell-prompt-function))
-(setq eshell-prompt-function
-      (lambda nil
-        (restrict-bol (old-eshell-prompt-function))))
-(setq eshell-prompt-function
-      (lambda nil
-        (restrict-bol (concat
-                   (eshell/pwd)
-                   " $ "))))
+  (add-hook 'eshell-after-prompt-hook 'protect-eshell-prompt)
+#+END_SRC
+*** COMMENT Attempted prompt fixes
+This code is the sum of failed attempts to get the above feature working.
+#+BEGIN_SRC emacs-lisp
+  (defun eshell/clear ()
+    (interactive)
+    (let ((inhibit-read-only t))
+      (erase-buffer))
+    (eshell-send-input))
+
+  (defun restrict-bol (string)
+    (propertize string
+                'inhibit-line-move-field-capture t
+                'rear-nonsticky t
+                'field 'output
+                'read-only t
+                'front-sticky '(field inhibit-line-move-field-capture)))
+  (defun protected-eshell-prompt (old-eshell-prompt &rest args)
+    (restrict-bol (apply old-eshell-prompt args)))
+  (advice-add 'eshell-prompt-functio)
+
+
+
+  (setq eshell-prompt-regexp (regexp-quote "^\b$")
+        eshell-prompt-function
+        (lambda nil ""))
+
+  (setq old-eshell-prompt-function (lambda nil (eshell-prompt-function)))
+  (setq old-eshell-prompt-function (symbol-value 'eshell-prompt-function))
+  (setq eshell-prompt-function
+        (lambda nil
+          (restrict-bol (old-eshell-prompt-function))))
+  (setq eshell-prompt-function
+        (lambda nil
+          (restrict-bol (concat
+                     (eshell/pwd)
+                     " $ "))))
 #+END_SRC
 ** Comint Mode
 ~comint mode~ is a generalized mode for repl-like interfaces.
@@ -1079,10 +1124,10 @@ Enable ~flycheck~
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-(leader-key-def 'normal c-mode-base-map
-  "s" 'ff-find-other-file
-  "c" 'compile-rec
-  "r" '(lambda () (interactive) (compile-rec :command "make run")))
+  (leader-key-def 'normal c-mode-base-map
+    "s" 'projectile-find-other-file
+    "c" 'compile-rec
+    "r" '(lambda () (interactive) (compile-rec :command "make run")))
 #+END_SRC
 *** Style
 #+BEGIN_SRC emacs-lisp
