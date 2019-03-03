@@ -84,7 +84,6 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#spotify][Spotify]]
   - [[#emacs-window-manager][Emacs window manager]]
 - [[#files-and-backups][Files and backups]]
-- [[#after-startup][After startup]]
 - [[#helper-functions][Helper functions]]
 
 * Startup
@@ -215,13 +214,14 @@ using emacs today if it were not for ~evil-mode~. I really love Vim.
 ** Evil collection
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
-(use-package evil-collection
-  :init
-  (setq evil-want-keybinding nil)
-  :after evil
-  :config
-  (evil-collection-minibuffer-setup)
-  (evil-collection-init))
+  (use-package evil-collection
+    :init
+    (setq evil-want-keybinding nil)
+    :after evil
+    :config
+    ;; (setq evil-collection-term-sync-state-and-mode-p nil)
+    (evil-collection-minibuffer-setup)
+    (evil-collection-init))
 #+END_SRC
 
 
@@ -375,6 +375,7 @@ Usage:
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "p" 'fzf-directory-from-home
+    "h" 'help
     "o" 'occur 
     "i" 'imenu
     "RET" (kbd ":noh"))
@@ -463,6 +464,13 @@ Close delimiters automatically as I write.
 #+BEGIN_SRC emacs-lisp
 (electric-pair-mode nil)
 #+END_SRC
+*** Matching parens
+Highlight the parentheis whose pair is under the point.
+#+BEGIN_SRC emacs-lisp
+  (show-paren-mode t)
+  (setq show-paren-delay 0)
+  (setq show-paren-style 'parenthesis)
+#+END_SRC
 *** Highlight parentheses
 Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/questions/34846531/show-parentheses-when-inside-them-emacs][this]] thread.
 #+BEGIN_SRC emacs-lisp
@@ -474,13 +482,6 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
                (funcall fn)))))
 #+END_SRC
 
-*** Matching parens
-Highlight the parentheis whose pair is under the point.
-#+BEGIN_SRC emacs-lisp
-  (show-paren-mode t)
-  (setq show-paren-delay 0)
-  (setq show-paren-style 'parenthesis)
-#+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
 key press. ~which-key~ key replacements are generated [[#leader][here]].
@@ -491,22 +492,41 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
 #+END_SRC
 * Shell
 ** Eshell
-~eshell~ is an Emacs Lisp shell. Very cool.
+~eshell~ is a shell that operates entirely within emacs. It is my
+primary shell.
 #+BEGIN_SRC emacs-lisp
 (require 'eshell)
 (require 'em-smart)
 #+END_SRC
-
 *** Configuration
-And configuration: 
 #+BEGIN_SRC emacs-lisp
-(setq eshell-where-to-jump 'begin)
-(setq eshell-review-quick-commands nil)
-(setq eshell-smart-space-goes-to-end t)
+  (setq eshell-where-to-jump 'begin)
+  (setq eshell-review-quick-commands nil)
+  (setq eshell-smart-space-goes-to-end t)
+  ;;(add-to-list 'eshell-visual-commands "rlwrap")
+#+END_SRC
+*** Commands
+~eshell~ commands
+#+BEGIN_SRC emacs-lisp
+  (defun eshell/e (args)
+    "Open the given files"
+    (if (listp args)
+        (dolist (file args) (find-file file t))
+      (find-file args)))
+
+  (defun eshell/fd (&optional from-directory)
+    "Run fzf to open a directory in dired"
+    (fzf-directory-from (if from-directory
+                            from-directory
+                          default-directory)))
+
+  (defun eshell/fh ()
+    (eshell/fd "~"))
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-  (global-set-key [f2] 'eshell)
+  (global-set-key [f1] 'eshell)
+  (global-set-key [f2] 'eshell-new)
   ;; Let me use C-j/k
   (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
             (lambda ()
@@ -520,10 +540,12 @@ And configuration:
   (add-hook 'eshell-mode-hook
             (lambda ()
               (eshell-cmpl-initialize)
-              (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete)
-              (define-key eshell-mode-map (kbd "M-s f") 'helm-eshell-prompts-all)))
-  (general-define-key :mode 'eshell-mode-map
-                      "M-r" 'helm-eshell-history)))
+              (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete)))
+#+END_SRC
+*** Disable Company
+While company mode is widely useful, helm does better for eshell.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-mode-hook (lambda () (company-mode -1)))
 #+END_SRC
 *** Start Function
 Function for making a new Eshell instance. From [[https://www.emacswiki.org/emacs/EshellMultipleEshellBuffers][this]] thread.
@@ -533,13 +555,12 @@ Function for making a new Eshell instance. From [[https://www.emacswiki.org/emac
   (interactive)
   (eshell 'N))
 #+END_SRC
-*** Protect Prompt
+*** Properly Protect Prompt
 ~eshell~ doesn't play with ~evil~ with commands such as ~dd~ which target
 tej whole line. This code (inspired by spacemacs shell layer) solves
 that problem.
 #+BEGIN_SRC emacs-lisp
   (defun protect-eshell-prompt ()
-    (interactive)
     (let ((inhibit-field-text-motion t)
           (inhibit-read-only t))
       (add-text-properties
@@ -590,6 +611,7 @@ This code is the sum of failed attempts to get the above feature working.
                      (eshell/pwd)
                      " $ "))))
 #+END_SRC
+
 ** Comint Mode
 ~comint mode~ is a generalized mode for repl-like interfaces.
 #+BEGIN_SRC emacs-lisp
@@ -597,16 +619,41 @@ This code is the sum of failed attempts to get the above feature working.
       comint-move-point-for-output nil ; reduce frequent redisplays
       comint-scroll-show-maximum-output nil)
 #+END_SRC
+
 ** Shell
-I prefer ~shell-mode~ to any newer terminal emulator because
-~comint-mode~, the mode which ~shell-mode~ is based on, plays well with
-~evil~.
+I prefer ~shell-mode~ to ~ansi-term~ because ~comint-mode~, the mode which
+~shell-mode~ is based on, plays well with ~evil~.
 #+BEGIN_SRC emacs-lisp
-  (global-set-key [f1] 'shell)
   (general-define-key :states 'normal :keymaps 'shell-mode-map
      "C-j" 'evil-window-down
      "C-k" 'evil-window-up)
 #+END_SRC
+
+** COMMENT Term mode
+This code was the restult of a bad misunderstanding of the function of ~ansi-term~.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'term-mode-hook (lambda () (setq-local term-prompt-regexp "\\[.*\\]\\$ [\n]*")))
+
+  (defun protect-term-prompt ()
+    (interactive)
+    (when (string-match (condition-case nil 
+                            (symbol-value 'term-prompt-regexp) 
+                          (void-variable "")) 
+                        (thing-at-point 'line t))
+      (let ((inhibit-field-text-motion t)
+            (inhibit-read-only t))
+        (add-text-properties
+         (point-at-bol)
+         (point-at-eol)
+         '(rear-nonsticky t
+                          inhibit-line-move-fiold-capture t
+                          field output
+                          read-only t
+                          front-sticky (field inhibit-line-move-field-capture))))))
+
+  (advice-add 'term-send-input #'protect-term-prompt)
+#+END_SRC
+
 ** Multi-Term
 If for some reason I need ~ansi-term~ instead of ~shell-mode~, and for some
 reason I need multiple, I have this plugin.
@@ -627,6 +674,7 @@ reason I need multiple, I have this plugin.
    "C-j" 'evil-window-down
    "C-k" 'evil-window-up))
 #+END_SRC
+
 * Tramp
 ~tramp~ is a truly one of the great gems of Emacs. It allows me to
 access remote files as if they were part of my filesystem within
@@ -698,7 +746,7 @@ given Nix environment.
       (when (interactive-p) (message (if running? "yes" "no")))
       running?))
 
-  (cl-defun nix-daemon (&optional (theme 'doom-opera))
+  (cl-defun nix-daemon (&optional (theme 'doom-nord-light))
     "Start a daemon and frame in the current nix project."
     (interactive)
     (if (nix-current-sandbox)
@@ -738,6 +786,7 @@ given Nix environment.
                    (concat "\"emacsclient --create-frame --socket-name=" socket-name "\""))))
       (error "No nix environment was found")))
 #+END_SRC
+
 * Colors, Themes, Fonts, and other aesthetic settings
 ** Doom Themes
 Doom Emacs looks good. I want those themes.
@@ -751,12 +800,36 @@ Doom Emacs looks good. I want those themes.
 I also use the ~poet~ theme, but I install it through the built-in
 package manager rather than through ~use-package~ due to a bug.
 ** Theme
-The theme loaded depends upon time of day.
+#+BEGIN_SRC emacs-lisp
+  (if (display-graphic-p)
+      (load-theme 'doom-one-light t)
+    (disable-all-themes))
+
+#+END_SRC
+And this is a helper function to switch themes and disable old ones.
+#+BEGIN_SRC emacs-lisp
+  (defun disable-all-themes ()
+    (interactive)
+    (mapcar #'disable-theme custom-enabled-themes))
+
+  (defun disable-most-recent-theme ()
+    (interactive)
+    (disable-theme (first custom-enabled-themes)))
+
+  (defun switch-theme (theme &optional no-confirm no-enable)
+    (interactive
+     (list
+      (intern (completing-read "Load custom theme: "
+                   (mapcar 'symbol-name
+                       (custom-available-themes))))
+      nil nil))
+    (disable-most-recent-theme)
+    (load-theme theme t))
+#+END_SRC
+**** COMMENT time-based theme
+The theme loaded depends upon time of day. Causes slight face issues.
 #+NAME: themes
 #+BEGIN_SRC emacs-lisp
-  (unless (display-graphic-p)
-      (mapcar #'disable-theme custom-enabled-themes))
-
   (use-package theme-changer
     :after doom-themes
     :config
@@ -803,10 +876,13 @@ speed of recursive search.
   (use-package fzf)
 #+END_SRC
 
-This function opens a window
+This function opens a directory using ~fzf/start~.
 #+BEGIN_SRC emacs-lisp
   (defun fzf-directory-from-home () (interactive)
          (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
+
+  (defun fzf-directory-from (directory) (interactive "D")
+         (fzf/start directory "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
 #+END_SRC
 ** File navigation
 I prefer to follow symbolic links under version control.
@@ -829,20 +905,20 @@ Repeated invocations toggle between the two most recently open buffers."
 ** Autocompletion
 I, like many others, use ~company~.
 #+BEGIN_SRC emacs-lisp
-(use-package company
-  :delight
-  :config
-  (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
-  (add-to-list 'completion-styles 'initials t)
-  ;;(add-to-list 'completion-styles 'substring t)
-  (define-key company-active-map (kbd "M-.") 'company-show-location)
-  (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
-  ;;(setq company-dabbrev-downcase 0)
-  (setq company-minimum-prefix-length 2)
-  (setq company-idle-delay 0)
-  (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
-                                             (setq company-minimum-prefix-length 3))))
-  (global-company-mode nil))
+  (use-package company
+    :delight
+    :config
+    (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
+    (add-to-list 'completion-styles 'initials t)
+    ;;(add-to-list 'completion-styles 'substring t)
+    (define-key company-active-map (kbd "M-.") 'company-show-location)
+    (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
+    ;;(setq company-dabbrev-downcase 0)
+    (setq company-minimum-prefix-length 2)
+    (setq company-idle-delay 0)
+    (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
+                                               (setq company-minimum-prefix-length 3))))
+    (global-company-mode nil))
 #+END_SRC
 ** Linting
 I also, like many others, use ~flycheck~.
@@ -1318,7 +1394,7 @@ Save cursor position in a file between sessions.
 #+BEGIN_SRC emacs-lisp
 (save-place-mode 1)
 #+END_SRC
-* After startup
+* COMMENT After startup
 Load themes after everything else because it seems that the faces are
 incorrect otherwise.
 #+BEGIN_SRC emacs-lisp :noweb strip-export
