@@ -374,9 +374,7 @@ Usage:
     "w" 'evil-delete-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
-    "p" '(lambda () (interactive)
-           ;; ",p" to fuzzy find directory from home directory
-           (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null")) 
+    "p" 'fzf-directory-from-home
     "o" 'occur 
     "i" 'imenu
     "RET" (kbd ":noh"))
@@ -799,10 +797,16 @@ project.
   (helm-projectile-on))
 #+END_SRC
 ** FZF
-As powerful as ~projectile~ and ~helm~ are, ~fzf~ still takes the cake on
+As powerful as ~projectile~ is, ~fzf~ still takes the cake on
 speed of recursive search.
 #+BEGIN_SRC emacs-lisp
-(use-package fzf)
+  (use-package fzf)
+#+END_SRC
+
+This function opens a window
+#+BEGIN_SRC emacs-lisp
+  (defun fzf-directory-from-home () (interactive)
+         (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
 #+END_SRC
 ** File navigation
 I prefer to follow symbolic links under version control.
