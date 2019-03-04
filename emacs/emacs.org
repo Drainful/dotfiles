@@ -28,6 +28,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#normal-mode][Normal Mode]]
   - [[#visual-mode][Visual Mode]]
   - [[#leader][Leader]]
+  - [[#other-commands][Other Commands]]
 - [[#user-interface-preferences][User interface preferences]]
   - [[#startup-screen][Startup screen]]
   - [[#mode-line][Mode line]]
@@ -338,27 +339,27 @@ then some helper functions to create functions to create subleader
 keybindings through ~general-create-definer~. Key-based replacements are
 also generated for [[#which-key][ ~which-key~ ]].
 #+BEGIN_SRC emacs-lisp
-(cl-defun leader-prefix (str &optional (prefix leader-key))
-  "Append a leader key to the given string"
-  (concat prefix " " str))
+  (cl-defun leader-prefix (str &optional (prefix leader-key))
+    "Append a leader key to the given string"
+    (concat prefix " " str))
 
-(cl-defmacro define--subleader (key name general-definer-name &key (leader leader-key))
-  "Both create a general definer, and a which-key replacement for the given subleader."
-  `(progn
-     (which-key-add-key-based-replacements
-       (leader-prefix ,key ,leader) ,name)
-     (general-create-definer ,general-definer-name
-       :prefix (leader-prefix ,key ,leader))))
+  (cl-defmacro define--subleader (key name general-definer-name &key (leader leader-key))
+    "Both create a general definer, and a which-key replacement for the given subleader."
+    `(progn
+       (which-key-add-key-based-replacements
+         (leader-prefix ,key ,leader) ,name)
+       (general-create-definer ,general-definer-name
+         :prefix (leader-prefix ,key ,leader))))
 
-;; the format for the input of this function is inspired by general's
-;; easy to use functions.
-(cl-defmacro define-subleader (&rest args &key (leader leader-key) &allow-other-keys)
-  "Both create a general definer, and a which-key replacement for
-the given subleader. Accepts arguments in threes with no
-delimiter."
-  `(progn ,@(mapcar '(lambda (elt)
-                       `(define--subleader ,@elt :leader ,leader))
-                    (seq-partition (remove-keyword-args args) 3))))
+  ;; the format for the input of this function is inspired by general's
+  ;; easy to use functions.
+  (cl-defmacro define-subleader (&rest args &key (leader leader-key) &allow-other-keys)
+    "Both create a general definer, and a which-key replacement for
+  the given subleader. Accepts arguments in threes with no
+  delimiter."
+    `(progn ,@(mapcar (lambda (elt)
+                        `(define--subleader ,@elt :leader ,leader))
+                      (seq-partition (remove-keyword-args args) 3))))
 #+END_SRC
 Usage:
 #+BEGIN_SRC emacs-lisp
@@ -371,7 +372,7 @@ Usage:
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
     "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
-    "w" 'evil-delete-buffer              ; ",Q" to kill buffer and window. equivalent of :bd<cr>.
+    "w" 'evil-delete-buffer              ; ",w" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "p" 'fzf-directory-from-home
@@ -384,6 +385,16 @@ Usage:
 #+BEGIN_SRC emacs-lisp
 (leader-key-def 'visual
   "c" 'comment-or-uncomment-region)
+#+END_SRC
+** Other Commands
+A command to configure my operating system
+#+BEGIN_SRC emacs-lisp
+  (defun nixconf () (interactive) (find-file "/sudo::/etc/nixos/configuration.nix"))
+#+END_SRC
+
+A command to configure emacs
+#+BEGIN_SRC emacs-lisp
+  (defun econf () (interactive) (find-file "~/.dotfiles/emacs/emacs.org"))
 #+END_SRC
 * User interface preferences
 These are settings related to the basic user interface of Emacs.
@@ -417,6 +428,31 @@ which integrates well across Emacs.
   :delight
   :bind (("M-x" . helm-M-x))
   :config (helm-mode t))
+#+END_SRC
+*** COMMENT Helper functions
+#+BEGIN_SRC emacs-lisp
+  (defun helm-rec-find-directory-old (&optional starting-directory)
+    (interactive)
+    (let ((default-directory (or starting-directory default-directory)))
+      (find-file
+       (helm :sources (helm-build-sync-source "directories"
+                        :candidates (lambda ()
+                                      (split-string
+                                        (shell-command-to-string "find . -type d -not -path '*/\.*'") "\n" t))
+                        :fuzzy-match t)
+             :prompt "Open directory: "
+             :buffer "*helm find directory*"))))
+
+  (defun rec-find-directory (&optional starting-directory)
+    (interactive)
+    (let ((default-directory (or starting-directory default-directory)))
+      (find-file
+       (completing-read "Open directory: "
+                        (split-string (shell-command-to-string "find . -type d") "\n" t)))))
+  (defun helm-rec-find-directory ()
+    (interactive)
+    (helm-find (list "-type d -not -path '*/\.*'")))
+
 #+END_SRC
 ** Hideshow
 ~hideshow~ mode provides vim-like folds (but not as good).
@@ -486,9 +522,10 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
 This plugin shows the available keys after a partially completed
 key press. ~which-key~ key replacements are generated [[#leader][here]].
 #+BEGIN_SRC emacs-lisp
-(use-package which-key
-  :config
-  (which-key-mode t))
+  (use-package which-key
+    :delight
+    :config
+    (which-key-mode t))
 #+END_SRC
 * Shell
 ** Eshell
@@ -522,6 +559,9 @@ primary shell.
 
   (defun eshell/fh ()
     (eshell/fd "~"))
+
+  (defun eshell/econf () (econf))
+  (defun eshell/nixconf () (nixconf))
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -801,6 +841,10 @@ I also use the ~poet~ theme, but I install it through the built-in
 package manager rather than through ~use-package~ due to a bug.
 ** Theme
 #+BEGIN_SRC emacs-lisp
+  (defun disable-all-themes ()
+    (interactive)
+    (mapcar #'disable-theme custom-enabled-themes))
+
   (if (display-graphic-p)
       (load-theme 'doom-one-light t)
     (disable-all-themes))
@@ -808,25 +852,20 @@ package manager rather than through ~use-package~ due to a bug.
 #+END_SRC
 And this is a helper function to switch themes and disable old ones.
 #+BEGIN_SRC emacs-lisp
-  (defun disable-all-themes ()
-    (interactive)
-    (mapcar #'disable-theme custom-enabled-themes))
-
   (defun disable-most-recent-theme ()
     (interactive)
     (disable-theme (first custom-enabled-themes)))
 
-  (defun switch-theme (theme &optional no-confirm no-enable)
+  (defun switch-theme (theme)
     (interactive
      (list
       (intern (completing-read "Load custom theme: "
                    (mapcar 'symbol-name
-                       (custom-available-themes))))
-      nil nil))
+                       (custom-available-themes))))))
     (disable-most-recent-theme)
     (load-theme theme t))
 #+END_SRC
-**** COMMENT time-based theme
+*** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
 #+NAME: themes
 #+BEGIN_SRC emacs-lisp
@@ -905,20 +944,20 @@ Repeated invocations toggle between the two most recently open buffers."
 ** Autocompletion
 I, like many others, use ~company~.
 #+BEGIN_SRC emacs-lisp
-  (use-package company
-    :delight
-    :config
-    (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
-    (add-to-list 'completion-styles 'initials t)
-    ;;(add-to-list 'completion-styles 'substring t)
-    (define-key company-active-map (kbd "M-.") 'company-show-location)
-    (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
-    ;;(setq company-dabbrev-downcase 0)
-    (setq company-minimum-prefix-length 2)
-    (setq company-idle-delay 0)
-    (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
-                                               (setq company-minimum-prefix-length 3))))
-    (global-company-mode nil))
+    (use-package company
+      :delight
+      :config
+      (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
+      (add-to-list 'completion-styles 'initials t)
+      ;;(add-to-list 'completion-styles 'substring t)
+      (define-key company-active-map (kbd "M-.") 'company-show-location)
+      (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
+      ;;(setq company-dabbrev-downcase 0)
+      (setq company-minimum-prefix-length 2)
+      (setq company-idle-delay 0)
+      (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
+                                                 (setq company-minimum-prefix-length 3))))
+      (global-company-mode nil))
 #+END_SRC
 ** Linting
 I also, like many others, use ~flycheck~.
@@ -946,32 +985,31 @@ and a leader shortcut.
 ** Snippets
 ~yasnippet~ allows the creation of snippets to automate repetitive typing.
 #+BEGIN_SRC emacs-lisp
-(use-package yasnippet
-  :config
-  (yas-global-mode t)
-  ;; (setq yas-snippet-dirs
-  ;;       '("~/.dotfiles/emacs/snippets"))
-  ;; (general-define-key :keymap 'yas-minor-mode-map
-  ;;                     "<tab>" nil
-  ;;                     "TAB" nil)
-  ;; (general-define-key :states 'insert
-  ;;                     :keymap 'yas-minor-mode-map
-  ;;                     "<C-return>" #'yas-expand)
-  ;; (general-define-key :keymap 'yas-keymap
-  ;;                     "<tab>" nil
-  ;;                     "TAB" nil
-  ;;                     "<backtab>" nil
-  ;;                     "<shift tab>" nil) 
-  ;; (general-define-key :states 'insert
-  ;;                      :keymap 'yas-keymap
-  ;;                      "C-n" 'yas-next-field-or-maybe-expand
-  ;;                      "C-p" 'yas-prev-field)
-  )
+  (use-package yasnippet
+    :delight yas-minor-mode
+    :config
+    (yas-global-mode t)
+    (setq yas-snippet-dirs
+          (list "~/.dotfiles/emacs/snippets" yasnippet-snippets-dir)))
 #+END_SRC
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+BEGIN_SRC emacs-lisp
 (use-package yasnippet-snippets
   :quelpa (:stable t))
+#+END_SRC
+~yasnippet~ can be used as a backend for ~company~.
+#+BEGIN_SRC emacs-lisp
+  ;; https://github.com/syl20bnr/spacemacs/pull/179
+  (defvar company-mode/enable-yas t
+    "Enable yasnippet for all backends.")
+
+  (defun company-mode/backend-with-yas (backend)
+    (if (or (not company-mode/enable-yas) (and (listp backend) (member 'company-yasnippet backend)))
+        backend
+      (append (if (consp backend) backend (list backend))
+              '(:with company-yasnippet))))
+
+  (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
 #+END_SRC
 ** Language client features
 The language server protocol can provide IDE-like features for many
@@ -1244,6 +1282,7 @@ Enable ~flycheck~
 literate source files like this one.
 #+BEGIN_SRC emacs-lisp
   (use-package org
+    :delight org-indent-mode
     ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
     :config
     (setq header-line-format " ")
