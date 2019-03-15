@@ -1,0 +1,6 @@
+(defmacro silent (&body body)
+  `(with-open-file (*standard-output*
+                    "/dev/null"
+                    :direction :output
+                    :if-exists :supersede)
+     ,@body))

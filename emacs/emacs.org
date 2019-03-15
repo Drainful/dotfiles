@@ -1,11 +1,5 @@
 #+TITLE: Emacs Configuration
 
-Emacs is a truly fantastic piece of software. Part REPL, part
-with Emacs, slowly carving it into the perfect interface for allmost
-everything my computer has to offer; and yet I feel as if I have only
-just begun to scratch the surface. With that said, the remainder of
-this file constitutes my emacs configuration. Please enjoy!
-
 * Table of contents                                                     :TOC:
 - [[#startup][Startup]]
   - [[#lexical-scope][Lexical Scope]]
@@ -24,6 +18,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#the-creation-of-text-objects][The creation of text objects]]
 - [[#keybindings-and-commands][Keybindings and commands]]
   - [[#generalel][General.el]]
+  - [[#hydrael][Hydra.el]]
   - [[#commands][Commands]]
   - [[#normal-mode][Normal Mode]]
   - [[#visual-mode][Visual Mode]]
@@ -45,6 +40,7 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#eshell][Eshell]]
   - [[#comint-mode][Comint Mode]]
   - [[#shell-1][Shell]]
+  - [[#term-mode][Term mode]]
   - [[#multi-term][Multi-Term]]
 - [[#tramp][Tramp]]
 - [[#emacs-clientserver-settings][Emacs client/server settings]]
@@ -82,7 +78,6 @@ this file constitutes my emacs configuration. Please enjoy!
   - [[#nix][Nix]]
   - [[#bash][Bash]]
 - [[#excessive-bs][Excessive BS]]
-  - [[#spotify][Spotify]]
   - [[#emacs-window-manager][Emacs window manager]]
 - [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
@@ -281,6 +276,11 @@ commands. It integrates well with ~evil~.
 (use-package general)
 (general-evil-setup)
 #+END_SRC
+** Hydra.el
+~hydra~ is useful to reduce repetitive keybindings.
+#+BEGIN_SRC emacs-lisp
+(use-package hydra)
+#+END_SRC
 ** Commands
 I don't have too much use for ~evil~ commands, but early on I created a
 couple.
@@ -449,6 +449,7 @@ which integrates well across Emacs.
       (find-file
        (completing-read "Open directory: "
                         (split-string (shell-command-to-string "find . -type d") "\n" t)))))
+
   (defun helm-rec-find-directory ()
     (interactive)
     (helm-find (list "-type d -not -path '*/\.*'")))
@@ -668,8 +669,18 @@ I prefer ~shell-mode~ to ~ansi-term~ because ~comint-mode~, the mode which
      "C-j" 'evil-window-down
      "C-k" 'evil-window-up)
 #+END_SRC
-
-** COMMENT Term mode
+I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
+#+BEGIN_SRC emacs-lisp
+  (push (cons "\\*shell\\*" display-buffer--same-window-action) display-buffer-alist)
+#+END_SRC
+** Term mode
+Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~ to escape.
+#+BEGIN_SRC emacs-lisp
+  (general-define-key :states 'insert
+                      :keymaps 'term-raw-map
+                      "C-g" 'term-send-esc)
+#+END_SRC
+*** COMMENT Protect Prompt
 This code was the restult of a bad misunderstanding of the function of ~ansi-term~.
 #+BEGIN_SRC emacs-lisp
   (add-hook 'term-mode-hook (lambda () (setq-local term-prompt-regexp "\\[.*\\]\\$ [\n]*")))
@@ -885,9 +896,14 @@ I use 4 spaces by default.
 #+END_SRC
 * Moving around, buffers, windows and splits
 ** Winner Mode
-~winner-mode~ lets me switch between window configurations with C-c left and right.
+~winner-mode~ lets me switch between window configurations with emacs-like undo capabilities.
+I abbreviate the command with ~hydra~.
 #+BEGIN_SRC emacs-lisp
-(winner-mode 1)
+  (winner-mode 1)
+
+  (defhydra hydra-winner (global-map "C-c")
+    "Window configuration history"
+    ("u" winner-undo))
 #+END_SRC
 ** Projectile
 ~projectile~ is a powerful package which facilitates navigation within a
@@ -928,6 +944,17 @@ I prefer to follow symbolic links under version control.
 #+BEGIN_SRC emacs-lisp
 (setq vc-follow-symlinks t)
 #+END_SRC
+
+*** COMMENT Buffer rotating
+I bind tab and shift-tab to functions which switch to the previous and
+next buffer with content respectively.
+#+BEGIN_SRC emacs-lisp
+  (defun content-buffer-p (buffer))
+  (general-define-key :states 'normal :keymaps 'override
+                      "<tab>" 'previous-buffer
+                      "<backtab>" 'next-buffer)
+#+END_SRC
+*** Buffer toggling
 This is a function and keybinding for toggling between 2
 buffers. Faster than ~,-b\r~. From [[https://emacsredux.com/blog/2013/04/28/switch-to-previous-buffer/][here]].
 #+BEGIN_SRC emacs-lisp
@@ -990,7 +1017,8 @@ and a leader shortcut.
     :config
     (yas-global-mode t)
     (setq yas-snippet-dirs
-          (list "~/.dotfiles/emacs/snippets" yasnippet-snippets-dir)))
+          (list "~/.dotfiles/emacs/snippets" yasnippet-snippets-dir))
+    (yas-reload-all))
 #+END_SRC
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+BEGIN_SRC emacs-lisp
@@ -1091,27 +1119,32 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
 *** Sly
 ~sly~ is a Common Lisp IDE for Emacs and a featureful fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
-(use-package sly
-  :quelpa (:stable t)
-  :after evil
-  :config
+  (use-package sly
+    :quelpa (:stable t)
+    :after evil
+    :config
 
-  ;; make functions for using specific lisp implementations.
-  (defmacro define-sly-lisp (name command)
-    `(defun ,name ()  (interactive)  (sly ,command)))
+    ;; make functions for using specific lisp implementations.
+    (defmacro define-sly-lisp (name command)
+      `(defun ,name ()  (interactive)  (sly ,command)))
 
-  (defmacro define-sly-lisp-defun (name fn)
-    `(defun ,name ()  (interactive)  (sly (funcall ,fn))))
+    (defmacro define-sly-lisp-defun (name fn)
+      `(defun ,name ()  (interactive)  (sly (funcall ,fn))))
 
-  ;;(define-sly-lisp-defun sbcl (lambda () (nix-executable-find (nix-current-sandbox) "sbcl")))
-  (define-sly-lisp sbcl "sbcl")
-  (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
-  (define-sly-lisp ccl "ccl")
-  (define-sly-lisp clisp "clisp")
+    ;;(define-sly-lisp-defun sbcl (lambda () (nix-executable-find (nix-current-sandbox) "sbcl")))
+    (define-sly-lisp sbcl "sbcl")
+    (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
+    (define-sly-lisp ccl "ccl")
+    (define-sly-lisp clisp "clisp")
 
-  (setq inferior-lisp-program "sbcl")
-  ;; Open sly debug buffers in emacs state, rather than evil state.
-  (add-to-list 'evil-emacs-state-modes 'sly-db-mode))
+    (setq inferior-lisp-program "sbcl")
+    ;; Open sly debug buffers in emacs state, rather than evil state.
+    (add-to-list 'evil-emacs-state-modes 'sly-db-mode)
+    (add-to-list 'helm-completing-read-handlers-alist
+                 '(sly-describe-symbol . nil)
+                 '(sly-describe-function . nil)))
+
+  
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -1305,8 +1338,24 @@ literate source files like this one.
           org-src-ask-before-returning-to-edit-buffer nil)
     (general-define-key :states 'normal :mode 'org-mode-map
                         "C-`" 'org-edit-special)
+
+                        ;; "C-j" 'evil-window-down
+                        ;; "C-k" 'evil-window-up
+    ;; (define-key org-mode-map (kbd "<C-j>") nil)
+    ;; (define-key org-mode-map (kbd "<C-k>") nil)
     (leader-key-def 'normal org-src-mode-map
-      "w" 'org-edit-src-exit))
+      "w" 'org-edit-src-exit)
+    (add-hook 'org-mode-hook (lambda ()
+                               (general-define-key :states 'normal :mode 'org-mode-map
+                                                   "C-j" 'evil-window-down
+                                                   "C-k" 'evil-window-up))))
+#+END_SRC
+A hydra to jump between org-babel source blocks:
+#+BEGIN_SRC emacs-lisp
+  (defhydra hydra-org-babel-source-block-jump (org-mode-map "C-c C-v")
+      "Jump between org babel source blocks"
+      ("n" org-babel-next-src-block)
+      ("p" org-babel-previous-src-block))
 #+END_SRC
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
@@ -1341,12 +1390,21 @@ I use a zero width space here to escape the underscore
 #+END_COMMENT
 Enter mode for bash on .profile, .bash_​aliases, and .inputrc
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'auto-mode-alist '(".profile\\'" . shell-script-mode))
-(add-to-list 'auto-mode-alist '(".bash_aliases\\'" . shell-script-mode))
-(add-to-list 'auto-mode-alist '(".inputrc\\'" . shell-script-mode))
+  (auto-mode-add 'shell-script-mode
+                 ".profile\\'"
+                 ".bash_aliases\\'"
+                 ".inputrc\\'")
+#+END_SRC
+*** Auto Mode
+Enter ~common-lisp-mode~ in the following files
+#+BEGIN_SRC emacs-lisp
+  (auto-mode-add 'common-lisp-mode
+       ".sbclrc\\'"
+       ".lisprc\\'"
+       ".otherlisprc\\'")
 #+END_SRC
 * Excessive BS
-** Spotify
+** COMMENT Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package spot4e :load-path "~/code/elisp/spot4e"
@@ -1443,27 +1501,35 @@ incorrect otherwise.
 Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
 #+BEGIN_SRC emacs-lisp
-(defun remove-keyword-args (list)
-  "Removes keyword arguments from the given list"
-  (car (general--remove-keyword-args list)))
+  (defun auto-mode-add (mode &rest filenames)
+    "Add a number of file name patterns to the given mode in
+  auto-mode-alist"
+    (mapcar (lambda (name)
+              (add-to-list 'auto-mode-alist
+                           `(,name . ,mode)))
+            filenames))
 
-(defun reload-init-file ()
-  "Load all elisp from 'user-init-file'."
-  (interactive)
-  (load-file user-init-file))
+  (defun remove-keyword-args (list)
+    "Remove keyword arguments from the given list"
+    (car (general--remove-keyword-args list)))
 
-(defun move-line-up ()
-  "Move up the current line."
-  (interactive)
-  (transpose-lines 1)
-  (forward-line -2)
-  (indent-according-to-mode))
+  (defun reload-init-file ()
+    "Load all elisp from 'user-init-file'."
+    (interactive)
+    (load-file user-init-file))
 
-(defun move-line-down ()
-  "Move down the current line."
-  (interactive)
-  (forward-line 1)
-  (transpose-lines 1)
-  (forward-line -1)
-  (indent-according-to-mode))
+  (defun move-line-up ()
+    "Move up the current line."
+    (interactive)
+    (transpose-lines 1)
+    (forward-line -2)
+    (indent-according-to-mode))
+
+  (defun move-line-down ()
+    "Move down the current line."
+    (interactive)
+    (forward-line 1)
+    (transpose-lines 1)
+    (forward-line -1)
+    (indent-according-to-mode))
 #+END_SRC

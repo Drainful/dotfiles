@@ -1,5 +1,5 @@
-#name : Org Emacs Lisp source block
-#key :<x
+#name : emacs lisp
+#key :<el
 # --
 #+BEGIN_SRC emacs-lisp
 $0
