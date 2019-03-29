@@ -67,9 +67,10 @@
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
   - [[#common-lisp][Common Lisp]]
+  - [[#clojure][Clojure]]
   - [[#scheme][Scheme]]
   - [[#shen][Shen]]
-  - [[#clojure][Clojure]]
+  - [[#prolog][Prolog]]
   - [[#cccppcppsepples][C/C++/CPP/Cpp/Sepples]]
   - [[#julia][Julia]]
   - [[#haskell][Haskell]]
@@ -903,7 +904,8 @@ I abbreviate the command with ~hydra~.
 
   (defhydra hydra-winner (global-map "C-c")
     "Window configuration history"
-    ("u" winner-undo))
+    ("u" winner-undo)
+    ("r" winner-redo))
 #+END_SRC
 ** Projectile
 ~projectile~ is a powerful package which facilitates navigation within a
@@ -1120,7 +1122,8 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
 ~sly~ is a Common Lisp IDE for Emacs and a featureful fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
   (use-package sly
-    :quelpa (:stable t)
+    ;; :quelpa (:stable t)
+    :load-path "~/code/elisp/sly"
     :after evil
     :config
 
@@ -1141,11 +1144,13 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
     ;; Open sly debug buffers in emacs state, rather than evil state.
     (add-to-list 'evil-emacs-state-modes 'sly-db-mode)
     (add-to-list 'helm-completing-read-handlers-alist
+                 '(sly-read-symbol-name . nil))
+    ;; Avoid using helm when bugget at sly-read-symbol-name functions
+    (add-to-list 'helm-completing-read-handlers-alist
                  '(sly-describe-symbol . nil)
                  '(sly-describe-function . nil)))
-
-  
 #+END_SRC
+
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
 (leader-key-def 'normal sly-mode-map
@@ -1162,6 +1167,33 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
   "f" 'sly-eval-defun)
 (eval-key-def 'visual 'sly-mode-map
   "r" 'sly-eval-region)
+#+END_SRC
+** Clojure
+A popular lisp on the JVM.
+#+BEGIN_SRC emacs-lisp
+(use-package clojure-mode)
+#+END_SRC
+*** Cider
+It's like ~slime~ for Clojure! Kinda.
+#+BEGIN_SRC emacs-lisp
+(use-package cider
+  :config
+  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
+  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
+
+;; some visual flare
+(use-package spinner :quelpa (:stable t))
+#+END_SRC
+*** Keybindings
+#+BEGIN_SRC emacs-lisp
+(leader-key-def 'normal clojure-mode-map
+  "s" 'cider-jack-in
+  "z" 'cider-switch-to-repl-buffer
+  "a" 'cider-close-ancillary-buffers)
+
+(eval-key-def 'normal clojure-mode-map
+  "b" 'cider-eval-buffer
+  "f" 'cider-eval-defun-at-point)
 #+END_SRC
 ** Scheme
 *** Geiser
@@ -1213,32 +1245,23 @@ things.
 (eval-key-def 'visual 'shen-mode-map
   "r" 'shen-eval-region)
 #+END_SRC
-** Clojure
-A popular lisp on the JVM.
-#+BEGIN_SRC emacs-lisp
-(use-package clojure-mode)
-#+END_SRC
-*** Cider
-It's like ~slime~ for Clojure! Kinda.
-#+BEGIN_SRC emacs-lisp
-(use-package cider
-  :config
-  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
-  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
-
-;; some visual flare
-(use-package spinner :quelpa (:stable t))
-#+END_SRC
+** Prolog
+I use the built-in prolog mode.
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-(leader-key-def 'normal clojure-mode-map
-  "s" 'cider-jack-in
-  "z" 'cider-switch-to-repl-buffer
-  "a" 'cider-close-ancillary-buffers)
+  (leader-key-def 'normal prolog-mode-map
+    "z" 'switch-to-prolog
+    "c" 'prolog-compile-buffer)
 
-(eval-key-def 'normal clojure-mode-map
-  "b" 'cider-eval-buffer
-  "f" 'cider-eval-defun-at-point)
+  (start-key-def 'normal prolog-mode-map
+    "s" 'run-prolog)
+
+  (eval-key-def 'normal prolog-mode-map
+    "b" 'prolog-consult-buffer
+    "f" 'prolog-consult-predicate)
+
+  (eval-key-def 'visual 'prolog-mode-map
+    "r" 'prolog-consult-region)
 #+END_SRC
 ** C/C++/CPP/Cpp/Sepples
 *** CQuery
