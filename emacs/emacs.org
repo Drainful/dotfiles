@@ -961,31 +961,32 @@ project.
                                           ; directory.
     (setq skeletor-user-directory (dotfiles "emacs/skeletor/"))
 
-    (defun skeletor-create-project-here (&rest args)
+    (defun skeletor-create-project-here ()
       "Create a skeletor project in the current directory."
       (interactive)
       (let ((skeletor-project-directory default-directory))
-        (skeletor-create-project args)))
+        (call-interactively 'skeletor-create-project)))
 
     ;; global substitutions
     (add-to-list 'skeletor-global-substitutions
                  '("__AUTHOR__" . "Adrian Fullmer"))
 
+    (defun setup--lorri (dir)
+      (let ((default-directory dir))
+        (skeletor-shell-command "direnv allow")
+        (projectile-lorri-watch)))
+
     ;; Custom project types
     (skeletor-define-template "generic"
       :title "Generic Project"
-      :after-creation (lambda (dir)
-                        (skeletor-shell-command "direnv allow")
-                        (projectile-lorri-watch dir)))
+      :after-creation setup--lorri)
 
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
       :default-license "MIT"
       :substitutions
       '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
-      :after-creation (lambda (dir)
-                        (skeletor-shell-command "direnv allow")
-                        (projectile-lorri-watch)))
+      :after-creation setup--lorri)
 
     ;;keybindings
     (project-key-def 'normal
@@ -1158,9 +1159,9 @@ used seamlessly.
       "Begin an inferior process to watch the current projectile
   project with lorri."
       (interactive)
-      (let ((process-name (concat "Lorri "
-                                  (projectile-project-name)))
-            (default-directory project-directory))
+      (let* ((project-name (final-directory-name project-directory))
+             (process-name (concat "Lorri [" project-name "]"))
+             (default-directory project-directory))
         (if (file-exists-p "shell.nix")
             (if (not (get-process process-name))
                 (progn
@@ -1170,9 +1171,9 @@ used seamlessly.
                   (start-process-shell-command
                    process-name (earmuffs process-name)
                    "lorri watch")
-                  (message (concat "Lorri watching " (projectile-project-name))))
-              (error (concat "Lorri is already watching " (projectile-project-name))))
-          (error (concat "There is no shell.nix for " (projectile-project-name))))))
+                  (message (concat "Lorri watching " project-name)))
+              (error (concat "Lorri is already watching " project-name)))
+          (error (concat "There is no shell.nix for " project-name)))))
 
     (project-key-def 'normal
       "d" 'direnv-update-directory-environment

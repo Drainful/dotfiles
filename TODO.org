@@ -11,13 +11,15 @@
 - Lorri auto-watch on entering a project (if not already watching) DONE
 - Eventually set up direnv auto-refresh?
 - Definitely find a way to automate direnv allow. Part of skeletor probs.
-- Skeletor project skeletons set up for
-  - Generic project with Nix and direnv (choose directory manually)
-  - Common Lisp
-  - C
-  - C++
-  - Rust
-  - Prolog
+- Skeletor 
+  - contribute the subdirectory feature, ~:subdir~  keyword.
+  - project skeletons set up for
+    - Generic project with Nix and direnv (choose directory manually)
+    - Common Lisp DONE
+    - C
+    - C++
+    - Rust
+    - Prolog
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗
