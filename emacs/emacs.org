@@ -7,6 +7,7 @@
   - [[#filename-handlers][Filename Handlers]]
   - [[#load-helper-functions][Load helper functions]]
   - [[#load-secrets][Load secrets]]
+  - [[#constants][Constants]]
 - [[#packages][Packages]]
   - [[#package-initialization][Package Initialization]]
   - [[#use-package][Use-Package]]
@@ -52,7 +53,7 @@
 - [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
-  - [[#project-settings][Project Settings]]
+  - [[#projects][Projects]]
   - [[#fzf][FZF]]
   - [[#file-navigation][File navigation]]
 - [[#programming-tools-and-settings][Programming tools and settings]]
@@ -130,6 +131,14 @@ Secrets are stored in ~~/.emacs.d/.secrets.el~.
   (let ((secret.el (expand-file-name ".secrets.el" user-emacs-directory)))
     (when (file-exists-p secret.el)
       (load secret.el)))
+#+END_SRC
+** Constants
+I create a few constants for later use
+#+BEGIN_SRC emacs-lisp
+  ;; Directory containing my dotfiles.
+  (defconst me/dotfiles "~/.dotfiles/")
+  ;; directory containing my nixos configutation
+  (defconst me/nixos-directory "/sudo::/etc/nixos/") 
 #+END_SRC
 * Packages
 ** Package Initialization
@@ -374,7 +383,7 @@ Usage:
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
-    "q" 'kill-this-buffer              ; ",q" to kill buffer not window.
+    "q" '(lambda () (interactive) (kill-buffer (current-buffer)))              ; ",q" to kill buffer not window.
     "w" 'evil-delete-buffer              ; ",w" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
@@ -392,12 +401,12 @@ Usage:
 ** Other Commands
 A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
-  (defun nixconf () (interactive) (find-file "/sudo::/etc/nixos/configuration.nix"))
+  (defun nixconf () (interactive) (find-file (concat me/nixos-directory "configuration.nix")))
 #+END_SRC
 
 A command to configure emacs
 #+BEGIN_SRC emacs-lisp
-  (defun econf () (interactive) (find-file "~/.dotfiles/emacs/emacs.org"))
+  (defun econf () (interactive) (find-file (dotfiles "emacs/emacs.org")))
 #+END_SRC
 * User interface preferences
 These are settings related to the basic user interface of Emacs.
@@ -427,10 +436,15 @@ blurbs.
 ~helm~ is a framework for incremental narrowing searching interfaces
 which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
-(use-package helm
-  :delight
-  :bind (("M-x" . helm-M-x))
-  :config (helm-mode t))
+  (use-package helm
+    :delight
+    :bind (("M-x" . helm-M-x))
+    :config
+    (helm-mode t)
+
+    ;; Do not create a new frame with helm completion.
+    (setq helm-show-completion-display-function
+          #'helm-show-completion-default-display-function))
 #+END_SRC
 *** COMMENT Helper functions
 #+BEGIN_SRC emacs-lisp
@@ -836,8 +850,8 @@ given Nix environment.
     "Start a frame from the relevant nix Emacs daemon in the current nix project."
     (interactive)
     (if (nix-current-sandbox)
-        (let ((default-directory (nix-current-sandbox))
-              (socket-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1)))
+        (let ((default-directory (file-name-directory (nix-current-sandbox)))
+              (socket-name (elt (nreverse (split-string default-directory "/")) 1)))
           (unless (nix-daemon-running-p socket-name)
             (error "The daemon is not active"))
           (start-process-shell-command
@@ -915,7 +929,8 @@ I abbreviate the command with ~hydra~.
     ("u" winner-undo)
     ("r" winner-redo))
 #+END_SRC
-** Project Settings
+** Projects
+*** Projectile
 ~projectile~ is a powerful package which facilitates navigation within a
 project.
 #+BEGIN_SRC emacs-lisp
@@ -935,6 +950,46 @@ project.
   (use-package helm-projectile
     :config
     (helm-projectile-on))
+#+END_SRC
+*** Skeletor
+~skeletor~ is a project skeleton package which helps me get off the ground faster.
+#+BEGIN_SRC emacs-lisp
+  (use-package skeletor
+    :config
+    (setq skeletor-project-directory "~/code/") ; by default, put the
+                                          ; project in the ~/code
+                                          ; directory.
+    (setq skeletor-user-directory (dotfiles "emacs/skeletor/"))
+
+    (defun skeletor-create-project-here (&rest args)
+      "Create a skeletor project in the current directory."
+      (interactive)
+      (let ((skeletor-project-directory default-directory))
+        (skeletor-create-project args)))
+
+    ;; global substitutions
+    (add-to-list 'skeletor-global-substitutions
+                 '("__AUTHOR__" . "Adrian Fullmer"))
+
+    ;; Custom project types
+    (skeletor-define-template "generic"
+      :title "Generic Project"
+      :after-creation (lambda (dir)
+                        (skeletor-shell-command "direnv allow")
+                        (projectile-lorri-watch dir)))
+
+    (skeletor-define-template "common-lisp"
+      :title "Common Lisp Project"
+      :default-license "MIT"
+      :substitutions
+      '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
+      :after-creation (lambda (dir)
+                        (skeletor-shell-command "direnv allow")
+                        (projectile-lorri-watch)))
+
+    ;;keybindings
+    (project-key-def 'normal
+      "s" 'skeletor-create-project-here))
 #+END_SRC
 ** FZF
 As powerful as ~projectile~ is, ~fzf~ still takes the cake on
@@ -1029,7 +1084,7 @@ and a leader shortcut.
     :config
     (yas-global-mode t)
     (setq yas-snippet-dirs
-          (list "~/.dotfiles/emacs/snippets" yasnippet-snippets-dir))
+          (list (dotfiles "emacs/snippets") yasnippet-snippets-dir))
     (yas-reload-all))
 #+END_SRC
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
@@ -1628,4 +1683,8 @@ Various small functions which are evaluated before anything else in the file.
     (transpose-lines 1)
     (forward-line -1)
     (indent-according-to-mode))
+
+  (defun dotfiles (path)
+    "Return path relative to the dotfiles directory"
+    (concat me/dotfiles path))
 #+END_SRC
