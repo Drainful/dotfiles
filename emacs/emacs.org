@@ -80,7 +80,7 @@
   - [[#org][Org]]
   - [[#nix][Nix]]
   - [[#bash][Bash]]
-- [[#excessive-bs][Excessive BS]]
+- [[#excessive-nonsense][Excessive Nonsense]]
   - [[#emacs-window-manager][Emacs window manager]]
 - [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
@@ -1546,7 +1546,7 @@ Enter ~common-lisp-mode~ in the following files
        ".lisprc\\'"
        ".otherlisprc\\'")
 #+END_SRC
-* Excessive BS
+* Excessive Nonsense
 ** COMMENT Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
