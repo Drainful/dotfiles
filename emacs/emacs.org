@@ -52,7 +52,7 @@
 - [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
-  - [[#projectile][Projectile]]
+  - [[#project-settings][Project Settings]]
   - [[#fzf][FZF]]
   - [[#file-navigation][File navigation]]
 - [[#programming-tools-and-settings][Programming tools and settings]]
@@ -63,6 +63,7 @@
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
   - [[#documentation][Documentation]]
+  - [[#direnv][Direnv]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -364,10 +365,11 @@ also generated for [[#which-key][ ~which-key~ ]].
 #+END_SRC
 Usage:
 #+BEGIN_SRC emacs-lisp
-(define-subleader
-  "e" "eval" eval-key-def
-  "s" "start" start-key-def
-  "x" "xpand" xpand-key-def)
+  (define-subleader
+    "e" "eval" eval-key-def
+    "s" "start" start-key-def
+    "x" "xpand" xpand-key-def
+    "p" "project" project-key-def)
 #+END_SRC
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
@@ -376,7 +378,7 @@ Usage:
     "w" 'evil-delete-buffer              ; ",w" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
-    "p" 'fzf-directory-from-home
+    "d" 'fzf-directory-from-home
     "h" 'help
     "o" 'occur 
     "i" 'imenu
@@ -543,6 +545,10 @@ primary shell.
   (setq eshell-review-quick-commands nil)
   (setq eshell-smart-space-goes-to-end t)
   ;;(add-to-list 'eshell-visual-commands "rlwrap")
+
+  ;; Eshell modules
+  (require 'esh-module)
+  (add-to-list 'eshell-modules-list 'eshell-tramp)
 #+END_SRC
 *** Commands
 ~eshell~ commands
@@ -756,6 +762,7 @@ it's nice to be able to manage them as inferior processes.
 #+BEGIN_SRC emacs-lisp
   (cl-defun make-daemon-frame (socket-name &rest args)
     "Make a new emacs frame for the daemon with the given socket name."
+    (interactive "M" "Socket name: ")
     (apply 'start-process
            (concat socket-name "-frame")
            nil
@@ -764,6 +771,7 @@ it's nice to be able to manage them as inferior processes.
 
   (cl-defun make-daemon (socket-name &key (create-buffer t) before after (theme 'doom-nord-light))
     "Make a new emacs daemon with the given socket name."
+    (interactive "M" "Socket name: ")
     (message "Loading inferior emacs")
     (let ((daemon-name (concat socket-name "-daemon")))
       (start-process-shell-command
@@ -802,8 +810,8 @@ given Nix environment.
     "Start a daemon and frame in the current nix project."
     (interactive)
     (if (nix-current-sandbox)
-        (let* ((default-directory (nix-current-sandbox))
-               (socket-name (elt (nreverse (split-string (nix-current-sandbox) "/")) 1))
+        (let* ((default-directory (file-name-directory (nix-current-sandbox)))
+               (socket-name (final-directory-name default-directory))
                (daemon-name (concat socket-name "-daemon")))
           (if (nix-daemon-running-p socket-name) 
               (nix-daemon-frame)
@@ -907,24 +915,26 @@ I abbreviate the command with ~hydra~.
     ("u" winner-undo)
     ("r" winner-redo))
 #+END_SRC
-** Projectile
+** Project Settings
 ~projectile~ is a powerful package which facilitates navigation within a
 project.
 #+BEGIN_SRC emacs-lisp
-(use-package projectile
-  :delight "P"
-  :after general
-  :config
-  (general-define-key
-   :states 'normal
-   :keymaps 'override
- "C-p" 'helm-projectile-find-file)
-  (projectile-mode +1))
+  (use-package projectile
+    :delight "P"
+    :after general
+    :config
+    (general-define-key
+     :states 'normal
+     :keymaps 'override
+   "C-p" 'helm-projectile-find-file)
+    (project-key-def 'normal 'projectile-mode-map
+      "p" 'projectile-switch-project)
+    (projectile-mode +1))
 
-;; use helm for projectile
-(use-package helm-projectile
-  :config
-  (helm-projectile-on))
+  ;; use helm for projectile
+  (use-package helm-projectile
+    :config
+    (helm-projectile-on))
 #+END_SRC
 ** FZF
 As powerful as ~projectile~ is, ~fzf~ still takes the cake on
@@ -1073,6 +1083,56 @@ A keybinding to access documentation.
 #+BEGIN_SRC emacs-lisp
   (global-set-key [f3] (lambda () (interactive) (manual-entry (current-word))))
 #+END_SRC
+** Direnv
+Direnv allows Emacs to automatically set environment variables on a
+per-file basis. Direnv integrates with Nix as well.
+#+BEGIN_SRC emacs-lisp
+  (use-package direnv
+    :delight
+    :after projectile ; I integrate projectile with direnv here
+    :config
+    (direnv-mode)
+
+    ;; Keybindings to direnv refresh and lorri watch
+
+    (cl-defun projectile-lorri-watch (&optional (project-directory (projectile-project-root)))
+      "Begin an inferior process to watch the current projectile
+  project with lorri."
+      (interactive)
+      (let ((process-name (concat "Lorri "
+                                  (projectile-project-name)))
+            (default-directory project-directory))
+        (if (file-exists-p "shell.nix")
+            (if (not (get-process process-name))
+                (progn
+                  ;; (start-process-shell-command
+                  ;;  (concat "direnv-" process-name) nil
+                  ;;  "direnv-allow")
+                  (start-process-shell-command
+                   process-name (earmuffs process-name)
+                   "lorri watch")
+                  (message (concat "Lorri watching " (projectile-project-name))))
+              (error (concat "Lorri is already watching " (projectile-project-name))))
+          (error (concat "There is no shell.nix for " (projectile-project-name))))))
+
+    (project-key-def 'normal
+      "d" 'direnv-update-directory-environment
+      "l" 'projectile-lorri-watch)
+
+    ;; Lorri watch the given project when switching to a new project.
+    (add-hook 'projectile-after-switch-project-hook
+              (lambda () (ignore-errors (projectile-lorri-watch))))
+
+    ;; Non-file modes which should also be synched with direnv
+    (defmacro add-direnv-non-file-modes (&rest body)
+      `(mapcar (lambda (mode) (add-to-list 'direnv-non-file-modes mode)) (list ,@body)))
+
+    (add-direnv-non-file-modes
+     'sly-mode
+     'eshell-mode
+     'comint-mode
+     'term-mode))
+#+END_SRC
 ** COMMENT Polymode
 This is a very cool package that provides support for multiple major
 modes in the same buffer. It seems to crash sometimes when editing org
@@ -1123,7 +1183,7 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
 #+BEGIN_SRC emacs-lisp
   (use-package sly
     ;; :quelpa (:stable t)
-    :load-path "~/code/elisp/sly"
+    ;; :load-path "~/code/elisp/sly"
     :after evil
     :config
 
@@ -1388,7 +1448,7 @@ Create a table of contents without exporting.
 #+END_SRC
 ** Nix
 These are tools for dealing with NixOS, my operating system.
-*** Sandbox
+*** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
 (use-package nix-sandbox)
@@ -1535,6 +1595,15 @@ Various small functions which are evaluated before anything else in the file.
   (defun remove-keyword-args (list)
     "Remove keyword arguments from the given list"
     (car (general--remove-keyword-args list)))
+
+  (defun earmuffs (string)
+    "Add *earmuffs* to the given string. This represents the name
+    of a buffer which is not associated with a file."
+    (concat "*" string "*"))
+
+  (defun final-directory-name (path)
+    "Return the name of the final directory of the given path"
+    (elt (nreverse (split-string path "/")) 1))
 
   (defun reload-init-file ()
     "Load all elisp from 'user-init-file'."
