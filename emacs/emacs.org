@@ -63,7 +63,7 @@
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
   - [[#documentation][Documentation]]
-  - [[#direnv][Direnv]]
+  - [[#direnv-and-lorri][Direnv and Lorri]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -1083,9 +1083,13 @@ A keybinding to access documentation.
 #+BEGIN_SRC emacs-lisp
   (global-set-key [f3] (lambda () (interactive) (manual-entry (current-word))))
 #+END_SRC
-** Direnv
+** Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
-per-file basis. Direnv integrates with Nix as well.
+per-file basis. Direnv integrates with Nix through Lorri. I put a
+function on ~projectile-after-switch-project-hook~ which automatically
+runs ~lorri watch~ on the project directory. Lorri updates direnv from
+~shell.nix~ as it is saved. The result is that the given Nix sandbox is
+used seamlessly.
 #+BEGIN_SRC emacs-lisp
   (use-package direnv
     :delight
