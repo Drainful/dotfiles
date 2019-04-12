@@ -32,14 +32,12 @@
   - [[#hideshow][Hideshow]]
   - [[#unnecessary-ui-elements][Unnecessary UI elements]]
   - [[#line-and-column-numbers][Line and Column numbers]]
-  - [[#line-wrap][Line wrap]]
   - [[#start-frame-maximized][Start frame maximized]]
   - [[#confirmation][Confirmation]]
   - [[#clipboard][Clipboard]]
   - [[#delimiters][Delimiters]]
   - [[#which-key][Which-key]]
   - [[#ediff][Ediff]]
-- [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
   - [[#comint-mode][Comint Mode]]
@@ -222,13 +220,6 @@ using emacs today if it were not for ~evil-mode~. I really love Vim.
   ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
   (global-undo-tree-mode -1))
 #+END_SRC
-** COMMENT Early loading of general for evil commands
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<use-package-general>>
-<<leader-definitions>>
-<<leader-helpers>>
-<<leader-subleaders>>
-#+END_SRC
 ** Evil collection
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
@@ -241,6 +232,8 @@ This provides ~evil~ friendly keybindings for a variety of modes.
     (evil-collection-minibuffer-setup)
     (evil-collection-init))
 #+END_SRC
+
+
 ** Evil easymotion
 This package helps with the issue of not knowing how many times to
 repeat an ~evil~ motion by providing a tag at the location of
@@ -291,13 +284,9 @@ Usage:
 * Keybindings and commands
 ** General.el
 I mainly use the the package ~general~ to define keybindings and
-commands. 
-#+NAME: use-package-general
+commands. It integrates well with ~evil~.
 #+BEGIN_SRC emacs-lisp
 (use-package general)
-#+END_SRC
-It integrates well with ~evil~.
-#+BEGIN_SRC emacs-lisp
 (general-evil-setup)
 #+END_SRC
 ** Hydra.el
@@ -348,23 +337,20 @@ sequential key commands are hidden behind a single key. For those who
 are familiar with ~hydra~, this is a similar concept.
 *** Definitions
 First I define the leader keys,
-#+NAME: leader-definitions
 #+BEGIN_SRC emacs-lisp
-  (cl-eval-when (compile load eval)
-   (defconst leader-key ",")
-   (defconst alt-leader "SPC"))
+(defconst leader-key ",")
+(defconst alt-leader "SPC")
 
-  (general-create-definer leader-key-def
-    :prefix leader-key)
+(general-create-definer leader-key-def
+  :prefix leader-key)
 
-  (general-create-definer alt-leader-key-def
-    :prefix alt-leader-key)
+(general-create-definer alt-leader-key-def
+  :prefix alt-leader-key)
 #+END_SRC
 
 then some helper functions to create functions to create subleader
 keybindings through ~general-create-definer~. Key-based replacements are
 also generated for [[#which-key][ ~which-key~ ]].
-#+NAME: leader-helpers
 #+BEGIN_SRC emacs-lisp
   (cl-defun leader-prefix (str &optional (prefix leader-key))
     "Append a leader key to the given string"
@@ -389,7 +375,6 @@ also generated for [[#which-key][ ~which-key~ ]].
                       (seq-partition (remove-keyword-args args) 3))))
 #+END_SRC
 Usage:
-#+NAME: subleaders
 #+BEGIN_SRC emacs-lisp
   (define-subleader
     "e" "eval" eval-key-def
@@ -445,16 +430,9 @@ useful information.
 Delight is a package which is used to hide unnecessary mode-line
 blurbs.
 #+BEGIN_SRC emacs-lisp
-  (use-package delight :quelpa (:stable t)
-    :config
-    (delight 'eldoc-mode nil "eldoc")
-    (delight 'auto-revert-mode nil " ARev"))
-#+END_SRC
-*** Display information
-Display time and battery in the mode line
-#+BEGIN_SRC emacs-lisp
-  (display-time-mode)
-  (display-battery-mode)
+(use-package delight :quelpa (:stable t)
+  :config
+  (delight 'eldoc-mode nil "eldoc"))
 #+END_SRC
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
@@ -519,11 +497,6 @@ Display them both on the side of the buffer and in the mode line.
 
 (setq column-number-mode t)
 #+END_SRC
-** Line wrap
-Do not truncate lines.
-#+BEGIN_SRC emacs-lisp
-  (setq truncate-lines nil)
-#+END_SRC
 ** Start frame maximized
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
@@ -579,16 +552,6 @@ Don't make a new frame for ediff.
 #+BEGIN_SRC emacs-lisp
 (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 #+END_SRC
-* Dired
-Some dired configuration
-#+BEGIN_SRC emacs-lisp
-  ;; Use atool for compression and extraction
-  (use-package dired-atool
-    :config
-    (leader-key-def normal dired-mode-map
-      "z" #'dired-atool-do-unpack
-      "Z" #'dired-atool-do-pack))
-#+END_SRC
 * Shell
 ** Eshell
 ~eshell~ is a shell that operates entirely within emacs. It is my
@@ -619,12 +582,6 @@ primary shell.
     (if (listp args)
         (dolist (file args) (find-file file t))
       (find-file args)))
-
-  (defun eshell/ee (args)
-    "Open the given files in new windows"
-    (if (listp args)
-        (dolist (file args) (find-file file t))
-      (find-file-other-window args)))
 
   (defun eshell/fd (&optional from-directory)
     "Run fzf to open a directory in dired"
@@ -800,13 +757,14 @@ reason I need multiple, I have this plugin.
    "C-k" 'evil-window-up))
 #+END_SRC
 
-* Tramp
+:qa* TRAMPu
 ~tramp~ is a truly one of the great gems of Emacs. It allows me to
 access remote files as if they were part of my filesystem within
 Emacs.
 #+BEGIN_SRC emacs-lisp
   (defun connect-to-serenity ()
-    (eshell-at me/serenity-path))
+    (interactive)
+    (dired me/serenity-path))
 #+END_SRC
 * Emacs client/server settings
 One of the personal breakthroughs I made when starting with Emacs was
@@ -931,10 +889,9 @@ package manager rather than through ~use-package~ due to a bug.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'tango-dark)
-  ;; (if (display-graphic-p)
-  ;;     (load-theme 'doom-one-light t)
-  ;;   (disable-all-themes))
+  (if (display-graphic-p)
+      (load-theme 'doom-one-light t)
+    (disable-all-themes))
 
 #+END_SRC
 And this is a helper function to switch themes and disable old ones.
@@ -1679,9 +1636,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                           (string-prefix-p "sun-awt-X11-" exwm-instance-name)
                           (string= "gimp" exwm-instance-name))
                   (exwm-workspace-rename-buffer exwm-title))))
-    (general-define-key :keymaps 'exwm-mode-map
-                        "C-c C-f" 'exwm-layout-toggle-fullscreen
-                        "C-c C-l" 'exwm-floating-toggle-floating)
+    ; (general-define-key :keymaps ')
 
     (setq exwm-input-global-keys
           `(
@@ -1690,7 +1645,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; Bind "s-tab" to toggle line vs char mode.
             ([s-tab] . exwm-input-toggle-keyboard)
             ;; Bind "s-w" to switch workspace interactively.
-            ([?\s-`] . exwm-workspace-switch)
+            ([?\s-w] . exwm-workspace-switch)
             ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
             ,@(mapcar (lambda (i)
                         `(,(kbd (format "s-%d" i)) .
@@ -1703,16 +1658,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
             ;; bind "s-[direction] to switch windows"
-            ([?\s-h] . windmove-left)
-            ([?\s-j] . windmove-down)
-            ([?\s-k] . windmove-up)
-            ([?\s-l] . windmove-right)
-
-            ;; bind "s-arrow" to move, "maximize" or "minimize" a window
-            ([s-right] . windows-right)
-            ([s-down] . evil-quit)
-            ([s-up] . delete-other-windows)
-            ([s-left] . windows-left)
+            ([?\s-h] . evil-window-left)
+            ([?\s-j] . evil-window-down)
+            ([?\s-k] . evil-window-up)
+            ([?\s-l] . evil-window-right)
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
@@ -1724,56 +1673,40 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-b] . helm-mini)
             ;; bind "s-q" to kill this buffer, closing the current program.
             ([?\s-q] . actually-kill-this-buffer)
-            ([?\s-w] . evil-delete-buffer)
-            ;; bind "s-g" to keyboard-quit
-            ([?\s-g] . keyboard-quit)
-
             ;; Bind "s-<f2>" to "slock", a simple X display locker.
             ;; ([s-f2] . (lambda ()
             ;;             (interactive)
             ;;             (start-process "" nil "/usr/bin/slock")))
-
-            ;; bind yes or no answers to s y and n
-            ([?\s-y] . answer-yes)
-            ([?\s-n] . answer-no)))
+            ))
+    ;; logout function
+    (defun exwm-logout ()
+      (interactive)
+      (recentf-save-list)
+      (save-some-buffers)
+      (start-process-shell-command "logout" nil "lxsession-logout"))
     ;; start in char mode by default
     (setq exwm-manage-configurations '((t char-mode t)))
-
-    ;; sys tray
+    ;; sys tray with network
     (require 'exwm-systemtray)
     (exwm-systemtray-enable)
-
+    ;; (shell-command "nm-applet")
     ;; set prefix keys
     (setq my-exwm-prefix-keys (list
+                               ;;?\s-f ?\s-h ?\s-j ?\s-k ?\s-l ?\s-H ?\s-J ?\s-K ?\s-L
                                ?\: ; evil ex mode
                                ?\, ; leader key
                                ?\M-x ; M-x
                               ?\C-w)) ; window options
-
     (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
     ;; Allow pulling a window between workspaces by switching to its buffer
     ;; to see x windows on other workspaces, do C-c a
     (setq exwm-workspace-show-all-buffers t)
-    (setq exwm-layout-show-all-buffers t)
-
-
-    ;; fix global-display-line-numbers-mode bug regarding the exwm
-    ;; "frame" not having the 'client parameter
-    (defun display-line-numbers--turn-on ()
-      "Turn on `display-line-numbers-mode'."
-      (unless (or (minibufferp)
-                  ;; taken from linum.el
-                  nil
-                  ;; (and (daemonp) (null (frame-parameter nil 'client)))
-                  )
-        (display-line-numbers-mode))))
+    (setq exwm-layout-show-all-buffers t))
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
-  (use-package symon
-    :config
-    (symon-mode))
+  (use-package symon)
 #+END_SRC
 *** Helm EXWM
 ~Helm-EXWM~ defines helm sources for exwm buffers
@@ -1784,35 +1717,13 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 ~desktop-environment~ is a package which provides keybindings for tasks such as changing volume.
 #+BEGIN_SRC emacs-lisp
   (use-package desktop-environment
-    :delight
     :config
     (desktop-environment-mode))
-#+END_SRC
-*** EXWM firefox
-#+BEGIN_SRC emacs-lisp
-  (use-package exwm-firefox-core)
-
-  (use-package exwm-firefox-evil)
 #+END_SRC
 *** COMMENT Network Manager
 Emacs interface to network manager. Buggy
 #+BEGIN_SRC emacs-lisp
   (quelpa '(nm :fetcher github :repo "Kodkollektivet/emacs-nm"))
-#+END_SRC
-*** Helpful commands
-#+BEGIN_SRC emacs-lisp
-  ;; logout function
-  (defun logout ()
-    (interactive)
-    (recentf-save-list)
-    (save-some-buffers)
-    (start-process-shell-command "logout" nil "lxsession-logout"))
-
-  (defun bluetooth ()
-    (interactive)
-    (split-window-vertically)
-    (other-window 1)
-    (start-process-shell-command "blueman-manager" nil "blueman-manager"))
 #+END_SRC
 * Files and backups
 Don't make backups.
@@ -1887,43 +1798,4 @@ Various small functions which are evaluated before anything else in the file.
   not always do that."
     (interactive)
     (kill-buffer (current-buffer)))
-
-  (defun answer-yes ()
-    (interactive)
-    (kbd "y"))
-
-  (defun answer-no ()
-    (interactive)
-    (kbd "n"))
-
-  (defun windows-right ()
-    (interactive)
-    (if (> (length (window-list)) 1)
-        (evil-window-move-far-right)
-      (progn
-        (split-window-right)
-        (evil-window-move-far-right)
-        (other-window 1)
-        (next-buffer)
-        (other-window 1))))
-
-  (defun windows-left ()
-    (interactive)
-    (if (> (length (window-list)) 1)
-        (funcall-interactively
-         #'evil-window-move-far-left)
-      (progn
-        (split-window-right)
-        (other-window 1)
-        (next-buffer)
-        (other-window 1))))
-
-  (defun eshell-new()
-    "Open a new instance of eshell."
-    (interactive)
-    (eshell 'N))
-
-  (defun eshell-at (directory)
-    (let ((default-directory directory))
-      (eshell-new)))
 #+END_SRC

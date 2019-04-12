@@ -10,11 +10,11 @@
 - Lorri commands to watch and to refresh direnv bound to hotkeys DONE
 - Lorri auto-watch on entering a project (if not already watching) DONE
 - Eventually set up direnv auto-refresh?
-- Definitely find a way to automate direnv allow. Part of skeletor probs.
 - Skeletor 
-  - contribute the subdirectory feature, ~:subdir~  keyword.
+  - contribute the subdirectory feature, ~:subdir~ keyword.
+  - Make a completion source that uses nix packages list to select packages for a project.
   - project skeletons set up for
-    - Generic project with Nix and direnv (choose directory manually)
+    - Generic project with Nix and direnv (choose directory manually) DONE
     - Common Lisp DONE
     - C
     - C++
