@@ -21,8 +21,11 @@
   - [[#generalel][General.el]]
   - [[#hydrael][Hydra.el]]
   - [[#commands][Commands]]
+  - [[#conditional-key-translations][Conditional key translations]]
+  - [[#all-modes][All modes]]
   - [[#normal-mode][Normal Mode]]
   - [[#visual-mode][Visual Mode]]
+  - [[#insert-mode][Insert Mode]]
   - [[#leader][Leader]]
   - [[#other-commands][Other Commands]]
 - [[#user-interface-preferences][User interface preferences]]
@@ -63,7 +66,6 @@
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
   - [[#git][Git]]
-  - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
   - [[#documentation][Documentation]]
@@ -91,26 +93,35 @@
 
 * Startup
 ** Lexical Scope
-My first move is to enable lexical scope. This not only improves
-execution time, but also allows lexical techniques such as closure to
-be used. This declaration is contained within a comment because
-lexical scope was only introduced to Emacs in version 24.1
+I enable lexical scope. This not only improves execution time, but
+also allows lexical techniques such as closures to be used.
+
+#+PROPERTY: header-args:emacs-lisp :lexical t
+
 #+BEGIN_SRC emacs-lisp
 ;; -*- lexical-binding: t; -*-
 #+END_SRC
 
 ** Garbage Collector Threshold
-In search of faster startup times, I discovered a technique that
-involves increasing the garbage collection threshold during starup. I
-got this idea from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom Emacs]]. Look there for more advice for
-improving startup time.
+In search of faster startup times, I took some advice from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom
+Emacs]].
 #+BEGIN_SRC emacs-lisp
-(setq gc-cons-threshold 402653184
-      gc-cons-percentage 0.6)
+  (setq gc-cons-threshold 402653184
+        gc-cons-percentage 0.6)
 
-(add-hook 'emacs-startup-hook
-  (setq gc-cons-threshold 16777216
-        gc-cons-percentage 0.1))
+  (add-hook 'emacs-startup-hook
+    (setq gc-cons-threshold 16777216
+          gc-cons-percentage 0.1))
+
+  (defun lex-p ()
+    "Return t if lexical binding is in effect."
+    (let (lex
+      _lex-p)
+      (let ((lex t))
+        (setq _lex-p
+          (lambda ()
+            lex)))
+      (funcall _lex-p)))
 #+END_SRC
 
 ** Filename Handlers
@@ -208,7 +219,7 @@ This code enables automatic package upgrades.
 #+END_SRC
 * Evil
 These are settings for the emulation of Vim in Emacs. I would not be
-using emacs today if it were not for ~evil-mode~. I really love Vim.
+using emacs today if it were not for ~evil-mode~.
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :init
@@ -268,25 +279,45 @@ At one point I used ~evil-snipe~, a tool for jumping to pairs of characters.
 #+END_SRC
 ** The creation of text objects
 This macro was copied from [[https://stackoverflow.com/a/22418983/4921402][this]] Stackoverflow thread, and facilitates
-the creation of ~evil~ text objects.
+the creation of simple ~evil~ text objects.
 #+BEGIN_SRC emacs-lisp
-(defmacro define-and-bind-quoted-text-object (name key start-regex end-regex)
-  (let ((inner-name (make-symbol (concat "evil-inner-" name)))
-        (outer-name (make-symbol (concat "evil-a-" name))))
-    `(progn
-       (evil-define-text-object ,inner-name (count &optional beg end type)
-         (evil-select-paren ,start-regex ,end-regex beg end type count nil))
-       (evil-define-text-object ,outer-name (count &optional beg end type)
-         (evil-select-paren ,start-regex ,end-regex beg end type count t))
-       (define-key evil-inner-text-objects-map ,key #',inner-name)
-       (define-key evil-outer-text-objects-map ,key #',outer-name))))
+  (defmacro define-and-bind-regex-text-object (name key start-regex end-regex)
+    (let ((inner-name (make-symbol (concat "evil-inner-" name)))
+          (outer-name (make-symbol (concat "evil-a-" name))))
+      `(progn
+         (evil-define-text-object ,inner-name (count &optional beg end type)
+           (evil-select-paren ,start-regex ,end-regex beg end type count nil))
+         (evil-define-text-object ,outer-name (count &optional beg end type)
+           (evil-select-paren ,start-regex ,end-regex beg end type count t))
+         (define-key evil-inner-text-objects-map ,key #',inner-name)
+         (define-key evil-outer-text-objects-map ,key #',outer-name))))
 
-(defalias 'textobj 'define-and-bind-quoted-text-object)
+  (create-multi-macro simple-text-objects
+                      define-and-bind-regex-text-object
+                      4)
 #+END_SRC
 Usage:
 #+BEGIN_SRC emacs-lisp
-(textobj "pipe" "|" "|" "|")
-(textobj "slash" "/" "/" "/")
+  (simple-text-objects
+   "pipe" "|" "|" "|"
+   "slash" "/" "/" "/"
+   "sexpr" "i" "(" ")")
+
+#+END_SRC
+
+More complex text objects are defined manually:
+#+BEGIN_SRC emacs-lisp
+  (evil-define-text-object evil-a-defun (count &optional beg end type)
+    "Text object for a top level form (language agnostic)"
+    (save-excursion
+      (mark-defun)
+      (list (point) (mark))))
+  (define-key evil-outer-text-objects-map "f" #'evil-a-defun)
+
+  (evil-define-text-object evil-entire-buffer (count &optional beg end type)
+    "Text object for the entire buffer"
+    (list 1 (1+ (buffer-size))))
+  (define-key evil-outer-text-objects-map "a" #'evil-entire-buffer)
 #+END_SRC
 * Keybindings and commands
 ** General.el
@@ -312,8 +343,40 @@ couple.
 (evil-ex-define-cmd "Src" 'reload-init-file)
 (evil-ex-define-cmd "Restart" 'restart-emacs)
 #+END_SRC
+** Conditional key translations
+The equivalent of Vim noremaps are Emacs key translations. They apply
+globally, so here are some macros to create key translations which apply
+conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14][this]].
+#+BEGIN_SRC emacs-lisp
+  ;; does not require lexical scope
+  (defmacro make-conditional-key-translation (key-from key-to translate-keys-p)
+    "Make a Key Translation such that if the translate-keys-p function returns true,
+     key-from translates to key-to, else key-from translates to itself. "
+    `(define-key key-translation-map (kbd ,key-from)
+      (lambda (prompt)
+        (if (,translate-keys-p) (kbd ,key-to) (kbd ,key-from)))))
+
+  (create-multi-macro make-conditional-key-translations
+                      make-conditional-key-translation
+                      3)
+
+  (defmacro inoremap-single (from to)
+    `(make-conditional-key-translation ,from ,to evil-insert-state-p))
+  (create-multi-macro inoremap inoremap-single 2)
+
+  (defmacro noremap-single (from to)
+    `(make-conditional-key-translation ,from ,to (lambda nil t)))
+  (create-multi-macro noremap noremap-single 2)
+#+END_SRC
+** All modes
+#+BEGIN_SRC emacs-lisp
+  ;; (noremap "9" "("
+  ;;            "0" ")"
+  ;;            "(" "9"
+  ;;            ")" "0")
+#+END_SRC
 ** Normal Mode
-These are normal mode mappings not specific to any major mode.
+qThese are normal mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
 (general-nmap
   "C-h" 'evil-window-left
@@ -341,6 +404,11 @@ And these are visual mode mappings not specific to any major mode.
 (general-vmap
   ;; Move a visual block of text using ALT+[jk]
   "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
+#+END_SRC
+** Insert Mode
+#+BEGIN_SRC emacs-lisp
+  ;; (inoremap "." "-"
+  ;;           "-" ".")
 #+END_SRC
 ** Leader
 The leader key is an old technique common among Vim users. A number of
@@ -447,14 +515,16 @@ blurbs.
 #+BEGIN_SRC emacs-lisp
   (use-package delight :quelpa (:stable t)
     :config
-    (delight 'eldoc-mode nil "eldoc")
-    (delight 'auto-revert-mode nil " ARev"))
+    (delight '((eldoc-mode nil "eldoc")
+               (auto-revert-mode nil "autorevert")
+               (org-src-mode nil "org-src")
+               (org-indent-mode nil "org"))))
 #+END_SRC
 *** Display information
 Display time and battery in the mode line
 #+BEGIN_SRC emacs-lisp
-  (display-time-mode)
   (display-battery-mode)
+  (display-time-mode)
 #+END_SRC
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
@@ -937,21 +1007,6 @@ package manager rather than through ~use-package~ due to a bug.
   ;;   (disable-all-themes))
 
 #+END_SRC
-And this is a helper function to switch themes and disable old ones.
-#+BEGIN_SRC emacs-lisp
-  (defun disable-most-recent-theme ()
-    (interactive)
-    (disable-theme (first custom-enabled-themes)))
-
-  (defun switch-theme (theme)
-    (interactive
-     (list
-      (intern (completing-read "Load custom theme: "
-                   (mapcar 'symbol-name
-                       (custom-available-themes))))))
-    (disable-most-recent-theme)
-    (load-theme theme t))
-#+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
 #+NAME: themes
@@ -988,7 +1043,7 @@ I abbreviate the command with ~hydra~.
 project.
 #+BEGIN_SRC emacs-lisp
   (use-package projectile
-    :delight "P"
+    :delight " P"
     :after general
     :config
     (general-define-key
@@ -1047,7 +1102,7 @@ project.
       :title "Python Library"
       :default-license (rx bol "mit"j)
       :substitutions
-      '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
+      '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
       :after-creation setup--lorri)
 
     ;;keybindings
@@ -1139,7 +1194,7 @@ and a leader shortcut.
 (leader-key-def 'normal
   "m" 'magit)
 #+END_SRC
-** Snippets
+** COMMENT Snippets
 ~yasnippet~ allows the creation of snippets to automate repetitive typing.
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
@@ -1408,12 +1463,12 @@ It's like ~slime~ for Scheme. Kinda.
 *** COMMENT Linting
 Python support is built in to ~flycheck~.
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'python-mode-hook #'flycheck-mode)
+  ;; (add-hook 'python-mode-hook #'flycheck-mode)
 #+END_SRC
 *** Language Server
 Python support is built in to ~lsp-mode~.
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'python-mode-hook #'lsp)
+  ;; (add-hook 'python-mode-hook #'lsp)
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -1684,11 +1739,12 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                         "C-c C-l" 'exwm-floating-toggle-floating)
 
     (setq exwm-input-global-keys
-          `(
-            ;; Bind "s-r" to exit char-mode and fullscreen mode.
+          `(;; Bind "s-r" to exit char-mode and fullscreen mode.
             ([?\s-r] . exwm-reset)
             ;; Bind "s-tab" to toggle line vs char mode.
             ([s-tab] . exwm-input-toggle-keyboard)
+            ;; Bind f11 to toggle full screen
+            ([f11] . exwm-layout-toggle-fullscreen)
             ;; Bind "s-w" to switch workspace interactively.
             ([?\s-`] . exwm-workspace-switch)
             ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
@@ -1801,18 +1857,32 @@ Emacs interface to network manager. Buggy
 #+END_SRC
 *** Helpful commands
 #+BEGIN_SRC emacs-lisp
-  ;; logout function
-  (defun logout ()
-    (interactive)
-    (recentf-save-list)
-    (save-some-buffers)
-    (start-process-shell-command "logout" nil "lxsession-logout"))
+;; logout function
+(defun logout ()
+  (interactive)
+  (recentf-save-list)
+  (save-some-buffers)
+  (start-process-shell-command "logout" nil "lxsession-logout"))
 
-  (defun bluetooth ()
-    (interactive)
-    (split-window-vertically)
-    (other-window 1)
-    (start-process-shell-command "blueman-manager" nil "blueman-manager"))
+(defun bluetooth ()
+  (interactive)
+  (split-window-vertically)
+  (other-window 1)
+  (start-process-shell-command "blueman-manager" nil "blueman-manager"))
+
+(defmacro define-shell-function (name command)
+  `(defun ,name ()
+     (interactive)
+     (start-process-shell-command ,(symbol-name name)
+                                  nil
+                                  ,command)))
+
+(create-multi-macro define-shell-functions define-shell-function 2)
+
+(define-shell-functions
+  wifi "wicd-gtk"
+  firefox "firefox"
+  spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
 * Files and backups
 Don't make backups.
@@ -1835,7 +1905,7 @@ Various small functions which are evaluated before anything else in the file.
 #+BEGIN_SRC emacs-lisp
   (defun auto-mode-add (mode &rest filenames)
     "Add a number of file name patterns to the given mode in
-  auto-mode-alist"
+    auto-mode-alist"
     (mapcar (lambda (name)
               (add-to-list 'auto-mode-alist
                            `(,name . ,mode)))
@@ -1847,7 +1917,7 @@ Various small functions which are evaluated before anything else in the file.
 
   (defun earmuffs (string)
     "Add *earmuffs* to the given string. This represents the name
-    of a buffer which is not associated with a file."
+      of a buffer which is not associated with a file."
     (concat "*" string "*"))
 
   (defun final-directory-name (path)
@@ -1884,7 +1954,7 @@ Various small functions which are evaluated before anything else in the file.
 
   (defun actually-kill-this-buffer ()
     "Kills the current buffer, unlike ~kill-this-buffer~ which does
-  not always do that."
+    not always do that."
     (interactive)
     (kill-buffer (current-buffer)))
 
@@ -1918,7 +1988,7 @@ Various small functions which are evaluated before anything else in the file.
         (next-buffer)
         (other-window 1))))
 
-  (defun eshell-new()
+  (defun eshell-new ()
     "Open a new instance of eshell."
     (interactive)
     (eshell 'N))
@@ -1926,4 +1996,41 @@ Various small functions which are evaluated before anything else in the file.
   (defun eshell-at (directory)
     (let ((default-directory directory))
       (eshell-new)))
+
+  ;; And this is a helper function to switch themes and disable old ones.
+  (defun disable-most-recent-theme ()
+    (interactive)
+    (disable-theme (first custom-enabled-themes)))
+
+  (defun switch-theme (theme)
+    (interactive
+     (list
+      (intern (completing-read "Load custom theme: "
+                               (mapcar 'symbol-name
+                                       (custom-available-themes))))))
+    (disable-most-recent-theme)
+    (load-theme theme t))
+
+
+  (defmacro create-multi-macro--old (name macro num-parameters)
+    `(defmacro ,name (&rest args)
+       `(progn ,@(mapcar (lambda (elt)
+                           `(,',macro ,@elt))
+                         (seq-partition args ,num-parameters)))))
+
+  (defmacro create-multi-macro (name macro num-parameters &key kwargs)
+    "kwargs is a list of keyword arguments to be accepted by macro"
+    `(cl-defmacro ,name ,(append `(&rest args) (when kwargs (append `(&key) kwargs `(&allow-other-keys))))
+       `(progn ,@(mapcar (lambda (elt)
+                           ,(let ((result (list (quote backquote) (list macro ',@elt))))
+                                 (dolist (kwarg kwargs)
+                                   (setf (cadr result) (append (cadr result)
+                                                        (list (make-symbol
+                                                               (concat ":"
+                                                                       (symbol-name kwarg)))
+                                                              (list
+                                                               (quote \,)
+                                                               kwarg)))))
+                                 result))
+                         (seq-partition (remove-keyword-args args) ,num-parameters)))))
 #+END_SRC

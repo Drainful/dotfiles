@@ -1,16 +1,13 @@
 with import <nixpkgs> {};
 with pkgs.python3Packages;
 
-buildPythonPackage rec {
-  pname = "__PROJECT-NAME__";
+mkShell rec {
+  name = "__PROJECT-NAME__";
 
-  version = "0.0.1";
-
-  buildInputs = with self; [];
-
-  propogatedBuildInputs = with self; [];
-
-  meta = {
-    description = "__DESCRIPTION__";
-  };
+  # Customizable development requirements
+  buildInputs = [
+   (python36.withPackages(ps: with ps; [
+	   __PACKAGES__
+		]))
+  ];
 }
