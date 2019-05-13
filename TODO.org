@@ -1,4 +1,6 @@
 * Emacs
+** appearance
+a launch screen to replace the scratch buffer. (like that dave fellow)
 ** language tools
 - Add Rust editing tools
 ** projects
@@ -46,17 +48,33 @@ example usage:
               :switch-to t))
 #+END_SRC
 
+or add shortcuts manually like
+#+BEGIN_SRC emacs-lisp
+  (defun launcher/firefox
+      (start-process-shell-command "firefox" nil "firefox"))
+#+END_SRC
+
+shortcuts are just defuns under ~launcher/~, the launch function simply
+narrows the launch functions. Keep what metadata you need.
+
 this is a good starting point, but eventually I want to parse .desktop
 files to add shortcuts automatically. I can continue to add launcher
 features over time in order to compete with those fancy gui launchers.
 I imagine that it will become useful to others, so why not make a package?
 
+The .desktop parser just outputs launch functions AKA shortcuts whose
+properties can be overriden by ~launcher-shortcuts~.
+
 Integrate with helm eventually.
+
+INTEGEATE THIS WITH YOUR WORKSPACE THING! YES SO GOOD!
 ** Workspaces
 All that's left to do is that alt-tab style thing perhaps.  This is
 worth consolidating into a package. Think about how to provide a safe
 interface to users: maybe do a pull request in exwm to add extra hooks
 for that.
+** exwm
+Remove extraneous information from the modelines of x11 window buffers
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗
