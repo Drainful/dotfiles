@@ -292,7 +292,7 @@ the creation of simple ~evil~ text objects.
          (define-key evil-inner-text-objects-map ,key #',inner-name)
          (define-key evil-outer-text-objects-map ,key #',outer-name))))
 
-  (create-multi-macro simple-text-objects
+  (create-multi-macro--old simple-text-objects
                       define-and-bind-regex-text-object
                       4)
 #+END_SRC
@@ -356,17 +356,17 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
       (lambda (prompt)
         (if (,translate-keys-p) (kbd ,key-to) (kbd ,key-from)))))
 
-  (create-multi-macro make-conditional-key-translations
+  (create-multi-macro--old make-conditional-key-translations
                       make-conditional-key-translation
                       3)
 
   (defmacro inoremap-single (from to)
     `(make-conditional-key-translation ,from ,to evil-insert-state-p))
-  (create-multi-macro inoremap inoremap-single 2)
+  (create-multi-macro--old inoremap inoremap-single 2)
 
   (defmacro noremap-single (from to)
     `(make-conditional-key-translation ,from ,to (lambda nil t)))
-  (create-multi-macro noremap noremap-single 2)
+  (create-multi-macro--old noremap noremap-single 2)
 #+END_SRC
 ** All modes
 #+BEGIN_SRC emacs-lisp
@@ -564,7 +564,6 @@ which integrates well across Emacs.
   (defun helm-rec-find-directory ()
     (interactive)
     (helm-find (list "-type d -not -path '*/\.*'")))
-
 #+END_SRC
 ** Hideshow
 ~hideshow~ mode provides vim-like folds (but not as good).
@@ -947,7 +946,7 @@ given Nix environment.
     (interactive)
     (if (nix-current-sandbox)
         (let* ((default-directory (file-name-directory (nix-current-sandbox)))
-               (socket-name (final-directory-name default-directory))
+               (socket-name (file-name-directory default-directory))
                (daemon-name (concat socket-name "-daemon")))
           (if (nix-daemon-running-p socket-name) 
               (nix-daemon-frame)
@@ -1003,7 +1002,7 @@ package manager rather than through ~use-package~ due to a bug.
 
   (switch-theme 'tango-dark)
   ;; (if (display-graphic-p)
-  ;;     (load-theme 'doom-one-light t)
+  ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
 
 #+END_SRC
@@ -1093,16 +1092,21 @@ project.
 
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
-      :default-license (rx bol "mit")
       :substitutions
       '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
       :after-creation setup--lorri)
 
     (skeletor-define-template "python"
       :title "Python Library"
-      :default-license (rx bol "mit"j)
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
+      :after-creation setup--lorri)
+
+    (skeletor-define-template "haskell"
+      :title "Haskell Project"
+      :substitutions
+      '(("__HASKELL-PACKAGES__" . (lambda () (read-string "Haskell packages: ")))
+        ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
       :after-creation setup--lorri)
 
     ;;keybindings
@@ -1139,18 +1143,12 @@ next buffer with content respectively.
                       "<tab>" 'previous-buffer
                       "<backtab>" 'next-buffer)
 #+END_SRC
-*** COMMENT Buffer toggling
-This is a function and keybinding for toggling between 2
-buffers. Faster than ~,-b\r~. From [[https://emacsredux.com/blog/2013/04/28/switch-to-previous-buffer/][here]].
+*** Buffer toggling
+This is a keybinding for toggling between 2
+buffers. Faster than ~,-b\r~.
 #+BEGIN_SRC emacs-lisp
-(defun er-switch-to-previous-buffer ()
-  "Switch to previously open buffer.
-Repeated invocations toggle between the two most recently open buffers."
-  (interactive)
-  (switch-to-buffer (other-buffer (current-buffer) 1)))
-
-(general-define-key :states 'normal :keymaps 'override
-                    "<tab>" 'er-switch-to-previous-buffer)
+  (general-define-key :states 'normal ; :keymaps 'override
+                      "<tab>" 'evil-buffer)
 #+END_SRC
 * Programming tools and settings
 ** Autocompletion
@@ -1271,7 +1269,7 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
       "Begin an inferior process to watch the current projectile
   project with lorri."
       (interactive)
-      (let* ((project-name (final-directory-name project-directory))
+      (let* ((project-name (file-name-directory project-directory))
              (process-name (concat "Lorri [" project-name "]"))
              (default-directory project-directory))
         (if (file-exists-p "shell.nix")
@@ -1532,7 +1530,7 @@ I use the built-in prolog mode.
       (call-interactively 'run-prolog)))
 #+END_SRC
 ** C/C++/CPP/Cpp/Sepples
-*** CQuery
+*** COMMENT CQuery
 A language server back end for C/++
 #+BEGIN_SRC emacs-lisp
 (use-package cquery
@@ -1741,23 +1739,22 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (setq exwm-input-global-keys
           `(;; Bind "s-r" to exit char-mode and fullscreen mode.
             ([?\s-r] . exwm-reset)
-            ;; Bind "s-tab" to toggle line vs char mode.
-            ([s-tab] . exwm-input-toggle-keyboard)
+
             ;; Bind f11 to toggle full screen
             ([f11] . exwm-layout-toggle-fullscreen)
-            ;; Bind "s-w" to switch workspace interactively.
-            ([?\s-`] . exwm-workspace-switch)
-            ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
-            ,@(mapcar (lambda (i)
-                        `(,(kbd (format "s-%d" i)) .
-                          (lambda ()
-                            (interactive)
-                            (exwm-workspace-switch-create ,i))))
-                      (number-sequence 0 9))
-            ;; Bind "s- " to launch applications
-            ([?\s- ] . (lambda (command)
-                         (interactive (list (read-shell-command "$ ")))
-                         (start-process-shell-command command nil command)))
+
+            ;; Bind "s- " to launch exteral commands
+            ([?\s- ] . helm-run-external-command)
+
+            ;;workspaces
+            ([?\s-m] . make-workspace)
+            ([?\s-d] . delete-workspace)
+
+            ([?\s-n] . next-workspace)
+            ([?\s-p] . previous-workspace)
+
+            ([s-tab] . switch-workspace)
+
             ;; bind "s-[direction] to switch windows"
             ([?\s-h] . windmove-left)
             ([?\s-j] . windmove-down)
@@ -1772,26 +1769,21 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
-            ;; bind "s-z" to work like a global "M-x"
+            ;; bind "s-z" to M-x
             ([?\s-z] . helm-M-x)
-            ;; bind "s-;" to work loke a global ":"
+            ;; bind "s-;" to ex mode
             ([?\s-\;] . evil-ex)
             ;; bind "s-b" to buffer switching
             ([?\s-b] . helm-mini)
-            ;; bind "s-q" to kill this buffer, closing the current program.
+            ;; bind "s-f" to file switching
+            ([?\s-f] . helm-find-files) 
+            ;; bind "s-q" to kill this buffer, closing the current
+            ;; program, and "s-w" to kill the current buffer AND window
             ([?\s-q] . actually-kill-this-buffer)
             ([?\s-w] . evil-delete-buffer)
             ;; bind "s-g" to keyboard-quit
-            ([?\s-g] . keyboard-quit)
+            ([?\s-g] . keyboard-quit)))
 
-            ;; Bind "s-<f2>" to "slock", a simple X display locker.
-            ;; ([s-f2] . (lambda ()
-            ;;             (interactive)
-            ;;             (start-process "" nil "/usr/bin/slock")))
-
-            ;; bind yes or no answers to s y and n
-            ([?\s-y] . answer-yes)
-            ([?\s-n] . answer-no)))
     ;; start in char mode by default
     (setq exwm-manage-configurations '((t char-mode t)))
 
@@ -1813,9 +1805,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (setq exwm-workspace-show-all-buffers t)
     (setq exwm-layout-show-all-buffers t)
 
-
-    ;; fix global-display-line-numbers-mode bug regarding the exwm
-    ;; "frame" not having the 'client parameter
+    ;; Redefine function to fix global-display-line-numbers-mode bug
+    ;; regarding the exwm "frame" not having the 'client parameter
     (defun display-line-numbers--turn-on ()
       "Turn on `display-line-numbers-mode'."
       (unless (or (minibufferp)
@@ -1824,6 +1815,138 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                   ;; (and (daemonp) (null (frame-parameter nil 'client)))
                   )
         (display-line-numbers-mode))))
+#+END_SRC
+*** Workspaces
+#+BEGIN_SRC emacs-lisp
+  (defconst default-workspace-name  "default-workspace")
+  (defvar workspace--names (list default-workspace-name)
+    "List of names of workspaces, nil for unnamed.")
+  (defvar workspace--history (list 0)
+    "List of all workspace indicies. Earliest in this list is
+    most recently visited")
+
+  (setq exwm-workspace-index-map
+        (lambda (index)
+          (or (workspace--index-to-name index)
+              (number-to-string index))))
+
+  (defun workspace-index-names ()
+    (mapcar exwm-workspace-index-map
+            (number-sequence 0 (1- (exwm-workspace--count)))))
+
+  (defun current-workspace-index ()
+    (exwm-workspace--position (selected-frame)))
+
+  (defun current-workspace-name ()
+    (workspace--index-to-name (current-workspace-index)))
+
+  (cl-defun select-workspace (&key prompt without-default-workspace order)
+    (let* ((workspace-list (if without-default-workspace
+                               (remove default-workspace-name
+                                       (workspace-index-names))
+                             (workspace-index-names)))
+           (ordered-workspace-list (cond ((equal order :last-visited)
+                                          (mapcar exwm-workspace-index-map workspace--history))
+                                         ((equal order :last-visited-current-last)
+                                          (mapcar exwm-workspace-index-map (append (remove (current-workspace-index)
+                                                                                           workspace--history)
+                                                                                   (list (current-workspace-index)))))
+                                         ((equal order :newest-first) (reverse workspace-list))
+                                         ((equal order :oldest-first) workspace-list)
+                                         (t workspace-list))))
+      (completing-read (if prompt prompt (format "Select Workspace (current: [%s]): "
+                                                 (current-workspace-name)))
+                       ordered-workspace-list)))
+
+  (cl-defun switch--to-workspace (name-or-index &key (update-history t))
+    (unless (workspace-handle-valid-p
+             name-or-index)
+      (error (format "Workspace %s does not exist" name-or-index)))
+    (exwm-workspace-switch (workspace--name-to-index name-or-index))
+    (when update-history
+      (setq workspace--history
+            (remove (workspace--name-to-index name-or-index) workspace--history))
+      (add-to-list 'workspace--history (workspace--name-to-index name-or-index))))
+
+  (defun switch-workspace ()
+    (interactive)
+    (switch--to-workspace (select-workspace :order :last-visited-current-last)))
+
+  (cl-defun make--workspace (&optional (name nil))
+    (cond ((string-to-integer-or-nil name)
+           (error "Cannot use a number as the workspace name"))
+          ((find-if (lambda (s) (string= s name)) workspace--names)
+           (error (format "The workspace name '%s' is already in use" name)))
+          (t (exwm-workspace-switch 0)
+             (exwm-workspace-add)
+             (add-to-list 'workspace--history (current-workspace-index))
+             (add-to-list 'workspace--names name t))))
+
+  (defun make-workspace ()
+    (interactive)
+    (make--workspace (read-string "Workspace Name: ")))
+
+  (defun delete--workspace (name-or-index)
+    (cond
+     ((not (workspace-handle-valid-p name-or-index))
+      (error (format "Workspace %s does not exist" name-or-index)))
+     ((or (when (stringp name-or-index)
+            (string= name-or-index default-workspace-name))
+          (when (numberp name-or-index)
+            (= name-or-index 0)))
+      (error "Cannot delete the default workspace."))
+     (t
+      (if (equal (workspace--name-to-index name-or-index)
+                 (current-workspace-index))
+          (switch--to-workspace (second workspace--history)))
+      (setq workspace--history
+            (remove (workspace--name-to-index name-or-index) workspace--history))
+      (setq workspace--names
+            (remove-if (lambda (s)
+                         (string= s (workspace--index-to-name name-or-index)))
+                       workspace--names))
+      (exwm-workspace-delete (workspace--name-to-index name-or-index)))))
+
+  (defun delete-workspace ()
+    (interactive)
+    (delete--workspace (select-workspace :without-default-workspace t
+                                         :order :newest-first)))
+
+  (defun next-workspace ()
+    "Switch to the next workspace in order of creation"
+    (interactive)
+    (switch--to-workspace (1+ (current-workspace-index)))
+    (message (format "Current Workspace: [%s]" (current-workspace-name))))
+
+  (defun previous-workspace ()
+    "Switch to the previous workspace in order of creation"
+    (interactive)
+    (switch--to-workspace (1- (current-workspace-index)))
+    (message (format "Current Workspace: [%s]" (current-workspace-name))))
+
+  (defun workspace--index-to-name (name-or-index)
+    (if (numberp name-or-index)
+        (nth name-or-index workspace--names)
+      name-or-index))
+
+  (defun workspace--name-to-index (name-or-index)
+    (if (numberp name-or-index)
+        name-or-index
+      (or (string-to-integer-or-nil name-or-index)
+          (position-if (lambda (s) (string= s name-or-index))
+                       workspace--names))))
+
+  (defun workspace-handle-valid-p (name-or-index)
+    (if (numberp name-or-index)
+        (> (exwm-workspace--count) name-or-index)
+      (find-if (lambda (s) (string= s name-or-index))
+               (workspace-index-names))))
+#+END_SRC
+*** COMMENT Launcher
+My implementation of an equivalent of dmenu and the ".desktop" file
+system for launching and switching between programs quickly
+#+BEGIN_SRC emacs-lisp
+
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
@@ -1849,6 +1972,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
   (use-package exwm-firefox-core)
 
   (use-package exwm-firefox-evil)
+
+  (setq browse-url-generic-program "firefox")
 #+END_SRC
 *** COMMENT Network Manager
 Emacs interface to network manager. Buggy
@@ -1857,32 +1982,31 @@ Emacs interface to network manager. Buggy
 #+END_SRC
 *** Helpful commands
 #+BEGIN_SRC emacs-lisp
-;; logout function
-(defun logout ()
-  (interactive)
-  (recentf-save-list)
-  (save-some-buffers)
-  (start-process-shell-command "logout" nil "lxsession-logout"))
+  ;; logout function
+  (defun logout ()
+    (interactive)
+    (recentf-save-list)
+    (save-some-buffers)
+    (start-process-shell-command "logout" nil "lxsession-logout"))
 
-(defun bluetooth ()
-  (interactive)
-  (split-window-vertically)
-  (other-window 1)
-  (start-process-shell-command "blueman-manager" nil "blueman-manager"))
+  (defun bluetooth ()
+    (interactive)
+    (split-window-vertically)
+    (other-window 1)
+    (start-process-shell-command "blueman-manager" nil "blueman-manager"))
 
-(defmacro define-shell-function (name command)
-  `(defun ,name ()
-     (interactive)
-     (start-process-shell-command ,(symbol-name name)
-                                  nil
-                                  ,command)))
+  (defmacro define-shell-function (name command)
+    `(defun ,name ()
+       (interactive)
+       (start-process-shell-command ,(symbol-name name)
+                                    nil
+                                    ,command)))
 
-(create-multi-macro define-shell-functions define-shell-function 2)
+  (create-multi-macro--old define-shell-functions define-shell-function 2)
 
-(define-shell-functions
-  wifi "wicd-gtk"
-  firefox "firefox"
-  spotify "spotify --force-device-scale-factor=2")
+  (define-shell-functions
+    wifi "cool-retro-term -e nmtui"
+    spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
 * Files and backups
 Don't make backups.
@@ -1920,10 +2044,6 @@ Various small functions which are evaluated before anything else in the file.
       of a buffer which is not associated with a file."
     (concat "*" string "*"))
 
-  (defun final-directory-name (path)
-    "Return the name of the final directory of the given path"
-    (elt (nreverse (split-string path "/")) 1))
-
   (defun reload-init-file ()
     "Load all elisp from 'user-init-file'."
     (interactive)
@@ -1958,14 +2078,6 @@ Various small functions which are evaluated before anything else in the file.
     (interactive)
     (kill-buffer (current-buffer)))
 
-  (defun answer-yes ()
-    (interactive)
-    (kbd "y"))
-
-  (defun answer-no ()
-    (interactive)
-    (kbd "n"))
-
   (defun windows-right ()
     (interactive)
     (if (> (length (window-list)) 1)
@@ -1994,15 +2106,16 @@ Various small functions which are evaluated before anything else in the file.
     (eshell 'N))
 
   (defun eshell-at (directory)
+    "Open a new instance of eshell in a new directory."
     (let ((default-directory directory))
       (eshell-new)))
 
-  ;; And this is a helper function to switch themes and disable old ones.
   (defun disable-most-recent-theme ()
     (interactive)
     (disable-theme (first custom-enabled-themes)))
 
   (defun switch-theme (theme)
+    "load a theme interactively while disabling the current one."
     (interactive
      (list
       (intern (completing-read "Load custom theme: "
@@ -2011,6 +2124,24 @@ Various small functions which are evaluated before anything else in the file.
     (disable-most-recent-theme)
     (load-theme theme t))
 
+  (defun string-represents-integer-p (string)
+    "Truthy if string is a representation of an integer (leading
+  zeroes allowed), nil otherwise."
+    (string-match-p "\\`[0-9][0-9]*\\'" string))
+
+  (defun string-to-integer-or-nil (string)
+    "If the string represents an integer, return that integer,
+  otherwise return nil."
+    (when (string-represents-integer-p string)
+      (string-to-number string)))
+
+  (defun circular (list)
+    "Return a copy of the given list where the last element points
+  to the first, rather than to nil."
+    (when list
+      (let ((new-list (copy-list list)))
+         (setf (cdr (last new-list))
+                  new-list))))
 
   (defmacro create-multi-macro--old (name macro num-parameters)
     `(defmacro ,name (&rest args)

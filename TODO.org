@@ -1,25 +1,62 @@
 * Emacs
-- Add flycheck file and #autosave# or whatever file to projectile exclusions
+** language tools
 - Add Rust editing tools
+** projects
+*** Projectile
+- Add flycheck file and #autosave# or whatever file to projectile exclusions
+*** Nix Daemon
 - Create a command to start a second daemon for nix project DONE
   - Name the daemon after the nix project DONE
   - some kind of daemon switching facility 
   - minimize startup time
   - Communicate through with daemon to create new frames etc.
   - Make the daemon buffer provide useful information
+*** Lorri
 - Lorri commands to watch and to refresh direnv bound to hotkeys DONE
 - Lorri auto-watch on entering a project (if not already watching) DONE
 - Eventually set up direnv auto-refresh?
-- Skeletor 
-  - contribute the subdirectory feature, ~:subdir~ keyword.
-  - Make a completion source that uses nix packages list to select packages for a project.
-  - project skeletons set up for
-    - Generic project with Nix and direnv (choose directory manually) DONE
-    - Common Lisp DONE
-    - C
-    - C++
-    - Rust
-    - Prolog
+*** Skeletor
+- contribute the subdirectory feature, ~:subdir~ keyword.
+- Make a completion source that uses nix packages list to select packages for a project.
+- project skeletons set up for
+  - Generic project with Nix and direnv (choose directory manually) DONE
+  - Common Lisp DONE
+  - C
+  - C++
+  - Rust
+  - Prolog
+** Launcher
+I want the following features:
+Simple macro to create launcher shortcuts
+example usage:
+#+BEGIN_SRC emacs-lisp
+  (launcher-shortcuts
+   firefox
+   krita
+   gimp
+   (spotify :args "--force-device-scale-factor=2"
+            :switch-to t)
+   (wifi :shell-command "cool-retro-term"
+         :args "-e nmtui"
+         :switch-to t)
+   (bluetooth :shell-command "blueman-manager"
+              :before (lambda ()
+                        (split-window-vertically)
+                        (other-window 1))
+              :switch-to t))
+#+END_SRC
+
+this is a good starting point, but eventually I want to parse .desktop
+files to add shortcuts automatically. I can continue to add launcher
+features over time in order to compete with those fancy gui launchers.
+I imagine that it will become useful to others, so why not make a package?
+
+Integrate with helm eventually.
+** Workspaces
+All that's left to do is that alt-tab style thing perhaps.  This is
+worth consolidating into a package. Think about how to provide a safe
+interface to users: maybe do a pull request in exwm to add extra hooks
+for that.
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗
