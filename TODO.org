@@ -69,10 +69,11 @@ Integrate with helm eventually.
 
 INTEGEATE THIS WITH YOUR WORKSPACE THING! YES SO GOOD!
 ** Workspaces
-All that's left to do is that alt-tab style thing perhaps.  This is
+- All that's left to do is that alt-tab style thing perhaps.  This is
 worth consolidating into a package. Think about how to provide a safe
 interface to users: maybe do a pull request in exwm to add extra hooks
 for that.
+- rename select-workspace to read-workspace
 ** exwm
 Remove extraneous information from the modelines of x11 window buffers
 * Other

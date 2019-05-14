@@ -8,6 +8,7 @@
   - [[#load-helper-functions][Load helper functions]]
   - [[#load-secrets][Load secrets]]
   - [[#constants][Constants]]
+  - [[#load-path][Load Path]]
 - [[#packages][Packages]]
   - [[#package-initialization][Package Initialization]]
   - [[#use-package][Use-Package]]
@@ -42,6 +43,7 @@
   - [[#delimiters][Delimiters]]
   - [[#which-key][Which-key]]
   - [[#ediff][Ediff]]
+  - [[#beacon][Beacon]]
 - [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -88,6 +90,7 @@
   - [[#bash][Bash]]
 - [[#excessive-nonsense][Excessive Nonsense]]
   - [[#emacs-window-manager][Emacs window manager]]
+  - [[#emms][EMMS]]
 - [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
 
@@ -147,6 +150,7 @@ Secrets are stored in ~~/.emacs.d/.secrets.el~.
     (when (file-exists-p secret.el)
       (load secret.el)))
 #+END_SRC
+
 ** Constants
 I create a few constants for later use
 #+BEGIN_SRC emacs-lisp
@@ -154,6 +158,13 @@ I create a few constants for later use
   (defconst me/dotfiles "~/.dotfiles/")
   ;; directory containing my nixos configutation
   (defconst me/nixos-directory "/sudo::/etc/nixos/") 
+#+END_SRC
+
+** Load Path
+I extend the load path from my dotfiles directory for tentative
+packages.
+#+BEGIN_SRC emacs-lisp
+  (push (concat me/dotfiles "emacs/packages/")load-path)
 #+END_SRC
 * Packages
 ** Package Initialization
@@ -292,7 +303,7 @@ the creation of simple ~evil~ text objects.
          (define-key evil-inner-text-objects-map ,key #',inner-name)
          (define-key evil-outer-text-objects-map ,key #',outer-name))))
 
-  (create-multi-macro--old simple-text-objects
+  (define-multi-macro--old simple-text-objects
                       define-and-bind-regex-text-object
                       4)
 #+END_SRC
@@ -356,17 +367,17 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
       (lambda (prompt)
         (if (,translate-keys-p) (kbd ,key-to) (kbd ,key-from)))))
 
-  (create-multi-macro--old make-conditional-key-translations
+  (define-multi-macro--old make-conditional-key-translations
                       make-conditional-key-translation
                       3)
 
   (defmacro inoremap-single (from to)
     `(make-conditional-key-translation ,from ,to evil-insert-state-p))
-  (create-multi-macro--old inoremap inoremap-single 2)
+  (define-multi-macro--old inoremap inoremap-single 2)
 
   (defmacro noremap-single (from to)
     `(make-conditional-key-translation ,from ,to (lambda nil t)))
-  (create-multi-macro--old noremap noremap-single 2)
+  (define-multi-macro--old noremap noremap-single 2)
 #+END_SRC
 ** All modes
 #+BEGIN_SRC emacs-lisp
@@ -647,6 +658,14 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
 Don't make a new frame for ediff.
 #+BEGIN_SRC emacs-lisp
 (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+#+END_SRC
+** Beacon
+Highlight the cursor when switching buffers.
+#+BEGIN_SRC emacs-lisp
+  (use-package beacon
+    :delight
+    :config
+    (beacon-mode 1))
 #+END_SRC
 * Dired
 Some dired configuration
@@ -1000,7 +1019,7 @@ package manager rather than through ~use-package~ due to a bug.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'tango-dark)
+  (switch-theme 'badwolf)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1342,6 +1361,22 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
   :delight)
 #+END_SRC
 ** Emacs lisp
+*** Nameless
+This uses font-lock to hide namespace prefixes automatically.
+#+BEGIN_SRC emacs-lisp
+  (use-package nameless
+    :config
+    (add-hook 'emacs-lisp-mode-hook #'nameless-mode)
+    (general-define-key :states 'insert
+                        :keymaps 'emacs-lisp-mode-map
+                        "C-:" 'nameless-insert-name)
+    (setq nameless-global-aliases '(("fl" . "font-lock")
+                                    ("s" . "seq")
+                                    ("me" . "macroexp")
+                                    ("c" . "cider")
+                                    ("q" . "queue")
+                                    ("xn" . "exwm-namedworkspace"))))
+#+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
 (eval-key-def 'normal emacs-lisp-mode-map
@@ -1743,17 +1778,20 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; Bind f11 to toggle full screen
             ([f11] . exwm-layout-toggle-fullscreen)
 
-            ;; Bind "s- " to launch exteral commands
-            ([?\s- ] . helm-run-external-command)
+            ;; Bind "s-&" to launch exteral through helm
+            ([?\s-&] . helm-run-external-command)
+
+            ;; Bind "s- " to launch external commands through my launcher.
+            ([?\s- ] . launch)
 
             ;;workspaces
-            ([?\s-m] . make-workspace)
-            ([?\s-d] . delete-workspace)
+            ([?\s-m] . exwm-namedworkspace-make)
+            ([?\s-d] . exwm-namedworkspace-delete)
 
-            ([?\s-n] . next-workspace)
-            ([?\s-p] . previous-workspace)
+            ([?\s-n] . exwm-namedworkspace-next)
+            ([?\s-p] . exwm-namedworkspace-previous)
 
-            ([s-tab] . switch-workspace)
+            ([s-tab] . exwm-namedworkspace-switch)
 
             ;; bind "s-[direction] to switch windows"
             ([?\s-h] . windmove-left)
@@ -1817,142 +1855,129 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
         (display-line-numbers-mode))))
 #+END_SRC
 *** Workspaces
+I wrote a small package to replace the numbered workspaces of exwm
+with named ones. This includes creation, deletion, and switching by
+narrowing name.
 #+BEGIN_SRC emacs-lisp
-  (defconst default-workspace-name  "default-workspace")
-  (defvar workspace--names (list default-workspace-name)
-    "List of names of workspaces, nil for unnamed.")
-  (defvar workspace--history (list 0)
-    "List of all workspace indicies. Earliest in this list is
-    most recently visited")
-
-  (setq exwm-workspace-index-map
-        (lambda (index)
-          (or (workspace--index-to-name index)
-              (number-to-string index))))
-
-  (defun workspace-index-names ()
-    (mapcar exwm-workspace-index-map
-            (number-sequence 0 (1- (exwm-workspace--count)))))
-
-  (defun current-workspace-index ()
-    (exwm-workspace--position (selected-frame)))
-
-  (defun current-workspace-name ()
-    (workspace--index-to-name (current-workspace-index)))
-
-  (cl-defun select-workspace (&key prompt without-default-workspace order)
-    (let* ((workspace-list (if without-default-workspace
-                               (remove default-workspace-name
-                                       (workspace-index-names))
-                             (workspace-index-names)))
-           (ordered-workspace-list (cond ((equal order :last-visited)
-                                          (mapcar exwm-workspace-index-map workspace--history))
-                                         ((equal order :last-visited-current-last)
-                                          (mapcar exwm-workspace-index-map (append (remove (current-workspace-index)
-                                                                                           workspace--history)
-                                                                                   (list (current-workspace-index)))))
-                                         ((equal order :newest-first) (reverse workspace-list))
-                                         ((equal order :oldest-first) workspace-list)
-                                         (t workspace-list))))
-      (completing-read (if prompt prompt (format "Select Workspace (current: [%s]): "
-                                                 (current-workspace-name)))
-                       ordered-workspace-list)))
-
-  (cl-defun switch--to-workspace (name-or-index &key (update-history t))
-    (unless (workspace-handle-valid-p
-             name-or-index)
-      (error (format "Workspace %s does not exist" name-or-index)))
-    (exwm-workspace-switch (workspace--name-to-index name-or-index))
-    (when update-history
-      (setq workspace--history
-            (remove (workspace--name-to-index name-or-index) workspace--history))
-      (add-to-list 'workspace--history (workspace--name-to-index name-or-index))))
-
-  (defun switch-workspace ()
-    (interactive)
-    (switch--to-workspace (select-workspace :order :last-visited-current-last)))
-
-  (cl-defun make--workspace (&optional (name nil))
-    (cond ((string-to-integer-or-nil name)
-           (error "Cannot use a number as the workspace name"))
-          ((find-if (lambda (s) (string= s name)) workspace--names)
-           (error (format "The workspace name '%s' is already in use" name)))
-          (t (exwm-workspace-switch 0)
-             (exwm-workspace-add)
-             (add-to-list 'workspace--history (current-workspace-index))
-             (add-to-list 'workspace--names name t))))
-
-  (defun make-workspace ()
-    (interactive)
-    (make--workspace (read-string "Workspace Name: ")))
-
-  (defun delete--workspace (name-or-index)
-    (cond
-     ((not (workspace-handle-valid-p name-or-index))
-      (error (format "Workspace %s does not exist" name-or-index)))
-     ((or (when (stringp name-or-index)
-            (string= name-or-index default-workspace-name))
-          (when (numberp name-or-index)
-            (= name-or-index 0)))
-      (error "Cannot delete the default workspace."))
-     (t
-      (if (equal (workspace--name-to-index name-or-index)
-                 (current-workspace-index))
-          (switch--to-workspace (second workspace--history)))
-      (setq workspace--history
-            (remove (workspace--name-to-index name-or-index) workspace--history))
-      (setq workspace--names
-            (remove-if (lambda (s)
-                         (string= s (workspace--index-to-name name-or-index)))
-                       workspace--names))
-      (exwm-workspace-delete (workspace--name-to-index name-or-index)))))
-
-  (defun delete-workspace ()
-    (interactive)
-    (delete--workspace (select-workspace :without-default-workspace t
-                                         :order :newest-first)))
-
-  (defun next-workspace ()
-    "Switch to the next workspace in order of creation"
-    (interactive)
-    (switch--to-workspace (1+ (current-workspace-index)))
-    (message (format "Current Workspace: [%s]" (current-workspace-name))))
-
-  (defun previous-workspace ()
-    "Switch to the previous workspace in order of creation"
-    (interactive)
-    (switch--to-workspace (1- (current-workspace-index)))
-    (message (format "Current Workspace: [%s]" (current-workspace-name))))
-
-  (defun workspace--index-to-name (name-or-index)
-    (if (numberp name-or-index)
-        (nth name-or-index workspace--names)
-      name-or-index))
-
-  (defun workspace--name-to-index (name-or-index)
-    (if (numberp name-or-index)
-        name-or-index
-      (or (string-to-integer-or-nil name-or-index)
-          (position-if (lambda (s) (string= s name-or-index))
-                       workspace--names))))
-
-  (defun workspace-handle-valid-p (name-or-index)
-    (if (numberp name-or-index)
-        (> (exwm-workspace--count) name-or-index)
-      (find-if (lambda (s) (string= s name-or-index))
-               (workspace-index-names))))
+  (require 'exwm-named-workspace)
 #+END_SRC
-*** COMMENT Launcher
-My implementation of an equivalent of dmenu and the ".desktop" file
+*** Launcher
+My implementation of an equivalent of dmenu and the ".desktop file"
 system for launching and switching between programs quickly
+**** Implementation
 #+BEGIN_SRC emacs-lisp
+  (defconst launcher-prefix "launcher/")
+  (defvar launcher-shortcut-functions nil
+    "List of functions representing launcher shortcuts.")
 
+
+  (defun launcher--get-exwm-buffer (class)
+    "Get the buffer of the exwm program with the given
+  class (`exwm-class-name')"
+    (require 'exwm)
+    (let ((last (buffer-list)))
+      (while (and last
+                  (not (with-current-buffer (car last)
+                         (and (eq major-mode 'exwm-mode)
+                              (string= (downcase (or exwm-class-name "")) (downcase class))))))
+        (setq last (cdr last)))
+      (car last)))
+
+  (cl-defmacro launcher-shortcut (name &key shell-command args
+                                       (switch-to t)
+                                       exwm-class
+                                       other-window
+                                       before
+                                       after
+                                       in-named-workspace)
+    "Create a function to launch the program given by NAME. 
+
+  The following keyword args are available:
+
+  SHELL-COMMAND, a string representing the shell command to use
+  for this program. Defaults to NAME.
+
+  ARGS, a string representing the command line arguments to use
+  for the program.
+
+  BEFORE and AFTER, elisp functions to run before and after the
+  program is launched.
+
+
+  If EXWM is installed, the following keywargs are available:
+
+  SWITCH-TO, if true will switch to the EXWM buffer of the running
+  program rather than starting a second instance. Default t.
+
+  EXWM-CLASS, the `exwm-class-name' of the program. Required for
+  SWITCH-TO. (not currently detected automatically, defaults to
+  NAME.)
+
+  OTHER-WINDOW, if true will open the program in another emacs
+  window.
+
+  If EXWM-NAMED-WORKSPACE is installed, the keyword
+  IN-NAMED-WORKSPACE can be used to run the program in the given
+  workspace, switch to that workspace, and create it if it does not
+  exist."
+    (let* ((name-string (symbol-name name))
+           (exwm-class (or exwm-class name-string))
+           (function-symbol (intern (concat launcher-prefix name-string)))
+           (full-shell-command (concat
+                                (or shell-command name-string)
+                                " " args)))
+      `(progn
+         (defun ,function-symbol ()
+           (interactive)
+           ,(when before `(funcall ,before))
+           ,(if (require 'exwm nil t)
+                `(progn
+                   ,(when (and t ;(require 'exwm-named-workspaces nil t)
+                               in-named-workspace)
+                      (exwm-named-workspace-make-or-switch in-named-workspace))
+                   (if ,(when switch-to `(get-process ,name-string))
+                       (,(if other-window
+                             'switch-to-buffer-other-window
+                           'switch-to-buffer)
+                        (launcher--get-exwm-buffer ,exwm-class))
+                     (progn
+                       ,(when other-window '(progn (split-window-sensibly) (other-window 1)))
+                       (start-process-shell-command ,name-string nil ,full-shell-command))))
+              `(start-process-shell-command ,name-string nil ,full-shell-command))
+           ,(when after `(funcall ,after)))
+         (add-to-list 'launcher-shortcut-functions ',function-symbol))))
+
+
+  (define-multi-macro-clauses launcher-shortcuts launcher-shortcut
+    "Define functions to launch programs. ")
+
+  (defun read-launcher ()
+    (completing-read "Launch: " launcher-shortcut-functions))
+
+  (defun launch ()
+    (interactive)
+    (funcall (symbol-function (intern (read-launcher)))))
+#+END_SRC
+**** Usage
+#+BEGIN_SRC emacs-lisp
+  (launcher-shortcuts
+   (firefox :switch-to nil)
+   krita
+   gimp
+   (spotify :args "--force-device-scale-factor=2"
+            :other-window t)
+   (wifi :shell-command "alacritty"
+         :args "-e nmtui")
+   (bluetooth :shell-command "blueman-manager"
+              :other-window t))
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
-  (use-package symon
-    :config
-    (symon-mode))
+    (use-package symon
+      :config
+      (symon-mode)
+      :bind
+      ("s-0" . symon-mode))
 #+END_SRC
 *** Helm EXWM
 ~Helm-EXWM~ defines helm sources for exwm buffers
@@ -1988,6 +2013,9 @@ Emacs interface to network manager. Buggy
     (recentf-save-list)
     (save-some-buffers)
     (start-process-shell-command "logout" nil "lxsession-logout"))
+#+END_SRC
+**** COMMENT Old launchers
+#+BEGIN_SRC emacs-lisp
 
   (defun bluetooth ()
     (interactive)
@@ -2002,12 +2030,14 @@ Emacs interface to network manager. Buggy
                                     nil
                                     ,command)))
 
-  (create-multi-macro--old define-shell-functions define-shell-function 2)
+  (define-multi-macro--old define-shell-functions define-shell-function 2)
 
   (define-shell-functions
     wifi "cool-retro-term -e nmtui"
     spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
+** EMMS
+
 * Files and backups
 Don't make backups.
 #+BEGIN_SRC emacs-lisp
@@ -2143,25 +2173,46 @@ Various small functions which are evaluated before anything else in the file.
          (setf (cdr (last new-list))
                   new-list))))
 
-  (defmacro create-multi-macro--old (name macro num-parameters)
+  (defmacro define-multi-macro--old (name macro num-parameters)
     `(defmacro ,name (&rest args)
        `(progn ,@(mapcar (lambda (elt)
                            `(,',macro ,@elt))
                          (seq-partition args ,num-parameters)))))
 
-  (defmacro create-multi-macro (name macro num-parameters &key kwargs)
+  (defmacro define-multi-macro-clauses (name macro documentation)
+    `(defmacro ,name (&rest clauses)
+       ,(concat documentation
+                (format "\n\nFor clause syntax, look at the
+  documentation of `%s'.
+
+  Example clauses:
+
+  (ARG1 ARG2 :KEYWORD1 VAL1 :KEYWORD2 VAL2)
+
+  (ARG BODY1
+       BODY2)
+
+  The clause \"(ARG)\" can be written as \"ARG\".
+  " macro))
+       `(progn ,@(mapcar (lambda (clause)
+                           `(,',macro ,@(if (consp clause)
+                                            clause
+                                          (list clause))))
+                         clauses))))
+
+  (defmacro define-multi-macro (name macro num-parameters &key kwargs)
     "kwargs is a list of keyword arguments to be accepted by macro"
     `(cl-defmacro ,name ,(append `(&rest args) (when kwargs (append `(&key) kwargs `(&allow-other-keys))))
        `(progn ,@(mapcar (lambda (elt)
                            ,(let ((result (list (quote backquote) (list macro ',@elt))))
-                                 (dolist (kwarg kwargs)
-                                   (setf (cadr result) (append (cadr result)
-                                                        (list (make-symbol
-                                                               (concat ":"
-                                                                       (symbol-name kwarg)))
-                                                              (list
-                                                               (quote \,)
-                                                               kwarg)))))
-                                 result))
+                              (dolist (kwarg kwargs)
+                                (setf (cadr result) (append (cadr result)
+                                                            (list (make-symbol
+                                                                   (concat ":"
+                                                                           (symbol-name kwarg)))
+                                                                  (list
+                                                                   (quote \,)
+                                                                   kwarg)))))
+                              result))
                          (seq-partition (remove-keyword-args args) ,num-parameters)))))
 #+END_SRC
