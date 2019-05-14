@@ -68,6 +68,13 @@ properties can be overriden by ~launcher-shortcuts~.
 Integrate with helm eventually.
 
 INTEGEATE THIS WITH YOUR WORKSPACE THING! YES SO GOOD!
+*** new 
+super tab for workspaces
+alt tab for buffers
+
+even in x11 windows
+
+achieve perfect symmetry between buffers and workspaces
 ** Workspaces
 - All that's left to do is that alt-tab style thing perhaps.  This is
 worth consolidating into a package. Think about how to provide a safe

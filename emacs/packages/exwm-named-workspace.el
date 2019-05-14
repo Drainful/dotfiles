@@ -1,8 +1,7 @@
-;;; exwm-named-workspace.el                     -*- lexical-binding: t; -*-
+;;; exwm-named-workspace.el -*- lexical-binding: t; -*-
 ;; Copyright (C) 2019 Adrian Fullmer
 
 ;; Author: Adrian Fullmer <adrianfullmer@yahoo.com>
-;; Keywords: exwm workspace
 ;; Version: 0.0.1
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -71,12 +70,11 @@
                                         (exwm-named-workspace--current-name)))
                      ordered-workspace-list)))
 
-(cl-defun exwm-named-workspace--switch (name-or-index &key (update-history t))
-  (unless (exwm-named-workspace-handle-valid-p
-           name-or-index)
+(cl-defun exwm-named-workspace--switch (name-or-index &optional avoid-history-update)
+  (unless (exwm-named-workspace-handle-valid-p name-or-index)
     (error (format "Workspace %s does not exist" name-or-index)))
   (exwm-workspace-switch (exwm-named-workspace--name-to-index name-or-index))
-  (when update-history
+  (when (not avoid-history-update)
     (setq exwm-named-workspace--history
           (remove (exwm-named-workspace--name-to-index name-or-index) exwm-named-workspace--history))
     (add-to-list 'exwm-named-workspace--history (exwm-named-workspace--name-to-index name-or-index))))
@@ -101,7 +99,7 @@
 
 (defun exwm-named-workspace-make-or-switch (name)
   (interactive "sWorkspace Name: ")
-  (if (find name exwm-named-workspace--names)
+  (if (find-if (lambda (s) (string= s name)) exwm-named-workspace--names)
       (exwm-named-workspace-switch name)
     (exwm-named-workspace-make name)))
 
@@ -142,6 +140,17 @@
   (interactive)
   (exwm-named-workspace--switch (1- (exwm-named-workspace--current-index)))
   (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
+
+(defun exwm-named-workspace-history (n &optional avoid-history-update)
+  (cond ((>= n (length exwm-named-workspace--history)) (error "Older history does not exist"))
+        ((< n 0) (error "Newer history does not exist")))
+  (exwm-named-workspace--switch (nth n exwm-named-workspace--history) avoid-history-update)
+  (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
+
+(defun exwm-named-workspace-update-history ()
+  (setq exwm-named-workspace--history
+        (remove (exwm-named-workspace--current-index) exwm-named-workspace--history))
+  (add-to-list 'exwm-named-workspace--history (exwm-named-workspace--current-index)))
 
 (defun exwm-named-workspace--index-to-name (name-or-index)
   (if (numberp name-or-index)

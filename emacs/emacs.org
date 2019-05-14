@@ -1011,8 +1011,8 @@ Doom Emacs looks good. I want those themes.
   (doom-themes-visual-bell-config))
 #+END_SRC
 ** Poet Theme
-I also use the ~poet~ theme, but I install it through the built-in
-package manager rather than through ~use-package~ due to a bug.
+I also use the ~poet~ theme, but I install it through ~package-install~
+rather than through ~use-package~ due to a bug.
 ** Theme
 #+BEGIN_SRC emacs-lisp
   (defun disable-all-themes ()
@@ -1375,7 +1375,7 @@ This uses font-lock to hide namespace prefixes automatically.
                                     ("me" . "macroexp")
                                     ("c" . "cider")
                                     ("q" . "queue")
-                                    ("xn" . "exwm-namedworkspace"))))
+                                    ("xn" . "exwm-named-workspace"))))
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -1778,26 +1778,31 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; Bind f11 to toggle full screen
             ([f11] . exwm-layout-toggle-fullscreen)
 
-            ;; Bind "s-&" to launch exteral through helm
-            ([?\s-&] . helm-run-external-command)
+            ;; Bind "s-!" to launch exteral commands with READ-SHELL-COMMAND
+            ([?\s-!] . (lambda (command)
+                         (interactive (list (read-shell-command "$ ")))
+                         (start-process-shell-command command nil command)))
 
             ;; Bind "s- " to launch external commands through my launcher.
-            ([?\s- ] . launch)
+            ([?\s-] . exlaunch)
 
             ;;workspaces
-            ([?\s-m] . exwm-namedworkspace-make)
-            ([?\s-d] . exwm-namedworkspace-delete)
+            ([?\s-m] . exwm-named-workspace-make)
+            ([?\s-d] . exwm-named-workspace-delete)
 
-            ([?\s-n] . exwm-namedworkspace-next)
-            ([?\s-p] . exwm-namedworkspace-previous)
+            ([?\s-n] . exwm-named-workspace-next)
+            ([?\s-p] . exwm-named-workspace-previous)
 
-            ([s-tab] . exwm-namedworkspace-switch)
+            ([s-return] . exwm-named-workspace-switch)
 
             ;; bind "s-[direction] to switch windows"
             ([?\s-h] . windmove-left)
             ([?\s-j] . windmove-down)
             ([?\s-k] . windmove-up)
             ([?\s-l] . windmove-right)
+
+            ;;symon
+            ([?\s-\\] . symon-mode)
 
             ;; bind "s-arrow" to move, "maximize" or "minimize" a window
             ([s-right] . windows-right)
@@ -1814,7 +1819,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-b" to buffer switching
             ([?\s-b] . helm-mini)
             ;; bind "s-f" to file switching
-            ([?\s-f] . helm-find-files) 
+            ([?\s-f] . helm-find-files)
             ;; bind "s-q" to kill this buffer, closing the current
             ;; program, and "s-w" to kill the current buffer AND window
             ([?\s-q] . actually-kill-this-buffer)
@@ -1831,17 +1836,17 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     ;; set prefix keys
     (setq my-exwm-prefix-keys (list
-                               ?\: ; evil ex mode
-                               ?\, ; leader key
-                               ?\M-x ; M-x
-                              ?\C-w)) ; window options
+                               ?\:        ; evil ex mode
+                               ?\,        ; leader key
+                               ?\M-x      ; M-x
+                               ?\C-w))    ; window options
 
     (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
-    ;; Allow pulling a window between workspaces by switching to its buffer
+    ;; Do not allow pulling a window between workspaces by switching to its buffer
     ;; to see x windows on other workspaces, do C-c a
-    (setq exwm-workspace-show-all-buffers t)
-    (setq exwm-layout-show-all-buffers t)
+    (setq exwm-workspace-show-all-buffers nil)
+    (setq exwm-layout-show-all-buffers nil)
 
     ;; Redefine function to fix global-display-line-numbers-mode bug
     ;; regarding the exwm "frame" not having the 'client parameter
@@ -1854,130 +1859,66 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                   )
         (display-line-numbers-mode))))
 #+END_SRC
-*** Workspaces
+*** Named Workspaces
 I wrote a small package to replace the numbered workspaces of exwm
 with named ones. This includes creation, deletion, and switching by
 narrowing name.
 #+BEGIN_SRC emacs-lisp
+  ; -*- lexical-binding: t -*-
   (require 'exwm-named-workspace)
+
+  (exwm-named-workspace-make "scratch")
 #+END_SRC
-*** Launcher
-My implementation of an equivalent of dmenu and the ".desktop file"
-system for launching and switching between programs quickly
-**** Implementation
+
+This is a hydra to switch between workspaces in the classic "Alt-tab"
+style with super-tab
+
 #+BEGIN_SRC emacs-lisp
-  (defconst launcher-prefix "launcher/")
-  (defvar launcher-shortcut-functions nil
-    "List of functions representing launcher shortcuts.")
+  (lexical-let ((history-element 0))
+    (defun workspace-history-delta (delta)
+      (exwm-named-workspace-history (+ history-element delta) t)
+      (incf history-element delta))
 
+    (general-define-key
+     "M-<tab>" (lambda ()
+                 (interactive)
+                 (workspace-history-delta 1)
+                 (hydra-workspace-history/body)))
 
-  (defun launcher--get-exwm-buffer (class)
-    "Get the buffer of the exwm program with the given
-  class (`exwm-class-name')"
-    (require 'exwm)
-    (let ((last (buffer-list)))
-      (while (and last
-                  (not (with-current-buffer (car last)
-                         (and (eq major-mode 'exwm-mode)
-                              (string= (downcase (or exwm-class-name "")) (downcase class))))))
-        (setq last (cdr last)))
-      (car last)))
-
-  (cl-defmacro launcher-shortcut (name &key shell-command args
-                                       (switch-to t)
-                                       exwm-class
-                                       other-window
-                                       before
-                                       after
-                                       in-named-workspace)
-    "Create a function to launch the program given by NAME. 
-
-  The following keyword args are available:
-
-  SHELL-COMMAND, a string representing the shell command to use
-  for this program. Defaults to NAME.
-
-  ARGS, a string representing the command line arguments to use
-  for the program.
-
-  BEFORE and AFTER, elisp functions to run before and after the
-  program is launched.
-
-
-  If EXWM is installed, the following keywargs are available:
-
-  SWITCH-TO, if true will switch to the EXWM buffer of the running
-  program rather than starting a second instance. Default t.
-
-  EXWM-CLASS, the `exwm-class-name' of the program. Required for
-  SWITCH-TO. (not currently detected automatically, defaults to
-  NAME.)
-
-  OTHER-WINDOW, if true will open the program in another emacs
-  window.
-
-  If EXWM-NAMED-WORKSPACE is installed, the keyword
-  IN-NAMED-WORKSPACE can be used to run the program in the given
-  workspace, switch to that workspace, and create it if it does not
-  exist."
-    (let* ((name-string (symbol-name name))
-           (exwm-class (or exwm-class name-string))
-           (function-symbol (intern (concat launcher-prefix name-string)))
-           (full-shell-command (concat
-                                (or shell-command name-string)
-                                " " args)))
-      `(progn
-         (defun ,function-symbol ()
-           (interactive)
-           ,(when before `(funcall ,before))
-           ,(if (require 'exwm nil t)
-                `(progn
-                   ,(when (and t ;(require 'exwm-named-workspaces nil t)
-                               in-named-workspace)
-                      (exwm-named-workspace-make-or-switch in-named-workspace))
-                   (if ,(when switch-to `(get-process ,name-string))
-                       (,(if other-window
-                             'switch-to-buffer-other-window
-                           'switch-to-buffer)
-                        (launcher--get-exwm-buffer ,exwm-class))
-                     (progn
-                       ,(when other-window '(progn (split-window-sensibly) (other-window 1)))
-                       (start-process-shell-command ,name-string nil ,full-shell-command))))
-              `(start-process-shell-command ,name-string nil ,full-shell-command))
-           ,(when after `(funcall ,after)))
-         (add-to-list 'launcher-shortcut-functions ',function-symbol))))
-
-
-  (define-multi-macro-clauses launcher-shortcuts launcher-shortcut
-    "Define functions to launch programs. ")
-
-  (defun read-launcher ()
-    (completing-read "Launch: " launcher-shortcut-functions))
-
-  (defun launch ()
-    (interactive)
-    (funcall (symbol-function (intern (read-launcher)))))
+    (defhydra hydra-workspace-history (:timeout 1
+                                       :post (progn
+                                               (setq history-element 0)
+                                               (exwm-named-workspace-update-history)))
+      "Workspace history: "
+      ("M-<tab>" (workspace-history-delta 1))
+      ("M-<S-iso-lefttab>" (workspace-history-delta -1))))
 #+END_SRC
-**** Usage
+*** Exlaunch
+I wrote a package to launch programs which integrates with ~exwm~ and
+~exwm-named-workspaces~.
 #+BEGIN_SRC emacs-lisp
-  (launcher-shortcuts
-   (firefox :switch-to nil)
-   krita
-   gimp
+  (require 'exlaunch)
+
+  (exlaunch-shortcuts
+   (firefox :in-named-workspace "firefox")
+
+   (krita :in-named-workspace "art")
+   (gimp :in-named-workspace "art")
+
    (spotify :args "--force-device-scale-factor=2"
             :other-window t)
-   (wifi :shell-command "alacritty"
+
+   (nmtui :shell-command "alacritty"
          :args "-e nmtui")
+
    (bluetooth :shell-command "blueman-manager"
               :other-window t))
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
-    (use-package symon
-      :config
-      (symon-mode)
-      :bind
-      ("s-0" . symon-mode))
+  (use-package symon
+    :config
+    (symon-mode))
 #+END_SRC
 *** Helm EXWM
 ~Helm-EXWM~ defines helm sources for exwm buffers
