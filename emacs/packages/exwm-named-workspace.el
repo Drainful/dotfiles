@@ -22,150 +22,198 @@
 ;; Exwm has only numbered workspaces, this package extends that
 ;; functionality to include named workspaces.
 
+;; TODO handle more than 1 starting workspace and provide a method to
+;; change the default workspace names.
+
+;; TODO handle multiple workspaces being initialized with the same
+;; name (without using exwm named workspace functions.)
+
+;; TODO and alist (name . (list functions)), like hooks for the
+;; creation of the workspace with that name. Could also do the same
+;; for entering that workspace.
+
 ;;; Code:
 
-(provide 'exwm-named-workspace)
-(require 'exwm-named-workspace)
-(defconst exwm-named-workspace--default-workspace-name  "default-workspace")
-(defvar exwm-named-workspace--names (list exwm-named-workspace--default-workspace-name)
-  "List of names of workspaces, nil for unnamed.")
-(defvar exwm-named-workspace--history (list 0)
-  "List of all workspace indicies. Earliest in this list is
+(require 'exwm)
+(require 'cl-lib)
+
+(defvar exwm-named-workspace--names nil
+  "Alist of names of workspaces, (name . emacs frame).")
+
+(defvar exwm-named-workspace--history (cl-copy-list exwm-workspace--list)
+  "List of all workspaces. Earliest in this list is
   most recently visited")
 
-(setq exwm-named-workspace-index-map
-      (lambda (index)
-        (or (exwm-named-workspace--index-to-name index)
-            (number-to-string index))))
+(defun exwm-named-workspace--name->frame (name)
+  (cdr (or (assoc name exwm-named-workspace--names)
+           (error (format "There is no workspace with the name %s" name)))))
 
-(setq exwm-workspace-index-map
-      exwm-named-workspace-index-map)
+(defun exwm-named-workspace--frame->name (frame)
+  (car (rassoc frame exwm-named-workspace--names)))
 
-(defun exwm-named-workspace--index-names ()
-  (mapcar exwm-named-workspace-index-map
-          (number-sequence 0 (1- (exwm-workspace--count)))))
+(defun exwm-named-workspace--frame->index (frame)
+  (exwm-workspace--position frame))
+
+(defun exwm-named-workspace--index->frame (index)
+  (nth index exwm-workspace--list))
+
+(defun exwm-named-workspace--index->name (index)
+  (car (rassoc (exwm-named-workspace--index->frame index)
+               exwm-named-workspace--names)))
 
 (defun exwm-named-workspace--current-index ()
-  (exwm-workspace--position (selected-frame)))
+  (exwm-named-workspace--frame->index (selected-frame)))
 
 (defun exwm-named-workspace--current-name ()
-  (exwm-named-workspace--index-to-name (exwm-named-workspace--current-index)))
+  (exwm-named-workspace--frame->name (selected-frame)))
 
-(cl-defun exwm-named-workspace-read (&key prompt without-default-workspace order)
-  (let* ((workspace-list (if without-default-workspace
-                             (remove exwm-named-workspace--default-workspace-name
-                                     (exwm-named-workspace--index-names))
-                           (exwm-named-workspace--index-names)))
-         (ordered-workspace-list (cond ((equal order :last-visited)
-                                        (mapcar exwm-named-workspace-index-map exwm-named-workspace--history))
-                                       ((equal order :last-visited-current-last)
-                                        (mapcar exwm-named-workspace-index-map
-                                                (append (remove (exwm-named-workspace--current-index)
-                                                                exwm-named-workspace--history)
-                                                        (list (exwm-named-workspace--current-index)))))
-                                       ((equal order :newest-first) (reverse workspace-list))
-                                       ((equal order :oldest-first) workspace-list)
-                                       (t workspace-list))))
+(defun exwm-named-workspace--name-exists-p (name)
+  (cl-find-if (lambda (s) (string= (car s) name)) exwm-named-workspace--names))
+
+(defvar exwm-named-workspace--old-workspace-list (cl-copy-list exwm-workspace--list)
+  "The list of workspaces before changes are made. Used for the
+  `exwm-workspace-list-change-hook'.")
+
+(defvar exwm-named-workspace--new-name "default-workspace"
+  "The name that will be given to the next workspace created by
+  `exwm-workspace-add'. For internal use only.")
+
+(defun exwm-named-workspace--post-change ()
+  "This function is added to the
+`exwm-workspace-list-change-hook' to keep track of names."
+  (let* ((new-workspace (cl-find-if (lambda (frame)
+                                   (not (cl-find frame
+                                              exwm-named-workspace--old-workspace-list)))
+                                 exwm-workspace--list))
+         (deleted-workspace (unless new-workspace
+                              (cl-find-if (lambda (frame)
+                                         (not (cl-find frame
+                                                    exwm-workspace--list)))
+                                       exwm-named-workspace--old-workspace-list))))
+    (when new-workspace
+      ;; (assert (equal (selected-frame) new-workspace))
+      ;; (let ((exwm-named-workspace--new-name (labels (())
+      ;;                       (if (cl-find-if (lambda (cell)
+      ;;                                  (string= exwm-named-workspace--new-name
+      ;;                                           (car cell)))
+      ;;                                exwm-named-workspace--names)
+      ;;                       )))))
+      (setq exwm-named-workspace--names (cons (cons exwm-named-workspace--new-name new-workspace)
+                          exwm-named-workspace--names))
+      (add-to-list 'exwm-named-workspace--history new-workspace))
+    (when deleted-workspace
+      (setq exwm-named-workspace--names
+            (cl-remove-if (lambda (w) (equal deleted-workspace
+                                          (cdr w)))
+                       exwm-named-workspace--names))
+      (setq exwm-named-workspace--history
+            (remove deleted-workspace exwm-named-workspace--history))))
+  (setq exwm-named-workspace--old-workspace-list (cl-copy-list exwm-workspace--list)))
+
+(add-hook 'exwm-workspace-list-change-hook 'exwm-named-workspace--post-change)
+
+(defconst exwm-named-workspace--history-norecord nil
+  "When non-nil, do not put recently switched workspaces on top
+  of the history stack.")
+
+(defun exwm-named-workspace-update-history ()
+  "Unless the global variable NORECORD is non-nil, put the
+current workspace on top of the history stack."
+  (unless exwm-named-workspace--history-norecord
+      (let ((current-frame (selected-frame)))
+        (setq exwm-named-workspace--history (remove current-frame exwm-named-workspace--history))
+        (add-to-list 'exwm-named-workspace--history current-frame))))
+
+(add-hook 'exwm-workspace-switch-hook #'exwm-named-workspace-update-history)
+
+(defvar exwm-named-workspace-message-on-switch nil
+  "If non nil, create a message notifying you of the current
+  workspace on switch.")
+
+(defun exwm-named-workspace--current-workspace-msg ()
+  (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
+
+(add-hook 'exwm-workspace-switch-hook
+          (lambda ()
+            (when exwm-named-workspace-message-on-switch
+              (exwm-named-workspace--current-workspace-msg))))
+
+(setq exwm-workspace-index-map
+      (lambda (index)
+        (or (concat "\"" (exwm-named-workspace--index->name index) "\"")
+            (number-to-string index))))
+
+(defun exwm-named-workspace--remove-strings (strings list)
+  (mapcar (lambda (string)
+         (cl-remove-if (lambda (s) (string= string s))
+                    list))
+       strings))
+
+(cl-defun exwm-named-workspace-read (&key prompt
+                     ;; without-default-workspaces
+                      current-last)
+  "Read the name of a workspace from the user."
+  (let* ((names (mapcar 'exwm-named-workspace--frame->name exwm-named-workspace--history))
+         ;; (names (if without-default-workspaces
+         ;;            (exwm-named-workspace--remove-strings exwm-named-workspace--default-workspace-names names)
+         ;;          names))
+         (names (if current-last
+                    (append (remove (exwm-named-workspace--current-name)
+                                       names)
+                            (list (exwm-named-workspace--current-name)))
+                  names)))
     (completing-read (or prompt (format "Select Workspace (current: [%s]): "
                                         (exwm-named-workspace--current-name)))
-                     ordered-workspace-list)))
+                     names)))
 
-(cl-defun exwm-named-workspace--switch (name-or-index &optional avoid-history-update)
-  (unless (exwm-named-workspace-handle-valid-p name-or-index)
-    (error (format "Workspace %s does not exist" name-or-index)))
-  (exwm-workspace-switch (exwm-named-workspace--name-to-index name-or-index))
-  (when (not avoid-history-update)
-    (setq exwm-named-workspace--history
-          (remove (exwm-named-workspace--name-to-index name-or-index) exwm-named-workspace--history))
-    (add-to-list 'exwm-named-workspace--history (exwm-named-workspace--name-to-index name-or-index))))
+(cl-defun exwm-named-workspace--switch (name &optional norecord)
+  "Switch to the workspace represented by NAME.
+ If norecord is non-nil, do not update the history."
+  (let ((exwm-named-workspace--history-norecord norecord))
+    (exwm-workspace-switch (exwm-named-workspace--name->frame name))))
 
-(defun exwm-named-workspace-switch (workspace)
-  (interactive (list (exwm-named-workspace-read :order :last-visited-current-last)))
-  (exwm-named-workspace--switch workspace))
+(defun exwm-named-workspace-switch (workspace-name)
+  "Switch to the workspace with string name WORKSPACE."
+  (interactive (list (exwm-named-workspace-read :current-last t)))
+  (exwm-named-workspace--switch workspace-name))
 
-(cl-defun exwm-named-workspace--make (&optional (name nil))
-  (cond ((string-to-integer-or-nil name)
-         (error "Cannot use a number as the workspace name"))
-        ((find-if (lambda (s) (string= s name)) exwm-named-workspace--names)
-         (error (format "The workspace name '%s' is already in use" name)))
-        (t (exwm-workspace-switch 0)
-           (exwm-workspace-add)
-           (add-to-list 'exwm-named-workspace--history (exwm-named-workspace--current-index))
-           (add-to-list 'exwm-named-workspace--names name t))))
-
-(defun exwm-named-workspace-make (name)
-  (interactive  "sWorkspace Name: ")
-  (exwm-named-workspace--make name))
+(cl-defun exwm-named-workspace-make (name &optional (from 0))
+  (interactive "sWorkspace Name: ")
+  "Make a new workspace with name NAME, first switching to the
+workspace with index FROM (so that x11 windows do not get stolen
+from the current workspace)"
+  (if (exwm-named-workspace--name-exists-p name)
+      (error (format "The workspace name '%s' is already in use" name))
+      (progn (exwm-workspace-switch from)
+             (let ((exwm-named-workspace--new-name name))
+               (exwm-workspace-add)))))
 
 (defun exwm-named-workspace-make-or-switch (name)
-  (interactive "sWorkspace Name: ")
-  (if (find-if (lambda (s) (string= s name)) exwm-named-workspace--names)
+  (interactive (list (exwm-named-workspace-read :current-last t)))
+  (if (exwm-named-workspace--name-exists-p name)
       (exwm-named-workspace-switch name)
     (exwm-named-workspace-make name)))
 
-(defun exwm-named-workspace--delete (name-or-index)
-  (cond
-   ((not (exwm-named-workspace-handle-valid-p name-or-index))
-    (error (format "Workspace %s does not exist" name-or-index)))
-   ((or (when (stringp name-or-index)
-          (string= name-or-index exwm-named-workspace--default-workspace-name))
-        (when (numberp name-or-index)
-          (= name-or-index 0)))
-    (error "Cannot delete the default workspace."))
-   (t
-    (if (equal (exwm-named-workspace--name-to-index name-or-index)
-               (exwm-named-workspace--current-index))
-        (exwm-named-workspace--switch (second exwm-named-workspace--history)))
-    (setq exwm-named-workspace--history
-          (remove (exwm-named-workspace--name-to-index name-or-index) exwm-named-workspace--history))
-    (setq exwm-named-workspace--names
-          (remove-if (lambda (s)
-                       (string= s (exwm-named-workspace--index-to-name name-or-index)))
-                     exwm-named-workspace--names))
-    (exwm-workspace-delete (exwm-named-workspace--name-to-index name-or-index)))))
-
 (defun exwm-named-workspace-delete (workspace)
-  (interactive (list (exwm-named-workspace-read :without-default-workspace t
-                                       :order :newest-first)))
-  (exwm-named-workspace--delete workspace))
+  "Delete the workspace with the given name. You may use either
+this or `exwm-workspace-delete' to delete your
+workspaces. Interactive."
+  (interactive (list (exwm-named-workspace-read)))
+  (exwm-workspace-delete (exwm-named-workspace--name->frame workspace)))
 
-(defun exwm-named-workspace-next ()
-  "Switch to the next workspace in order of creation"
-  (interactive)
-  (exwm-named-workspace--switch (1+ (exwm-named-workspace--current-index)))
-  (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
+(defun exwm-named-workspace--circular-copy (list)
+    "Return a copy of the given list where the last element points
+  to the first, rather than to nil."
+    (when list
+      (let ((new-list (cl-copy-list list)))
+         (setf (cdr (last new-list))
+                  new-list))))
 
-(defun exwm-named-workspace-previous ()
-  "Switch to the previous workspace in order of creation"
-  (interactive)
-  (exwm-named-workspace--switch (1- (exwm-named-workspace--current-index)))
-  (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
+(defun exwm-named-workspace-history (n &optional norecord)
+  "Switch to the Nth element of the workspace history
+circularly. If norecord is non-nil, do not update the history."
+  (let ((exwm-named-workspace-message-on-switch t))
+    (exwm-named-workspace--switch (exwm-named-workspace--frame->name
+               (nth n (exwm-named-workspace--circular-copy exwm-named-workspace--history))) norecord)))
 
-(defun exwm-named-workspace-history (n &optional avoid-history-update)
-  (cond ((>= n (length exwm-named-workspace--history)) (error "Older history does not exist"))
-        ((< n 0) (error "Newer history does not exist")))
-  (exwm-named-workspace--switch (nth n exwm-named-workspace--history) avoid-history-update)
-  (message (format "Current Workspace: [%s]" (exwm-named-workspace--current-name))))
-
-(defun exwm-named-workspace-update-history ()
-  (setq exwm-named-workspace--history
-        (remove (exwm-named-workspace--current-index) exwm-named-workspace--history))
-  (add-to-list 'exwm-named-workspace--history (exwm-named-workspace--current-index)))
-
-(defun exwm-named-workspace--index-to-name (name-or-index)
-  (if (numberp name-or-index)
-      (nth name-or-index exwm-named-workspace--names)
-    name-or-index))
-
-(defun exwm-named-workspace--name-to-index (name-or-index)
-  (if (numberp name-or-index)
-      name-or-index
-    (or (string-to-integer-or-nil name-or-index)
-        (position-if (lambda (s) (string= s name-or-index))
-                     exwm-named-workspace--names))))
-
-(defun exwm-named-workspace-handle-valid-p (name-or-index)
-  (if (numberp name-or-index)
-      (> (exwm-workspace--count) name-or-index)
-    (find-if (lambda (s) (string= s name-or-index))
-             (exwm-named-workspace--index-names))))
+(provide 'exwm-named-workspace)

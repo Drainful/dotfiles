@@ -1153,6 +1153,75 @@ I prefer to follow symbolic links under version control.
 (setq vc-follow-symlinks t)
 #+END_SRC
 
+*** COMMENT Alt-tab buffer navigation
+While emacs is missing key raised events, alt-tab style behavior can
+still be replicated with a hydra with a timeout
+(broken)
+#+BEGIN_SRC emacs-lisp
+  (lexical-let (blist length-blist)
+
+    (defun buffer-switchable (buffer)
+      (with-current-buffer buffer
+        (not (or (minibufferp) ; dont switch to minibuffer
+                 (get-buffer-window) ; or a buffer which is already visible
+                 exwm--floating-frame ; or an exwm floating buffer
+                 (and exwm--id ; if this is an exwm buffer
+                      ;; don't switch if we are neither allowed to
+                      ;; switch to exwm buffers in other frames, nor can
+                      ;; see exwm buffers in other frames, unless the
+                      ;; exwm buffer's frame is the current one.
+                      (not (or (and exwm-workspace-show-all-buffers
+                                    exwm-layout-show-all-buffers)
+                               (eq (selected-frame) exwm--frame))))))))
+
+    (defun buffer-history-delta (delta)
+      (assert (or (= delta 1)
+                  (= delta -1)))
+      (setq blist (cd*r (if (minusp delta)
+                            (+ length-blist delta)
+                          delta)
+                        blist))
+      (if (buffer-switchable (car blist))
+          ;(display-buffer-same-window (car blist) (list))
+          (switch-to-buffer (car blist) t t)
+        (buffer-history-delta delta)))
+
+    (defun update-buffer-history ()
+      (switch-to-buffer (current-buffer)))
+
+    (general-define-key
+     "M-<tab>" (lambda ()
+                 (interactive)
+                 (setq length-blist (length (buffer-list)))
+                 (setq blist (circular (buffer-list)))
+                 (buffer-history-delta 1)
+                 (hydra-buffer-history/body)))
+
+    (defhydra hydra-buffer-history (:timeout 2
+                                             :post (update-buffer-history))
+      "Buffer history: "
+      ("M-<tab>" (buffer-history-delta 1))
+      ("M-<S-iso-lefttab>" (buffer-history-delta -1))))
+#+END_SRC
+
+
+*** COMMENT Helm Alt-tab buffer navigation
+While emacs is missing key raised events, alt-tab style behavior can
+still be replicated with a hydra with a timeout
+(broken)
+#+BEGIN_SRC emacs-lisp
+  (general-define-key
+   "C-M-`" (lambda ()
+            (interactive)
+            (helm-mini)
+            (hydra-helm-mini/body)))
+
+  (defhydra hydra-helm-mini (:timeout 2
+                                      :post (helm-execute-selection-action))
+    "Buffer history: "
+    ("M-<tab>" (helm-next-line))
+    ("M-<S-iso-lefttab>" (helm-previous-line)))
+#+END_SRC
 *** COMMENT Buffer rotating
 I bind tab and shift-tab to functions which switch to the previous and
 next buffer with content respectively.
@@ -1365,6 +1434,7 @@ While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a dif
 This uses font-lock to hide namespace prefixes automatically.
 #+BEGIN_SRC emacs-lisp
   (use-package nameless
+    :delight
     :config
     (add-hook 'emacs-lisp-mode-hook #'nameless-mode)
     (general-define-key :states 'insert
@@ -1782,18 +1852,29 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-!] . (lambda (command)
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
+          
+            ([?\s-`] . eshell)
+
+            ,@(mapcar (lambda (n)
+                        `(,(kbd (format "s-%d" n)) .
+                          (lambda ()
+                            (interactive)
+                            (eshell ,n)))
+                        (number-sequence 1 3)))
+
+            ([?\s-4] . exlaunch/alacritty)
 
             ;; Bind "s- " to launch external commands through my launcher.
-            ([?\s-] . exlaunch)
+            ([?\s- ] . exlaunch)
 
             ;;workspaces
-            ([?\s-m] . exwm-named-workspace-make)
             ([?\s-d] . exwm-named-workspace-delete)
 
-            ([?\s-n] . exwm-named-workspace-next)
-            ([?\s-p] . exwm-named-workspace-previous)
+            ;; s-tab makes these unnecessary.
+            ;; ([?\s-n] . exwm-named-workspace-next)
+            ;; ([?\s-p] . exwm-named-workspace-previous)
 
-            ([s-return] . exwm-named-workspace-switch)
+            ([s-return] . exwm-named-workspace-make-or-switch)
 
             ;; bind "s-[direction] to switch windows"
             ([?\s-h] . windmove-left)
@@ -1801,8 +1882,15 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-k] . windmove-up)
             ([?\s-l] . windmove-right)
 
-            ;;symon
+            ;; symon mode toggle
             ([?\s-\\] . symon-mode)
+
+            ;; switch to default workspace and scratch buffer
+            ([?\s-0] . (lambda ()
+                         (interactive)
+                         (let ((exwm-named-workspace--message-on-switch t))
+                           (exwm-named-workspace-make-or-switch "default-workspace")
+                           (switch-to-buffer "*scratch*"))))
 
             ;; bind "s-arrow" to move, "maximize" or "minimize" a window
             ([s-right] . windows-right)
@@ -1827,26 +1915,26 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-g" to keyboard-quit
             ([?\s-g] . keyboard-quit)))
 
-    ;; start in char mode by default
-    (setq exwm-manage-configurations '((t char-mode t)))
+    ;; do not start in char mode by default
+    ;; (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
     (require 'exwm-systemtray)
     (exwm-systemtray-enable)
 
     ;; set prefix keys
-    (setq my-exwm-prefix-keys (list
-                               ?\:        ; evil ex mode
-                               ?\,        ; leader key
-                               ?\M-x      ; M-x
-                               ?\C-w))    ; window options
+    (setq exwm-input-prefix-keys (list
+                                  (elt (kbd "M-<tab>") 0)
+                                  (elt (kbd "<M-iso-lefttab>") 0)
+                                  (elt (kbd "s-<tab>") 0)
+                                  (elt (kbd "<s-iso-lefttab>") 0)))
 
-    (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
+    ; (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
     ;; Do not allow pulling a window between workspaces by switching to its buffer
     ;; to see x windows on other workspaces, do C-c a
     (setq exwm-workspace-show-all-buffers nil)
-    (setq exwm-layout-show-all-buffers nil)
+    (setq exwm-layout-show-all-buffers t)
 
     ;; Redefine function to fix global-display-line-numbers-mode bug
     ;; regarding the exwm "frame" not having the 'client parameter
@@ -1864,14 +1952,13 @@ I wrote a small package to replace the numbered workspaces of exwm
 with named ones. This includes creation, deletion, and switching by
 narrowing name.
 #+BEGIN_SRC emacs-lisp
-  ; -*- lexical-binding: t -*-
   (require 'exwm-named-workspace)
 
-  (exwm-named-workspace-make "scratch")
+  ;; ; (exwm-named-workspace-make "scratch")
 #+END_SRC
 
 This is a hydra to switch between workspaces in the classic "Alt-tab"
-style with super-tab
+style
 
 #+BEGIN_SRC emacs-lisp
   (lexical-let ((history-element 0))
@@ -1885,13 +1972,14 @@ style with super-tab
                  (workspace-history-delta 1)
                  (hydra-workspace-history/body)))
 
-    (defhydra hydra-workspace-history (:timeout 1
+    (defhydra hydra-workspace-history (:timeout 2
                                        :post (progn
                                                (setq history-element 0)
                                                (exwm-named-workspace-update-history)))
       "Workspace history: "
       ("M-<tab>" (workspace-history-delta 1))
-      ("M-<S-iso-lefttab>" (workspace-history-delta -1))))
+      ;; ("s-<S-iso-lefttab>" (workspace-history-delta -1))
+      ("<M-iso-lefttab>" (workspace-history-delta -1))))
 #+END_SRC
 *** Exlaunch
 I wrote a package to launch programs which integrates with ~exwm~ and
@@ -1900,16 +1988,21 @@ I wrote a package to launch programs which integrates with ~exwm~ and
   (require 'exlaunch)
 
   (exlaunch-shortcuts
-   (firefox :in-named-workspace "firefox")
 
-   (krita :in-named-workspace "art")
-   (gimp :in-named-workspace "art")
+   alacritty
+
+   (firefox :in-workspace "firefox")
+
+   (steam :in-workspace "steam")
+
+   (krita :in-workspace "art")
+   (gimp :in-workspace "art")
 
    (spotify :args "--force-device-scale-factor=2"
             :other-window t)
 
    (nmtui :shell-command "alacritty"
-         :args "-e nmtui")
+          :args "-e nmtui")
 
    (bluetooth :shell-command "blueman-manager"
               :other-window t))
@@ -2113,6 +2206,12 @@ Various small functions which are evaluated before anything else in the file.
       (let ((new-list (copy-list list)))
          (setf (cdr (last new-list))
                   new-list))))
+
+  (defun cd*r (n list)
+    "n cdrs of list. recursive."
+    (if (<= n 0)
+        list
+      (cd*r (1- n) (cdr list))))
 
   (defmacro define-multi-macro--old (name macro num-parameters)
     `(defmacro ,name (&rest args)

@@ -79,6 +79,8 @@ achieve perfect symmetry between buffers and workspaces
 quick launch eshell 1-9 on s-numbers?
 esh 1-4, term 5.
 rest of numbers for other bindings
+
+brightness tick at 1%
 ** Workspaces
 - All that's left to do is that alt-tab style thing perhaps.  This is
 worth consolidating into a package. Think about how to provide a safe

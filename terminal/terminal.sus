@@ -4,4 +4,12 @@ card bash {
     .bashrc
     .bash_aliases
     .inputrc
+
+    spark card alacritty
+}
+
+card alacritty {
+    into ~/.config/alacritty
+
+    alacritty.yml
 }

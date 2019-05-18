@@ -50,7 +50,7 @@ class (`exwm-class-name')"
                                      other-window
                                      before
                                      after
-                                     in-named-workspace)
+                                     in-workspace)
   "Create a function to launch the program given by NAME. 
 
 The following keyword args are available:
@@ -78,7 +78,7 @@ OTHER-WINDOW, if true will open the program in another emacs
 window.
 
 If EXWM-NAMED-WORKSPACE is installed, the keyword
-IN-NAMED-WORKSPACE can be used to run the program in the given
+IN-WORKSPACE can be used to run the program in the given
 workspace, switch to that workspace, and create it if it does not
 exist."
   (let* ((name-string (symbol-name name))
@@ -94,8 +94,8 @@ exist."
          ,(if (require 'exwm nil t)
               `(progn
                  ,(when (and (require 'exwm-named-workspace nil t)
-                             in-named-workspace)
-                    `(exwm-named-workspace-make-or-switch ,in-named-workspace))
+                             in-workspace)
+                    `(exwm-named-workspace-make-or-switch ,in-workspace))
                  (if ,(when switch-to `(get-process ,name-string))
                      (,(if other-window
                            'switch-to-buffer-other-window
