@@ -27,7 +27,7 @@ a launch screen to replace the scratch buffer. (like that dave fellow)
   - C++
   - Rust
   - Prolog
-** Launcher
+** Launcher (MOSTLY DONE)
 I want the following features:
 Simple macro to create launcher shortcuts
 example usage:
@@ -64,31 +64,11 @@ I imagine that it will become useful to others, so why not make a package?
 
 The .desktop parser just outputs launch functions AKA shortcuts whose
 properties can be overriden by ~launcher-shortcuts~.
+** Other 
+brightness tick at 1% (maybe 2% too)
 
-Integrate with helm eventually.
-
-INTEGEATE THIS WITH YOUR WORKSPACE THING! YES SO GOOD!
-*** new 
-super tab for workspaces
-alt tab for buffers
-
-even in x11 windows
-
-achieve perfect symmetry between buffers and workspaces
-
-quick launch eshell 1-9 on s-numbers?
-esh 1-4, term 5.
-rest of numbers for other bindings
-
-brightness tick at 1%
-** Workspaces
-- All that's left to do is that alt-tab style thing perhaps.  This is
-worth consolidating into a package. Think about how to provide a safe
-interface to users: maybe do a pull request in exwm to add extra hooks
-for that.
-- rename select-workspace to read-workspace
-** exwm
-Remove extraneous information from the modelines of x11 window buffers
+Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
+just correct xrandr when switching from a fullscreen'd workspace.
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗
