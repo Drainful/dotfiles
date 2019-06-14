@@ -14,6 +14,7 @@
   - [[#use-package][Use-Package]]
   - [[#quelpa][Quelpa]]
 - [[#evil][Evil]]
+  - [[#early-loading-of-general-for-evil-commands][Early loading of general for evil commands]]
   - [[#evil-collection][Evil collection]]
   - [[#evil-easymotion][Evil easymotion]]
   - [[#evil-surround][Evil surround]]
@@ -43,7 +44,6 @@
   - [[#delimiters][Delimiters]]
   - [[#which-key][Which-key]]
   - [[#ediff][Ediff]]
-  - [[#beacon][Beacon]]
 - [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -79,6 +79,7 @@
   - [[#clojure][Clojure]]
   - [[#scheme][Scheme]]
   - [[#python][Python]]
+  - [[#lua][Lua]]
   - [[#shen][Shen]]
   - [[#prolog][Prolog]]
   - [[#cccppcppsepples][C/C++/CPP/Cpp/Sepples]]
@@ -88,9 +89,10 @@
   - [[#org][Org]]
   - [[#nix][Nix]]
   - [[#bash][Bash]]
-- [[#excessive-nonsense][Excessive Nonsense]]
+- [[#emacs-does-everything][Emacs does everything]]
   - [[#emacs-window-manager][Emacs window manager]]
   - [[#emms][EMMS]]
+  - [[#irc][IRC]]
 - [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
 
@@ -232,19 +234,28 @@ This code enables automatic package upgrades.
 These are settings for the emulation of Vim in Emacs. I would not be
 using emacs today if it were not for ~evil-mode~.
 #+BEGIN_SRC emacs-lisp
-(use-package evil
-  :init
-  ;; highlight all search results
-  (setq evil-search-module 'evil-search)
-  ;; settings for evil-collection integration
-  (setq evil-want-keybinding nil)
-  (setq evil-want-integration t)
-  :config
-  (evil-mode 1)
-  ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
-  (global-undo-tree-mode -1))
+  (use-package evil
+    :init
+    ;; highlight all search results
+    (setq evil-search-module 'evil-search)
+    ;; settings for evil-collection integration
+    (setq evil-want-keybinding nil)
+    (setq evil-want-integration t)
+    :config
+    (evil-mode 1)
+    ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
+    (global-undo-tree-mode -1)
+
+    ;; ex commands
+    (eval-after-load 'evil-ex
+      '(progn
+         ;; Sometimes I don't release shift fast enough
+         (evil-ex-define-cmd "W[rite]" 'evil-write)
+         (evil-ex-define-cmd "Wa" 'evil-write-all)
+         (evil-ex-define-cmd "Q[uit]" 'evil-quit)
+         (evil-ex-define-cmd "Qa" 'evil-quit-all))))
 #+END_SRC
-** COMMENT Early loading of general for evil commands
+** Early loading of general for evil commands
 #+BEGIN_SRC emacs-lisp :noweb strip-export
 <<use-package-general>>
 <<leader-definitions>>
@@ -394,14 +405,6 @@ qThese are normal mode mappings not specific to any major mode.
   "C-j" 'evil-window-down
   "C-k" 'evil-window-up
   "C-l" 'evil-window-right
-  "s-h" 'evil-window-left
-  "s-j" 'evil-window-down
-  "s-k" 'evil-window-up
-  "s-l" 'evil-window-right
-  "s-H" 'evil-window-move-far-left
-  "s-J" 'evil-window-move-very-bottom
-  "s-K" 'evil-window-move-very-top
-  "s-L" 'evil-window-move-far-right
   "C--" 'helm-projectile-grep
   ;; Move a line of text using ALT+[jk]
   "M-j" (kbd ":move + RET")
@@ -479,8 +482,8 @@ Usage:
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
-    "q" 'actually-kill-this-buffer              ; ",q" to kill buffer not window.
-    "w" 'evil-delete-buffer              ; ",w" to kill buffer and window. equivalent of :bd<cr>.
+    "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
+    "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "d" 'fzf-directory-from-home
@@ -535,7 +538,16 @@ blurbs.
 Display time and battery in the mode line
 #+BEGIN_SRC emacs-lisp
   (display-battery-mode)
+
+  ;; (use-package fancy-battery
+  ;;   :config
+  ;;   (setq fancy-battery-mode-line
+  ;;       '(:eval (unless (string= (cdr (assq 66 fancy-battery-last-status)) "Charging")
+  ;;                 (fancy-battery-default-mode-line))))
+  ;;   (fancy-battery-mode))
+
   (display-time-mode)
+  (setq display-time-default-load-average nil)
 #+END_SRC
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
@@ -659,7 +671,7 @@ Don't make a new frame for ediff.
 #+BEGIN_SRC emacs-lisp
 (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 #+END_SRC
-** Beacon
+** COMMENT Beacon
 Highlight the cursor when switching buffers.
 #+BEGIN_SRC emacs-lisp
   (use-package beacon
@@ -729,13 +741,28 @@ primary shell.
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
   (global-set-key [f1] 'eshell)
-  (global-set-key [f2] 'eshell-new)
+  (global-set-key [f2] 'eshell-temp)
+
+  (defun comint-style-insert-line (count)
+    "insert line at the comint prompt"
+    (interactive "p")
+    (evil-goto-line)
+    (evil-insert-line count))
+
+  (defun comint-style-append-line (count)
+    "append line at the comint prompt"
+    (interactive "p")
+    (evil-goto-line)
+    (evil-append-line count))
+
   ;; Let me use C-j/k
   (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
             (lambda ()
               (general-define-key :states 'normal :keymaps 'eshell-mode-map
-                                  "C-j" 'evil-window-down
-                                  "C-k" 'evil-window-up)))
+                                  "C-j" #'evil-window-down
+                                  "C-k" #'evil-window-up
+                                  "I" #'comint-style-insert-line
+                                  "A" #'comint-style-append-line)))
 #+END_SRC
 *** Helm support
 ~helm~ can be used for ~eshell~ completions with the following code.
@@ -750,13 +777,6 @@ While company mode is widely useful, helm does better for eshell.
 #+BEGIN_SRC emacs-lisp
   (add-hook 'eshell-mode-hook (lambda () (company-mode -1)))
 #+END_SRC
-*** Start Function
-Function for making a new Eshell instance. From [[https://www.emacswiki.org/emacs/EshellMultipleEshellBuffers][this]] thread.
-#+BEGIN_SRC emacs-lisp
-(defun eshell-new()
-  "Open a new instance of eshell."
-  (interactive)
-  (eshell 'N))
 #+END_SRC
 *** Properly Protect Prompt
 ~eshell~ doesn't play with ~evil~ with commands such as ~dd~ which target
@@ -818,9 +838,19 @@ This code is the sum of failed attempts to get the above feature working.
 ** Comint Mode
 ~comint mode~ is a generalized mode for repl-like interfaces.
 #+BEGIN_SRC emacs-lisp
-(setq comint-prompt-read-only t ; Don't let me delete the comint prompt duh
-      comint-move-point-for-output nil ; reduce frequent redisplays
-      comint-scroll-show-maximum-output nil)
+  (setq comint-prompt-read-only t ; Don't let me delete the comint prompt duh
+        comint-move-point-for-output nil  ; reduce frequent redisplays
+        comint-scroll-show-maximum-output nil)
+
+  (general-define-key
+   :states 'normal
+   :keymaps 'comint-mode-map
+   ;; was overridden
+   "C-j" #'evil-window-down
+   "C-k" #'evil-window-up
+   ;; go to prompt before append or insert line in comint mode
+   "I" #'comint-style-insert-line
+   "A" #'comint-style-append-line)
 #+END_SRC
 
 ** Shell
@@ -1019,7 +1049,7 @@ rather than through ~use-package~ due to a bug.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'badwolf)
+  (switch-theme 'doom-one-light)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1050,7 +1080,7 @@ I abbreviate the command with ~hydra~.
 #+BEGIN_SRC emacs-lisp
   (winner-mode 1)
 
-  (defhydra hydra-winner (global-map "C-c")
+  (defhydra hydra-winner (global-map "C-c" :timeout 2)
     "Window configuration history"
     ("u" winner-undo)
     ("r" winner-redo))
@@ -1069,7 +1099,8 @@ project.
      :keymaps 'override
    "C-p" 'helm-projectile-find-file)
     (project-key-def 'normal 'projectile-mode-map
-      "p" 'projectile-switch-project)
+      "p" 'projectile-switch-project
+      "e" 'projectile-run-eshell)
     (projectile-mode +1))
 
   ;; use helm for projectile
@@ -1102,31 +1133,37 @@ project.
         (skeletor-shell-command "direnv allow")
         (projectile-lorri-watch)))
 
+
     ;; Custom project types
     (skeletor-define-template "generic"
       :title "Generic Project"
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages to use: "))))
-      :after-creation setup--lorri)
+      :after-creation (lambda (dir) (setup--lorri dir))) ; a lambda is
+                                                         ; used to avoid
+                                                         ; a failed
+                                                         ; assertation.
+                                                         ; maybe
+                                                         ; reporthe bug.
 
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
       :substitutions
       '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
-      :after-creation setup--lorri)
+      :after-creation (lambda (dir) (setup--lorri dir)))
 
     (skeletor-define-template "python"
       :title "Python Library"
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
-      :after-creation setup--lorri)
+      :after-creation (lambda (dir) (setup--lorri dir)))
 
     (skeletor-define-template "haskell"
       :title "Haskell Project"
       :substitutions
       '(("__HASKELL-PACKAGES__" . (lambda () (read-string "Haskell packages: ")))
         ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
-      :after-creation setup--lorri)
+      :after-creation (lambda (dir) (setup--lorri dir)))
 
     ;;keybindings
     (project-key-def 'normal
@@ -1257,6 +1294,14 @@ I, like many others, use ~company~.
                                                  (setq company-minimum-prefix-length 3))))
       (global-company-mode nil))
 #+END_SRC
+*** COMMENT Autocomplete
+I have ~auto-complete~ installed for cases where a company package does not exist.
+#+BEGIN_SRC emacs-lisp
+  (use-package fuzzy)
+  (use-package auto-complete
+    :after fuzzy
+    :config)
+#+END_SRC
 ** Linting
 I also, like many others, use ~flycheck~.
 #+BEGIN_SRC emacs-lisp
@@ -1347,7 +1392,7 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 #+BEGIN_SRC emacs-lisp
   (use-package direnv
     :delight
-    :after projectile ; I integrate projectile with direnv here
+    :after projectile          ; I integrate projectile with direnv here
     :config
     (direnv-mode)
 
@@ -1384,6 +1429,17 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
     ;; Non-file modes which should also be synched with direnv
     (defmacro add-direnv-non-file-modes (&rest body)
       `(mapcar (lambda (mode) (add-to-list 'direnv-non-file-modes mode)) (list ,@body)))
+
+    ;; Advice to run emacsHook
+    ;; (defun run-emacs-hook ()
+    ;;   (if (getenv "emacsHook")
+    ;;       (eval (car (read-from-string
+    ;;                   (format "(progn %s)"
+    ;;                           (getenv "emacsHook")))))))
+
+    ;; (advice-add 'direnv-update-directory-environment
+    ;;             :after
+    ;;             #'run-emacs-hook)
 
     (add-direnv-non-file-modes
      'sly-mode
@@ -1491,27 +1547,30 @@ This uses font-lock to hide namespace prefixes automatically.
 
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-(leader-key-def 'normal sly-mode-map
-  "z" 'sly-switch-to-output-buffer
-  "c" 'sly-compile-file
-  "l" 'sly-load-file)
+  (general-define-key :states 'normal :mode 'sly-mode-map
+                      "K" 'sly-describe-symbol)
 
-(start-key-def 'normal sly-mode-map
-  "s" 'sly
-  "c" 'sly-connect)
+  (leader-key-def 'normal sly-mode-map
+    "z" 'sly-switch-to-output-buffer
+    "c" 'sly-compile-file
+    "l" 'sly-load-file)
 
-(eval-key-def 'normal sly-mode-map
-  "b" 'sly-eval-buffer
-  "f" 'sly-eval-defun)
-(eval-key-def 'visual 'sly-mode-map
-  "r" 'sly-eval-region)
+  (start-key-def 'normal sly-mode-map
+    "s" 'sly
+    "c" 'sly-connect)
+
+  (eval-key-def 'normal sly-mode-map
+    "b" 'sly-eval-buffer
+    "f" 'sly-eval-defun)
+  (eval-key-def 'visual 'sly-mode-map
+    "r" 'sly-eval-region)
 #+END_SRC
 ** Clojure
 A popular lisp on the JVM.
 #+BEGIN_SRC emacs-lisp
 (use-package clojure-mode)
 #+END_SRC
-*** Cider
+*** COMMENT Cider
 It's like ~slime~ for Clojure! Kinda.
 #+BEGIN_SRC emacs-lisp
 (use-package cider
@@ -1588,6 +1647,99 @@ Python support is built in to ~lsp-mode~.
   (eval-key-def 'visual 'python-mode-map
     "r" 'python-shell-send-region)
 #+END_SRC
+** Lua
+#+BEGIN_SRC emacs-lisp
+  (use-package lua-mode
+    :config
+    (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
+    (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
+    ;; Don't always switch to lua repl after sending code.
+    (setq lua-always-show nil))
+
+  (start-key-def 'normal lua-mode-map
+    "s" 'run-lua
+    "l" (lambda () (interactive)
+          (let ((exwm-manage-force-tiling t))
+            (run-lua "love" "love" nil "."))))
+
+  (eval-key-def 'normal lua-mode-map
+    "b" 'lua-send-buffer
+    "f" 'lua-send-defun
+    "s" 'lua-send-string
+    "l" 'lua-send-current-line
+    "y" (lambda () (interactive)
+          (lua-send-string "repl.y()")))
+
+  (eval-key-def 'visual lua-mode-map
+    "r" 'lua-send-region)
+#+END_SRC
+*** Love
+#+BEGIN_SRC emacs-lisp
+  (use-package love-minor-mode
+    :config
+    ;(setq love-local-documentation-path "~/Documents/programming/documentation/lua-love-wiki/")
+    )
+#+END_SRC
+*** COMMENT Autocomplete
+#+BEGIN_SRC emacs-lisp
+  (use-package auto-complete-lua
+    :quelpa (:repo "https://github.com/rolpereira/auto-complete-lua.el")
+    :config
+    (add-hook 'lua-mode-hook '(lambda ()
+                                (setq ac-sources '(ac-source-lua))
+                                (auto-complete-mode))))
+
+  (use-package auto-complete-love
+    :after auto-complete-lua
+    :quelpa (:fetcher github :repo "https://github.com/rolpereira/auto-complete-love.el")
+    :config
+    (add-hook 'lua-mode-hook '(lambda ()
+                                (setq ac-sources '(ac-source-love))
+                                (push ac-source-lua ac-sources)
+                                (auto-complete-mode))))
+#+END_SRC
+*** Lank
+#+BEGIN_SRC emacs-lisp
+  (make-variable-buffer-local
+   (defvar lua-send-string-signals nil
+     "A list of integers or strings representing the signals to send
+    to the lua process before sending a string."))
+
+  (make-variable-buffer-local
+   (defvar lua-send-string-post ""
+     "This string is sent to the lua process after any string is sent"))
+
+  (defun lua-send-string (str)
+    "Send STR plus a newline to the Lua process.
+  If `lua-process' is nil or dead, start a new process first."
+    (unless (string-equal (substring str -1) "\n")
+      (setq str (concat str "\n")))
+    (let ((process (lua-get-create-process)))
+      (dolist (sig lua-send-string-signals)
+        (signal-process process sig))
+      (process-send-string process str)
+      (process-send-string process lua-send-string-post)))
+
+  (make-variable-buffer-local
+   (defvar lank-mode-running nil))
+
+  (define-minor-mode lank-mode
+    "Use signals to automatically send code to a running lua
+  process."
+    :lighter " Lank"
+    (if lank-mode-running
+        (progn
+          (setq lank-mode-running nil)
+          (setq lua-send-string-signals nil)
+          (setq lua-send-string-post ""))
+      (progn
+        (setq lank-mode-running t)
+        (setq lua-send-string-signals
+              (list 'SIGUSR1))
+        (setq lua-send-string-post
+              (format "loadstring(%s);\n"
+                      (lua-make-lua-string "coroutine.yield()"))))))
+#+END_SRC
 ** Shen
 An intriguing and small language that runs on Common Lisp and other
 things.
@@ -1658,9 +1810,9 @@ A language server back end for C/++
 *** Font lock
 Corrects font lock for modern C++.
 #+BEGIN_SRC emacs-lisp
-(use-package modern-cpp-font-lock
-  :config
-  (modern-c++-font-lock-global-mode t))
+  (use-package modern-cpp-font-lock
+    :config
+    (add-hook 'c++-mode-hook #'modern-c++-font-lock-mode))
 #+END_SRC
 *** Linting
 Enable ~flycheck~
@@ -1738,7 +1890,7 @@ literate source files like this one.
     ;; (define-key org-mode-map (kbd "<C-j>") nil)
     ;; (define-key org-mode-map (kbd "<C-k>") nil)
     (leader-key-def 'normal org-src-mode-map
-      "w" 'org-edit-src-exit)
+      "q" 'org-edit-src-exit)
     (add-hook 'org-mode-hook (lambda ()
                                (general-define-key :states 'normal :mode 'org-mode-map
                                                    "C-j" 'evil-window-down
@@ -1797,7 +1949,7 @@ Enter ~common-lisp-mode~ in the following files
        ".lisprc\\'"
        ".otherlisprc\\'")
 #+END_SRC
-* Excessive Nonsense
+* Emacs does everything
 ** COMMENT Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
@@ -1806,17 +1958,31 @@ Control spotify running on any device from Emacs.
     :requires helm url json
     :config
     (setq spot4e-refresh-token me/spotify-refresh-token)
-    (run-with-timer 0 (* 60 59) 'spot4e-refresh)
+    (run-with-timer 0 (* 60 59) 'spot4e-refresh))
 
-    (define-subleader :leader alt-leader
-      "s" "spotify" spotify-key-def)
-    (spotify-key-def 'normal emacs-lisp-mode-map
-      "b" 'spot4e-helm-search-user-tracks
-      "r" 'spot4e-helm-search-recommendations-track
-      "s" 'spot4e-player-pause
-      "p" 'spot4e-player-play
-      "n" 'spot4e-player-next
-      "N" 'spot4e-player-previous))
+  (define-subleader :leader alt-leader
+    "s" "spotify" spotify-key-def)
+
+  (spotify-key-def 'normal emacs-lisp-mode-map
+    "b" 'spot4e-helm-search-user-tracks
+    "a" 'spot4e-helm-search-albums
+    "s" 'spot4e-player-pause
+    "p" 'spot4e-player-play
+    "n" 'spot4e-player-next
+    "N" 'spot4e-player-previous)
+
+  (defun spot4e-player-volume (volume)
+    "Set the volume on Spotify active device."
+    (interactive "nVolume: ")
+    (if (or (> volume 100) (< volume 0))
+        (error "Volume must be between 1 and 100"))
+    (spot4e-request "PUT"
+                    (concat spot4e-player-url "volume")
+                    (concat "?volume_percent=" (number-to-string volume))
+                    nil
+                    `(("Authorization" . ,(concat "Bearer " spot4e-access-token )))))
+
+    ;; (spot4e-player-do-action "PUT" (concat "/volume?volume_percent=" (number-to-string volume)))
 #+END_SRC
 ** Emacs window manager
 *** Main Package
@@ -1852,17 +2018,19 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-!] . (lambda (command)
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
-          
-            ([?\s-`] . eshell)
 
-            ,@(mapcar (lambda (n)
-                        `(,(kbd (format "s-%d" n)) .
-                          (lambda ()
-                            (interactive)
-                            (eshell ,n)))
-                        (number-sequence 1 3)))
+            ([?\s-`] . projectile-run-eshell)
+            ([?\s-1] . eshell)
+            ([?\s-2] . eshell-temp)
+            ([?\s-3] . exlaunch/alacritty)
 
-            ([?\s-4] . exlaunch/alacritty)
+            ;; ,@(mapcar (lambda (n)
+            ;;             `(,(kbd (format "s-%d" n)) .
+            ;;               (lambda ()
+            ;;                 (interactive)
+            ;;                 (eshell ,n))))
+            ;;           (number-sequence 1 3))
+
 
             ;; Bind "s- " to launch external commands through my launcher.
             ([?\s- ] . exlaunch)
@@ -1870,9 +2038,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;;workspaces
             ([?\s-d] . exwm-named-workspace-delete)
 
-            ;; s-tab makes these unnecessary.
-            ;; ([?\s-n] . exwm-named-workspace-next)
-            ;; ([?\s-p] . exwm-named-workspace-previous)
+            ;; Switch between workspaces with global keys to better deal
+            ;; with exwm's fullscreen mode.
+            ([?\s-n] . exwm-named-workspace-next)
+            ([?\s-p] . exwm-named-workspace-previous)
 
             ([s-return] . exwm-named-workspace-make-or-switch)
 
@@ -1882,8 +2051,18 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-k] . windmove-up)
             ([?\s-l] . windmove-right)
 
+            ;; Brightness
+            ([C-XF86MonBrightnessUp] . desktop-environment-brightness-increment-very-slowly)
+            ([C-XF86MonBrightnessDown] . desktop-environment-brightness-decrement-very-slowly)
+          
+            ;; lock screen
+            ([?\s-o] . desktop-environment-lock-screen)
+
             ;; symon mode toggle
             ([?\s-\\] . symon-mode)
+
+            ;; toggle window floating
+            ([?\s-/] . exwm-floating-toggle-floating)
 
             ;; switch to default workspace and scratch buffer
             ([?\s-0] . (lambda ()
@@ -1910,8 +2089,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-f] . helm-find-files)
             ;; bind "s-q" to kill this buffer, closing the current
             ;; program, and "s-w" to kill the current buffer AND window
-            ([?\s-q] . actually-kill-this-buffer)
-            ([?\s-w] . evil-delete-buffer)
+            ([?\s-w] . actually-kill-this-buffer)
+            ([?\s-q] . evil-delete-buffer)
             ;; bind "s-g" to keyboard-quit
             ([?\s-g] . keyboard-quit)))
 
@@ -1920,7 +2099,14 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     ;; sys tray
     (require 'exwm-systemtray)
+    (setq exwm-systemtray-height 34)
     (exwm-systemtray-enable)
+
+    ;; startup programs
+    (define-multi-macro--old startup-programs start-process-shell-command 3)
+
+    (startup-programs
+     "networkmanager applet" nil "nm-applet")
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -2004,6 +2190,9 @@ I wrote a package to launch programs which integrates with ~exwm~ and
    (nmtui :shell-command "alacritty"
           :args "-e nmtui")
 
+   (alsamixer :shell-command "alacritty"
+              :args "-e alsamixer")
+
    (bluetooth :shell-command "blueman-manager"
               :other-window t))
 #+END_SRC
@@ -2024,7 +2213,33 @@ I wrote a package to launch programs which integrates with ~exwm~ and
   (use-package desktop-environment
     :delight
     :config
-    (desktop-environment-mode))
+    (desktop-environment-mode)
+    (defun desktop-environment-lock-screen ()
+      "Lock the screen, preventing anyone without a password from using the system."
+      (interactive)
+      (start-process-shell-command "slock" nil desktop-environment-screenlock-command))
+
+    (defcustom desktop-environment-brightness-tiny-increment "1%+"
+      "Tiny brightness increment value."
+      :type 'string)
+
+    (defcustom desktop-environment-brightness-tiny-decrement "1%-"
+      "Tiny brightness decrement value."
+      :type 'string)
+
+    (defun desktop-environment-brightness-increment-very-slowly ()
+      "Increment brightness by `desktop-environment-brightness-tiny-increment'."
+      (interactive)
+      (desktop-environment-brightness-set desktop-environment-brightness-tiny-increment))
+
+    (defun desktop-environment-brightness-decrement-very-slowly ()
+      "Decrement brightness by `desktop-environment-brightness-tiny-decrement'."
+      (interactive)
+      (desktop-environment-brightness-set desktop-environment-brightness-tiny-decrement))
+
+    (general-define-key ; :keymaps 'dekstop-environment-mode-map
+                        "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
+                        "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly))
 #+END_SRC
 *** EXWM firefox
 #+BEGIN_SRC emacs-lisp
@@ -2070,8 +2285,63 @@ Emacs interface to network manager. Buggy
     wifi "cool-retro-term -e nmtui"
     spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
+*** Window class specific settings
+*** COMMENT autominimize
+#+BEGIN_SRC emacs-lisp
+  (defvar autominimize-list (list "love"))
+
+  (defun autominimize ()
+    (when (find-if (lambda (class) (string= exwm-class-name class))
+                   autominimize-list)
+      (winner-undo)))
+
+  (remove-hook 'exwm-manage-finish-hook
+            #'autominimize)
+#+END_SRC
+*** COMMENT floating toggle
+#+BEGIN_SRC emacs-lisp
+  (defconst floating-toggle-list (list "love" "firefox"))
+
+  (defun enforce-floating-toggle-list ()
+    (mapcar (lambda (class)
+              (when (string= exwm-class-name class)
+                (exwm-floating--unset-floating exwm--id)))
+            floating-toggle-list))
+
+  (add-hook 'exwm-manage-finish-hook
+            #'enforce-floating-toggle-list)
+#+END_SRC
 ** EMMS
 
+** IRC
+#+BEGIN_SRC emacs-lisp
+  (use-package circe
+    :config
+    (setq circe-format-self-say "<{nick}> {body}")
+
+    (setq
+     lui-time-stamp-position 'right-margin
+     lui-time-stamp-format "%H:%M"
+     lui-fill-type nil
+     lui-track-bar-behavior 'before-switch-to-buffer)
+
+    (enable-lui-track-bar)
+
+    (add-hook 'lui-mode-hook 'my-lui-setup)
+    (defun my-lui-setup ()
+      (setq
+       fringes-outside-margins t
+       right-margin-width 5
+       word-wrap t
+       wrap-prefix "    "))
+
+
+    (setq circe-network-options
+          `(("Freenode"
+             :tls nil
+             :nick ,me/freenode-nick
+             :nickserv-password me/nickserv-password))))
+#+END_SRC
 * Files and backups
 Don't make backups.
 #+BEGIN_SRC emacs-lisp
@@ -2164,15 +2434,16 @@ Various small functions which are evaluated before anything else in the file.
         (next-buffer)
         (other-window 1))))
 
-  (defun eshell-new ()
+  (defun eshell-temp ()
     "Open a new instance of eshell."
     (interactive)
-    (eshell 'N))
+    (let ((eshell-buffer-name "*temporary eshell*"))
+      (eshell 'N)))
 
   (defun eshell-at (directory)
     "Open a new instance of eshell in a new directory."
     (let ((default-directory directory))
-      (eshell-new)))
+      (eshell-temp)))
 
   (defun disable-most-recent-theme ()
     (interactive)
@@ -2212,6 +2483,26 @@ Various small functions which are evaluated before anything else in the file.
     (if (<= n 0)
         list
       (cd*r (1- n) (cdr list))))
+
+  (defun add-to-env (env val)
+    (setenv env (concat (getenv env) val)))
+
+  (cl-defun add-to-path (paths &optional (env "PATH") (seperator ":"))
+    (dolist (path (split-string paths seperator))
+      (unless (find-if (lambda (s)
+                         (string= s path))
+                       (split-string (getenv env) seperator))
+        (add-to-env env (concat seperator paths)))))
+
+  (defun lua-path+ (val)
+    (add-to-path val
+                 "LUA_PATH"
+                 ";"))
+
+  (defun lua-cpath+ (val)
+    (add-to-path val
+                 "LUA_CPATH"
+                 ";"))
 
   (defmacro define-multi-macro--old (name macro num-parameters)
     `(defmacro ,name (&rest args)

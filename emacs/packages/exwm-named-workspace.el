@@ -74,7 +74,9 @@
   "The list of workspaces before changes are made. Used for the
   `exwm-workspace-list-change-hook'.")
 
-(defvar exwm-named-workspace--new-name "default-workspace"
+(defconst exwm-named-workspace--default-workspace-name "default-workspace")
+
+(defvar exwm-named-workspace--new-name exwm-named-workspace--default-workspace-name
   "The name that will be given to the next workspace created by
   `exwm-workspace-add'. For internal use only.")
 
@@ -119,10 +121,13 @@
 (defun exwm-named-workspace-update-history ()
   "Unless the global variable NORECORD is non-nil, put the
 current workspace on top of the history stack."
+  
+  ;; (when exwm-named-workspace--history-norecord (warn "history not updated. frame: %s" (exwm-named-workspace--frame->name (selected-frame)))) ; DEBUG
   (unless exwm-named-workspace--history-norecord
-      (let ((current-frame (selected-frame)))
-        (setq exwm-named-workspace--history (remove current-frame exwm-named-workspace--history))
-        (add-to-list 'exwm-named-workspace--history current-frame))))
+    ;; (warn (format "history updated. frame: %s" (exwm-named-workspace--frame->name (selected-frame)))) ; DEBUG
+    (let ((current-frame (selected-frame)))
+      (setq exwm-named-workspace--history (remove current-frame exwm-named-workspace--history))
+      (add-to-list 'exwm-named-workspace--history current-frame))))
 
 (add-hook 'exwm-workspace-switch-hook #'exwm-named-workspace-update-history)
 
@@ -184,9 +189,11 @@ workspace with index FROM (so that x11 windows do not get stolen
 from the current workspace)"
   (if (exwm-named-workspace--name-exists-p name)
       (error (format "The workspace name '%s' is already in use" name))
-      (progn (exwm-workspace-switch from)
-             (let ((exwm-named-workspace--new-name name))
-               (exwm-workspace-add)))))
+    (progn (let ((exwm-named-workspace--history-norecord t)
+                 (exwm-named-workspace--new-name name))
+             (exwm-workspace-switch from)
+             (exwm-workspace-add)
+             (exwm-named-workspace-update-history)))))
 
 (defun exwm-named-workspace-make-or-switch (name)
   (interactive (list (exwm-named-workspace-read :current-last t)))

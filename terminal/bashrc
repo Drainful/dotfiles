@@ -61,3 +61,5 @@ else
 
    [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 fi
+export LUA_PATH='/home/adrian/.luarocks/share/lua/5.2/?.lua;/home/adrian/.luarocks/share/lua/5.2/?/init.lua;/nix/store/26gb452y4z8yynjhz2k6cbln9yqn5zmq-luarocks-2.4.4/share/lua/5.2/?.lua;/nix/store/26gb452y4z8yynjhz2k6cbln9yqn5zmq-luarocks-2.4.4/share/lua/5.2/?/init.lua'
+export LUA_CPATH='/home/adrian/.luarocks/lib/lua/5.2/?.so;/nix/store/26gb452y4z8yynjhz2k6cbln9yqn5zmq-luarocks-2.4.4/lib/lua/5.2/?.so;/usr/lib/lua/5.2/?.so;/usr/lib/lua/5.2/loadall.so;./?.so'
