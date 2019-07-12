@@ -45,12 +45,12 @@ class (`exwm-class-name')"
     (car last)))
 
 (cl-defmacro exlaunch-shortcut (name &key shell-command args
-                                     (switch-to t)
-                                     exwm-class
-                                     other-window
-                                     before
-                                     after
-                                     in-workspace)
+                             (switch-to t)
+                             exwm-class
+                             other-window
+                             before
+                             after
+                             in-workspace)
   "Create a function to launch the program given by NAME. 
 
 The following keyword args are available:
@@ -107,9 +107,6 @@ exist."
             `(start-process-shell-command ,name-string nil ,full-shell-command))
          ,(when after `(funcall ,after)))
        (add-to-list 'exlaunch-shortcut-functions ',function-symbol))))
-
-(define-multi-macro-clauses exlaunch-shortcuts exlaunch-shortcut
-  "Define functions to launch programs. ")
 
 (defun read-exlaunch ()
   (completing-read "Launch: " exlaunch-shortcut-functions))

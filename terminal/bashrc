@@ -1,4 +1,5 @@
 source ~/.bash_aliases
+source ~/.secrets.sh
 
 #export PS1="\W \$"
 

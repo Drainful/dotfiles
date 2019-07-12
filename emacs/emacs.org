@@ -10,11 +10,8 @@
   - [[#constants][Constants]]
   - [[#load-path][Load Path]]
 - [[#packages][Packages]]
-  - [[#package-initialization][Package Initialization]]
-  - [[#use-package][Use-Package]]
-  - [[#quelpa][Quelpa]]
+  - [[#straightel][Straight.el]]
 - [[#evil][Evil]]
-  - [[#early-loading-of-general-for-evil-commands][Early loading of general for evil commands]]
   - [[#evil-collection][Evil collection]]
   - [[#evil-easymotion][Evil easymotion]]
   - [[#evil-surround][Evil surround]]
@@ -29,8 +26,9 @@
   - [[#visual-mode][Visual Mode]]
   - [[#insert-mode][Insert Mode]]
   - [[#leader][Leader]]
+  - [[#shell-commands][Shell Commands]]
   - [[#other-commands][Other Commands]]
-- [[#user-interface-preferences][User interface preferences]]
+- [[#user-interface][User interface]]
   - [[#startup-screen][Startup screen]]
   - [[#mode-line][Mode line]]
   - [[#helm][Helm]]
@@ -42,8 +40,8 @@
   - [[#confirmation][Confirmation]]
   - [[#clipboard][Clipboard]]
   - [[#delimiters][Delimiters]]
-  - [[#which-key][Which-key]]
   - [[#ediff][Ediff]]
+  - [[#which-key][Which-key]]
 - [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -65,6 +63,7 @@
   - [[#fzf][FZF]]
   - [[#file-navigation][File navigation]]
 - [[#programming-tools-and-settings][Programming tools and settings]]
+  - [[#agressive-indent][Agressive Indent]]
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
   - [[#git][Git]]
@@ -91,6 +90,7 @@
   - [[#bash][Bash]]
 - [[#emacs-does-everything][Emacs does everything]]
   - [[#emacs-window-manager][Emacs window manager]]
+  - [[#document-viewer][Document viewer]]
   - [[#emms][EMMS]]
   - [[#irc][IRC]]
 - [[#files-and-backups][Files and backups]]
@@ -169,67 +169,89 @@ packages.
   (push (concat me/dotfiles "emacs/packages/")load-path)
 #+END_SRC
 * Packages
-** Package Initialization
-Before I can install packages I must first initialize package sources
-and installation tools. Here I source ~elpa~ and ~melpa~.
+** Straight.el
+A functional alternative to package.el which promotes reusablility.
 #+BEGIN_SRC emacs-lisp
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+        (bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
 
-(require 'package)
-(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
-                    (not (gnutls-available-p))))
-       (proto (if no-ssl "http" "https")))
-  (when no-ssl (warn "\
-Your version of Emacs does not support SSL connections,
-which is unsafe because it allows man-in-the-middle attacks.
-There are two things you can do about this warning:
-1. Install an Emacs version that does support SSL and be safe.
-2. Remove this warning from your init file so you won't see it again."))
-  ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
-  (add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
-  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
-  (when (< emacs-major-version 24)
-    ;; For important compatibility libraries like cl-lib
-    (add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
+  (straight-use-package 'use-package)
 
-(package-initialize)
+  (setq straight-use-package-by-default t)
 #+END_SRC
+** COMMENT package.el
+I have switched to straight.el for my packaging needs.
+*** Package Initialization
+*Before I can install packages I must first initialize package sources
+*and installation tools. Here I source ~elpa~ and ~melpa~.
+*#+BEGIN_SRC emacs-lisp
+*
+*(require 'package)
+*(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
+                    *(not (gnutls-available-p))))
+       *(proto (if no-ssl "http" "https")))
+  *(when no-ssl (warn "\
+*Your version of Emacs does not support SSL connections,
+*which is unsafe because it allows man-in-the-middle attacks.
+*There are two things you can do about this warning:
+*1. Install an Emacs version that does support SSL and be safe.
+*2. Remove this warning from your init file so you won't see it again."))
+  *;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
+  *(add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
+  *(add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
+  *(when (< emacs-major-version 24)
+    *;; For important compatibility libraries like cl-lib
+    *(add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
+*
+*(package-initialize)
+**#+END_SRC
 
-** Use-Package
-I use the ever-popular package-using facility ~use-package~. It is
-installed automatically by a nix expression in my dotfiles. This line
-causes ~use-package~ expressions to be automatically downloaded.
+*** Use-Package
+*I use the ever-popular package-using facility ~use-package~. It is
+*installed automatically by a nix expression in my dotfiles. This line
+*causes ~use-package~ expressions to be automatically downloaded.
+*
+*#+BEGIN_SRC emacs-lisp
+*(setq use-package-always-ensure t)
+**#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(setq use-package-always-ensure t)
-#+END_SRC
+*** Quelpa
+*~quelpa~ is a package installation facility that allows packages to be
+*installed from arbitrary sources. This is convenient for getting
+*bleeding edge versions of packages which have yet to reach ~melpa~.
+*#+BEGIN_SRC emacs-lisp
+*(use-package quelpa)
+*
+*(setq quelpa-upgrade-p nil)
+*
+*(use-package quelpa-use-package)
+*
+*(quelpa-use-package-activate-advice)
+**#+END_SRC
 
-** Quelpa
-~quelpa~ is a package installation facility that allows packages to be
-installed from arbitrary sources. This is convenient for getting
-bleeding edge versions of packages which have yet to reach ~melpa~.
-#+BEGIN_SRC emacs-lisp
-(use-package quelpa)
-
-(setq quelpa-upgrade-p nil)
-
-(use-package quelpa-use-package)
-
-(quelpa-use-package-activate-advice)
-#+END_SRC
-
-** COMMENT Automatic Upgrades
-This code enables automatic package upgrades.
-#+BEGIN_SRC emacs-lisp
-(setq quelpa-upgrade-p t)
-
-(package-refresh-contents)
-
-(use-package auto-package-update
-  :config
-  (setq auto-package-update-delete-old-versions t)
-  (setq auto-package-update-hide-results t)
-  (auto-package-update-maybe))
-#+END_SRC
+*** COMMET Automatic Upgrades
+*This code enables automatic package upgrades.
+*#+BEGIN_SRC emacs-lisp
+*(setq quelpa-upgrade-p t)
+*
+*(package-refresh-contents)
+*
+*(use-package auto-package-update
+  *:config
+  *(setq auto-package-update-delete-old-versions t)
+  *(setq auto-package-update-hide-results t)
+  *(auto-package-update-maybe))
+*#+END_SRC
 * Evil
 These are settings for the emulation of Vim in Emacs. I would not be
 using emacs today if it were not for ~evil-mode~.
@@ -255,9 +277,10 @@ using emacs today if it were not for ~evil-mode~.
          (evil-ex-define-cmd "Q[uit]" 'evil-quit)
          (evil-ex-define-cmd "Qa" 'evil-quit-all))))
 #+END_SRC
-** Early loading of general for evil commands
+** COMMENT Early loading facilities to create evil commands
 #+BEGIN_SRC emacs-lisp :noweb strip-export
 <<use-package-general>>
+<<which-key>>
 <<leader-definitions>>
 <<leader-helpers>>
 <<leader-subleaders>>
@@ -287,7 +310,7 @@ each possible motion result.
 This solves the tricky issue of surrounding a block of text with
 delimiters when they automatically close.
 #+BEGIN_SRC emacs-lisp
-(use-package "evil-surround"
+(use-package evil-surround
   :config
   (global-evil-surround-mode 1))
 #+END_SRC
@@ -314,9 +337,7 @@ the creation of simple ~evil~ text objects.
          (define-key evil-inner-text-objects-map ,key #',inner-name)
          (define-key evil-outer-text-objects-map ,key #',outer-name))))
 
-  (define-multi-macro--old simple-text-objects
-                      define-and-bind-regex-text-object
-                      4)
+  (define-multi-macro simple-text-objects define-and-bind-regex-text-object 4)
 #+END_SRC
 Usage:
 #+BEGIN_SRC emacs-lisp
@@ -378,17 +399,17 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
       (lambda (prompt)
         (if (,translate-keys-p) (kbd ,key-to) (kbd ,key-from)))))
 
-  (define-multi-macro--old make-conditional-key-translations
+  (define-multi-macro make-conditional-key-translations
                       make-conditional-key-translation
                       3)
 
   (defmacro inoremap-single (from to)
     `(make-conditional-key-translation ,from ,to evil-insert-state-p))
-  (define-multi-macro--old inoremap inoremap-single 2)
+  (define-multi-macro inoremap inoremap-single 2)
 
   (defmacro noremap-single (from to)
     `(make-conditional-key-translation ,from ,to (lambda nil t)))
-  (define-multi-macro--old noremap noremap-single 2)
+  (define-multi-macro noremap noremap-single 2)
 #+END_SRC
 ** All modes
 #+BEGIN_SRC emacs-lisp
@@ -400,17 +421,17 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
 ** Normal Mode
 qThese are normal mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
-(general-nmap
-  "C-h" 'evil-window-left
-  "C-j" 'evil-window-down
-  "C-k" 'evil-window-up
-  "C-l" 'evil-window-right
-  "C--" 'helm-projectile-grep
-  ;; Move a line of text using ALT+[jk]
-  "M-j" (kbd ":move + RET")
-  "M-k" (kbd ":move .-2 RET")
-  "M-j" 'move-line-down
-  "M-k" 'move-line-up)
+  (general-nmap
+    "C-h" 'evil-window-left
+    "C-j" 'evil-window-down
+    "C-k" 'evil-window-up
+    "C-l" 'evil-window-right
+    "C--" 'helm-projectile-grep
+    ;; Move a line of text using ALT+[jk]
+    "M-j" (kbd ":move + RET")
+    "M-k" (kbd ":move .-2 RET")
+    "M-j" 'move-line-down
+    "M-k" 'move-line-up)
 #+END_SRC
 ** Visual Mode
 And these are visual mode mappings not specific to any major mode.
@@ -429,6 +450,11 @@ The leader key is an old technique common among Vim users. A number of
 sequential key commands are hidden behind a single key. For those who
 are familiar with ~hydra~, this is a similar concept.
 *** Definitions
+First ~which-key~ must be loaded early
+#+BEGIN_SRC emacs-lisp :noweb strip-export
+<<which-key>>
+#+END_SRC
+
 First I define the leader keys,
 #+NAME: leader-definitions
 #+BEGIN_SRC emacs-lisp
@@ -497,18 +523,38 @@ Usage:
 (leader-key-def 'visual
   "c" 'comment-or-uncomment-region)
 #+END_SRC
+** Shell Commands
+M-x commands for common shell commands such as reboot.
+#+BEGIN_SRC emacs-lisp
+  (defmacro define-shell-command (function-name &optional command)
+    (let ((command (or command (symbol-name function-name))))
+      `(defun ,function-name ()
+         ,(format "Run shell command '%s'" command)
+         (interactive)
+         (shell-command ,command))))
+
+  (define-multi-macro-clauses define-shell-commands define-shell-command)
+
+  (define-shell-commands
+    reboot
+    (suspend "systemctl suspend"))
+#+END_SRC
 ** Other Commands
 A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
-  (defun nixconf () (interactive) (find-file (concat me/nixos-directory "configuration.nix")))
+  (defun nixconf ()
+    (interactive)
+    (or (find-file "~/nixos-config/modules/core.nix")
+        (find-file (concat me/nixos-directory
+                           "configuration.nix"))))
 #+END_SRC
 
 A command to configure emacs
 #+BEGIN_SRC emacs-lisp
   (defun econf () (interactive) (find-file (dotfiles "emacs/emacs.org")))
 #+END_SRC
-* User interface preferences
-These are settings related to the basic user interface of Emacs.
+* User interface
+These are settings related to the user interface of Emacs.
 ** Startup screen
 I disable the default startup screen and splash message.
 #+BEGIN_SRC emacs-lisp
@@ -527,12 +573,12 @@ useful information.
 Delight is a package which is used to hide unnecessary mode-line
 blurbs.
 #+BEGIN_SRC emacs-lisp
-  (use-package delight :quelpa (:stable t)
+  (use-package delight 
     :config
     (delight '((eldoc-mode nil "eldoc")
-               (auto-revert-mode nil "autorevert")
-               (org-src-mode nil "org-src")
-               (org-indent-mode nil "org"))))
+	       (auto-revert-mode nil "autorevert")
+	       (org-src-mode nil "org-src")
+	       (org-indent-mode nil "org"))))
 #+END_SRC
 *** Display information
 Display time and battery in the mode line
@@ -604,12 +650,15 @@ Emacs comes with such useless features as a tool bar. Turn them off.
              '(vertical-scroll-bars . nil))
 #+END_SRC
 ** Line and Column numbers
-Display them both on the side of the buffer and in the mode line.
+Display them both in the mode line, and show line number on the side
+of the screen in ~prog-mode~.
 #+BEGIN_SRC emacs-lisp
-(global-display-line-numbers-mode 1)
-(display-line-numbers-mode 1)
+  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
-(setq column-number-mode t)
+  (leader-key-def 'normal
+    "l" #'display-line-numbers-mode)
+
+  (setq column-number-mode t)
 #+END_SRC
 ** Line wrap
 Do not truncate lines.
@@ -657,19 +706,20 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
                (funcall fn)))))
 #+END_SRC
 
+** Ediff
+Don't make a new frame for ediff.
+#+BEGIN_SRC emacs-lisp
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
+#+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
 key press. ~which-key~ key replacements are generated [[#leader][here]].
+#+NAME: which-key
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
     :delight
     :config
     (which-key-mode t))
-#+END_SRC
-** Ediff
-Don't make a new frame for ediff.
-#+BEGIN_SRC emacs-lisp
-(setq ediff-window-setup-function 'ediff-setup-windows-plain)
 #+END_SRC
 ** COMMENT Beacon
 Highlight the cursor when switching buffers.
@@ -710,27 +760,24 @@ primary shell.
 
   (setq password-cache t) ; enable password caching
   (setq password-cache-expiry 3600) ; for one hour (time in secs)
+
+  (setq eshell-prompt-function
+        (lambda ()
+          (concat
+           (abbreviate-file-name (eshell/pwd))
+           (if (= (user-uid) 0) " # " " $ "))))
 #+END_SRC
 *** Commands
 ~eshell~ commands
 #+BEGIN_SRC emacs-lisp
-  (defun eshell/e (args)
+  (defun eshell/e (&rest args)
     "Open the given files"
-    (if (listp args)
-        (dolist (file args) (find-file file t))
-      (find-file args)))
-
-  (defun eshell/ee (args)
-    "Open the given files in new windows"
-    (if (listp args)
-        (dolist (file args) (find-file file t))
-      (find-file-other-window args)))
+    (dolist (file args) (find-file file t)))
 
   (defun eshell/fd (&optional from-directory)
     "Run fzf to open a directory in dired"
-    (fzf-directory-from (if from-directory
-                            from-directory
-                          default-directory)))
+    (fzf-directory-from (or from-directory
+                            default-directory)))
 
   (defun eshell/fh ()
     (eshell/fd "~"))
@@ -762,7 +809,11 @@ primary shell.
                                   "C-j" #'evil-window-down
                                   "C-k" #'evil-window-up
                                   "I" #'comint-style-insert-line
-                                  "A" #'comint-style-append-line)))
+                                  "A" #'comint-style-append-line
+                                  "M-<tab>" (lambda ()
+                                              (interactive)
+                                              (workspace-history-delta 1)
+                                              (hydra-workspace-history/body)))))
 #+END_SRC
 *** Helm support
 ~helm~ can be used for ~eshell~ completions with the following code.
@@ -1049,7 +1100,8 @@ rather than through ~use-package~ due to a bug.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-one-light)
+  ;; I'll stick with default for noww
+  ;; (switch-theme 'doom-one-light)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1057,7 +1109,6 @@ rather than through ~use-package~ due to a bug.
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
-#+NAME: themes
 #+BEGIN_SRC emacs-lisp
   (use-package theme-changer
     :after doom-themes
@@ -1139,12 +1190,10 @@ project.
       :title "Generic Project"
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages to use: "))))
-      :after-creation (lambda (dir) (setup--lorri dir))) ; a lambda is
-                                                         ; used to avoid
-                                                         ; a failed
-                                                         ; assertation.
-                                                         ; maybe
-                                                         ; reporthe bug.
+      :after-creation (lambda (dir) (setup--lorri dir)))
+                                          ; a lambda is used to avoid a
+                                          ; failed assertation.  maybe
+                                          ; reporthe bug.
 
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
@@ -1249,24 +1298,24 @@ still be replicated with a hydra with a timeout
 #+BEGIN_SRC emacs-lisp
   (general-define-key
    "C-M-`" (lambda ()
-            (interactive)
-            (helm-mini)
-            (hydra-helm-mini/body)))
+             (interactive)
+             (helm-mini)
+             (hydra-helm-mini/body)))
 
-  (defhydra hydra-helm-mini (:timeout 2
-                                      :post (helm-execute-selection-action))
-    "Buffer history: "
-    ("M-<tab>" (helm-next-line))
-    ("M-<S-iso-lefttab>" (helm-previous-line)))
+(defhydra hydra-helm-mini (:timeout 2
+                                    :post (helm-execute-selection-action))
+  "Buffer history: "
+  ("M-<tab>" (helm-next-line))
+  ("M-<S-iso-lefttab>" (helm-previous-line)))
 #+END_SRC
 *** COMMENT Buffer rotating
 I bind tab and shift-tab to functions which switch to the previous and
 next buffer with content respectively.
 #+BEGIN_SRC emacs-lisp
   (defun content-buffer-p (buffer))
-  (general-define-key :states 'normal :keymaps 'override
-                      "<tab>" 'previous-buffer
-                      "<backtab>" 'next-buffer)
+(general-define-key :states 'normal :keymaps 'override
+                    "<tab>" 'previous-buffer
+                    "<backtab>" 'next-buffer)
 #+END_SRC
 *** Buffer toggling
 This is a keybinding for toggling between 2
@@ -1276,6 +1325,20 @@ buffers. Faster than ~,-b\r~.
                       "<tab>" 'evil-buffer)
 #+END_SRC
 * Programming tools and settings
+** Agressive Indent
+~agressive-indent-mode~ maintaints indentation as code is reformatted
+#+BEGIN_SRC emacs-lisp
+  (use-package aggressive-indent
+    :delight
+    :config
+    (global-aggressive-indent-mode 1)
+    (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
+    (add-to-list
+     'aggressive-indent-dont-indent-if
+     '(and (derived-mode-p 'c++-mode)
+           (null (string-match "\\([;{}]\\|\\b\\(if\\|for\\|while\\)\\b\\)"
+                               (thing-at-point 'line))))))
+#+END_SRC
 ** Autocompletion
 I, like many others, use ~company~.
 #+BEGIN_SRC emacs-lisp
@@ -1338,8 +1401,7 @@ and a leader shortcut.
 #+END_SRC
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+BEGIN_SRC emacs-lisp
-(use-package yasnippet-snippets
-  :quelpa (:stable t))
+  (use-package yasnippet-snippets)
 #+END_SRC
 ~yasnippet~ can be used as a backend for ~company~.
 #+BEGIN_SRC emacs-lisp
@@ -1516,8 +1578,6 @@ This uses font-lock to hide namespace prefixes automatically.
 ~sly~ is a Common Lisp IDE for Emacs and a featureful fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
   (use-package sly
-    ;; :quelpa (:stable t)
-    ;; :load-path "~/code/elisp/sly"
     :after evil
     :config
 
@@ -1579,7 +1639,7 @@ It's like ~slime~ for Clojure! Kinda.
   (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
 
 ;; some visual flare
-(use-package spinner :quelpa (:stable t))
+(use-package spinner)
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -1683,7 +1743,7 @@ Python support is built in to ~lsp-mode~.
 *** COMMENT Autocomplete
 #+BEGIN_SRC emacs-lisp
   (use-package auto-complete-lua
-    :quelpa (:repo "https://github.com/rolpereira/auto-complete-lua.el")
+    :straight (:host github :repo "rolpereira/auto-complete-lua")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-lua))
@@ -1691,7 +1751,7 @@ Python support is built in to ~lsp-mode~.
 
   (use-package auto-complete-love
     :after auto-complete-lua
-    :quelpa (:fetcher github :repo "https://github.com/rolpereira/auto-complete-love.el")
+    :straight (:host github :repo "rolpereira/auto-complete-love")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-love))
@@ -1877,16 +1937,20 @@ literate source files like this one.
           org-pretty-entities t
           org-hide-emphasis-markers t
           ;; show actually italicized text instead of /italicized text/
-          ;;;org-agenda-block-separator ""
+  ;;;org-agenda-block-separator ""
           org-fontify-whole-heading-line t
           org-fontify-done-headline t
           org-fontify-quote-and-verse-blocks t
           org-src-ask-before-returning-to-edit-buffer nil)
     (general-define-key :states 'normal :mode 'org-mode-map
                         "C-`" 'org-edit-special)
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((lisp . t)))
+    (setq org-babel-lisp-eval-fn #'sly-eval)
 
-                        ;; "C-j" 'evil-window-down
-                        ;; "C-k" 'evil-window-up
+    ;; "C-j" 'evil-window-down
+    ;; "C-k" 'evil-window-up
     ;; (define-key org-mode-map (kbd "<C-j>") nil)
     ;; (define-key org-mode-map (kbd "<C-k>") nil)
     (leader-key-def 'normal org-src-mode-map
@@ -2054,7 +2118,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; Brightness
             ([C-XF86MonBrightnessUp] . desktop-environment-brightness-increment-very-slowly)
             ([C-XF86MonBrightnessDown] . desktop-environment-brightness-decrement-very-slowly)
-          
+
             ;; lock screen
             ([?\s-o] . desktop-environment-lock-screen)
 
@@ -2103,7 +2167,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (exwm-systemtray-enable)
 
     ;; startup programs
-    (define-multi-macro--old startup-programs start-process-shell-command 3)
+    (define-multi-macro startup-programs start-process-shell-command 3)
 
     (startup-programs
      "networkmanager applet" nil "nm-applet")
@@ -2171,6 +2235,9 @@ style
 I wrote a package to launch programs which integrates with ~exwm~ and
 ~exwm-named-workspaces~.
 #+BEGIN_SRC emacs-lisp
+  (define-multi-macro-clauses exlaunch-shortcuts exlaunch-shortcut
+    "Define functions to launch programs. ")
+
   (require 'exlaunch)
 
   (exlaunch-shortcuts
@@ -2198,9 +2265,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
-  (use-package symon
-    :config
-    (symon-mode))
+  (use-package symon)
 #+END_SRC
 *** Helm EXWM
 ~Helm-EXWM~ defines helm sources for exwm buffers
@@ -2249,11 +2314,6 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 
   (setq browse-url-generic-program "firefox")
 #+END_SRC
-*** COMMENT Network Manager
-Emacs interface to network manager. Buggy
-#+BEGIN_SRC emacs-lisp
-  (quelpa '(nm :fetcher github :repo "Kodkollektivet/emacs-nm"))
-#+END_SRC
 *** Helpful commands
 #+BEGIN_SRC emacs-lisp
   ;; logout function
@@ -2272,16 +2332,16 @@ Emacs interface to network manager. Buggy
     (other-window 1)
     (start-process-shell-command "blueman-manager" nil "blueman-manager"))
 
-  (defmacro define-shell-function (name command)
+  (defmacro define-start-process-shell-function (name command)
     `(defun ,name ()
        (interactive)
        (start-process-shell-command ,(symbol-name name)
                                     nil
                                     ,command)))
 
-  (define-multi-macro--old define-shell-functions define-shell-function 2)
+  (define-multi-macro define-start-process-shell-functions define-start-process-shell-function 2)
 
-  (define-shell-functions
+  (define-start-process-shell-functions 
     wifi "cool-retro-term -e nmtui"
     spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
@@ -2310,6 +2370,13 @@ Emacs interface to network manager. Buggy
 
   (add-hook 'exwm-manage-finish-hook
             #'enforce-floating-toggle-list)
+#+END_SRC
+** Document viewer
+~pdf-tools~ is a document viewer for emacs
+#+BEGIN_SRC emacs-lisp
+  (use-package pdf-tools
+    :config
+    (pdf-loader-install))
 #+END_SRC
 ** EMMS
 
@@ -2351,12 +2418,6 @@ Save cursor position in a file between sessions.
 #+BEGIN_SRC emacs-lisp
 (save-place-mode 1)
 #+END_SRC
-* COMMENT After startup
-Load themes after everything else because it seems that the faces are
-incorrect otherwise.
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<themes>>
-#+END_SRC
 * Helper functions
 Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
@@ -2382,25 +2443,6 @@ Various small functions which are evaluated before anything else in the file.
     "Load all elisp from 'user-init-file'."
     (interactive)
     (load-file user-init-file))
-
-  (defun move-line-up ()
-    "Move up the current line."
-    (interactive)
-    (transpose-lines 1)
-    (forward-line -2)
-    (indent-according-to-mode))
-
-  (defun move-line-down ()
-    "Move down the current line."
-    (interactive)
-    (forward-line 1)
-    (transpose-lines 1)
-    (forward-line -1)
-    (indent-according-to-mode))
-
-  (defun reboot ()
-    (interactive)
-    (shell-command "reboot"))
 
   (defun dotfiles (path)
     "Return path relative to the dotfiles directory"
@@ -2445,9 +2487,38 @@ Various small functions which are evaluated before anything else in the file.
     (let ((default-directory directory))
       (eshell-temp)))
 
+  (defun move-line-up ()
+    "Move up the current line."
+    (interactive)
+    (transpose-lines 1)
+    (forward-line -2)
+    (indent-according-to-mode))
+
+  (defun move-line-down ()
+    "Move down the current line."
+    (interactive)
+    (forward-line 1)
+    (transpose-lines 1)
+    (forward-line -1)
+    (indent-according-to-mode))
+
+  (defun move-line-up ()
+    "Move up the current line."
+    (interactive)
+    (transpose-lines 1)
+    (forward-line -2)
+    (indent-according-to-mode))
+
+  (defun move-line-down ()
+    "Move down the current line."
+    (interactive)
+    (forward-line 1)
+    (transpose-lines 1)
+    (forward-line -1)
+    (indent-according-to-mode))
   (defun disable-most-recent-theme ()
     (interactive)
-    (disable-theme (first custom-enabled-themes)))
+    (disable-theme (car custom-enabled-themes)))
 
   (defun switch-theme (theme)
     "load a theme interactively while disabling the current one."
@@ -2504,17 +2575,40 @@ Various small functions which are evaluated before anything else in the file.
                  "LUA_CPATH"
                  ";"))
 
-  (defmacro define-multi-macro--old (name macro num-parameters)
-    `(defmacro ,name (&rest args)
-       `(progn ,@(mapcar (lambda (elt)
-                           `(,',macro ,@elt))
-                         (seq-partition args ,num-parameters)))))
+  ;;;; Macrology
 
-  (defmacro define-multi-macro-clauses (name macro documentation)
+  (defmacro dobody (spec &rest body)
+    "A tool for creating domain specific languages.
+
+  Return a progn which contains the collected results of
+  evaluating BODY with VAR bound to each car from LIST, in turn.
+
+  \(fn (VAR LIST) BODY...)"
+    (unless (consp spec)
+      (signal 'wrong-type-argument (list 'consp spec)))
+    (unless (= 2 (length spec))
+      (signal 'wrong-number-of-arguments (list '(2 . 2) (length spec))))
+    (list 'backquote
+          (list 'progn
+                (list backquote-splice-symbol
+                      `(mapcar (lambda (,(cl-first spec))
+                                 (progn ,@body))
+                               ,(cl-second spec))))))
+
+  ;; todo: add support for kwargs which act as uniform values for the
+  ;; entire multi-macro call.
+  (defmacro define-multi-macro (name macro num-parameters &optional documentation)
+    `(defmacro ,name (&rest args)
+       ,(concat documentation
+                (format "For each %d arguments, call `%s' with those arguments."
+                        num-parameters macro))
+       (dobody (elt (seq-partition args ,num-parameters))
+               `(,',macro ,@elt))))
+
+  (defmacro define-multi-macro-clauses (name macro &optional documentation)
     `(defmacro ,name (&rest clauses)
        ,(concat documentation
-                (format "\n\nFor clause syntax, look at the
-  documentation of `%s'.
+                (format "\n\nFor clause syntax, look at the documentation of `%s'.
 
   Example clauses:
 
@@ -2525,25 +2619,8 @@ Various small functions which are evaluated before anything else in the file.
 
   The clause \"(ARG)\" can be written as \"ARG\".
   " macro))
-       `(progn ,@(mapcar (lambda (clause)
-                           `(,',macro ,@(if (consp clause)
-                                            clause
-                                          (list clause))))
-                         clauses))))
-
-  (defmacro define-multi-macro (name macro num-parameters &key kwargs)
-    "kwargs is a list of keyword arguments to be accepted by macro"
-    `(cl-defmacro ,name ,(append `(&rest args) (when kwargs (append `(&key) kwargs `(&allow-other-keys))))
-       `(progn ,@(mapcar (lambda (elt)
-                           ,(let ((result (list (quote backquote) (list macro ',@elt))))
-                              (dolist (kwarg kwargs)
-                                (setf (cadr result) (append (cadr result)
-                                                            (list (make-symbol
-                                                                   (concat ":"
-                                                                           (symbol-name kwarg)))
-                                                                  (list
-                                                                   (quote \,)
-                                                                   kwarg)))))
-                              result))
-                         (seq-partition (remove-keyword-args args) ,num-parameters)))))
+       (dobody (clause clauses)
+               `(,',macro ,@(if (consp clause)
+                                clause
+                              (list clause))))))
 #+END_SRC
