@@ -84,14 +84,16 @@
   "This function is added to the
 `exwm-workspace-list-change-hook' to keep track of names."
   (let* ((new-workspace (cl-find-if (lambda (frame)
-                                   (not (cl-find frame
-                                              exwm-named-workspace--old-workspace-list)))
-                                 exwm-workspace--list))
+                                      (and
+                                       (exwm-workspace--workspace-from-frame-or-index frame)
+                                       (not (cl-find frame
+                                                     exwm-named-workspace--old-workspace-list))))
+                                    exwm-workspace--list))
          (deleted-workspace (unless new-workspace
                               (cl-find-if (lambda (frame)
-                                         (not (cl-find frame
-                                                    exwm-workspace--list)))
-                                       exwm-named-workspace--old-workspace-list))))
+                                            (not (cl-find frame
+                                                          exwm-workspace--list)))
+                                          exwm-named-workspace--old-workspace-list))))
     (when new-workspace
       ;; (assert (equal (selected-frame) new-workspace))
       ;; (let ((exwm-named-workspace--new-name (labels (())
@@ -106,8 +108,8 @@
     (when deleted-workspace
       (setq exwm-named-workspace--names
             (cl-remove-if (lambda (w) (equal deleted-workspace
-                                          (cdr w)))
-                       exwm-named-workspace--names))
+                                             (cdr w)))
+                          exwm-named-workspace--names))
       (setq exwm-named-workspace--history
             (remove deleted-workspace exwm-named-workspace--history))))
   (setq exwm-named-workspace--old-workspace-list (cl-copy-list exwm-workspace--list)))
@@ -121,13 +123,14 @@
 (defun exwm-named-workspace-update-history ()
   "Unless the global variable NORECORD is non-nil, put the
 current workspace on top of the history stack."
-  
+
   ;; (when exwm-named-workspace--history-norecord (warn "history not updated. frame: %s" (exwm-named-workspace--frame->name (selected-frame)))) ; DEBUG
   (unless exwm-named-workspace--history-norecord
     ;; (warn (format "history updated. frame: %s" (exwm-named-workspace--frame->name (selected-frame)))) ; DEBUG
     (let ((current-frame (selected-frame)))
-      (setq exwm-named-workspace--history (remove current-frame exwm-named-workspace--history))
-      (add-to-list 'exwm-named-workspace--history current-frame))))
+      (when (cl-find current-frame exwm-named-workspace--history)
+        (setq exwm-named-workspace--history (remove current-frame exwm-named-workspace--history))
+        (add-to-list 'exwm-named-workspace--history current-frame)))))
 
 (add-hook 'exwm-workspace-switch-hook #'exwm-named-workspace-update-history)
 
@@ -221,6 +224,7 @@ workspaces. Interactive."
 circularly. If norecord is non-nil, do not update the history."
   (let ((exwm-named-workspace-message-on-switch t))
     (exwm-named-workspace--switch (exwm-named-workspace--frame->name
-               (nth n (exwm-named-workspace--circular-copy exwm-named-workspace--history))) norecord)))
+               (nth n (exwm-named-workspace--circular-copy exwm-named-workspace--history)))
+              norecord)))
 
 (provide 'exwm-named-workspace)

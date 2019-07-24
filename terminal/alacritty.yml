@@ -233,7 +233,7 @@ mouse.hide_when_typing: false
 
 # If this is `true`, the cursor will be rendered as a hollow box when the
 # window is not focused.
-unfocused_hollow_cursor: true
+cursor.unfocused_hollow: true
 
 # Live config reload (changes require restart)
 live_config_reload: true

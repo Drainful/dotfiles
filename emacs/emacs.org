@@ -277,14 +277,6 @@ using emacs today if it were not for ~evil-mode~.
          (evil-ex-define-cmd "Q[uit]" 'evil-quit)
          (evil-ex-define-cmd "Qa" 'evil-quit-all))))
 #+END_SRC
-** COMMENT Early loading facilities to create evil commands
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<use-package-general>>
-<<which-key>>
-<<leader-definitions>>
-<<leader-helpers>>
-<<leader-subleaders>>
-#+END_SRC
 ** Evil collection
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
@@ -455,8 +447,7 @@ First ~which-key~ must be loaded early
 <<which-key>>
 #+END_SRC
 
-First I define the leader keys,
-#+NAME: leader-definitions
+then I define the leader keys,
 #+BEGIN_SRC emacs-lisp
   (cl-eval-when (compile load eval)
    (defconst leader-key ",")
@@ -472,7 +463,6 @@ First I define the leader keys,
 then some helper functions to create functions to create subleader
 keybindings through ~general-create-definer~. Key-based replacements are
 also generated for [[#which-key][ ~which-key~ ]].
-#+NAME: leader-helpers
 #+BEGIN_SRC emacs-lisp
   (cl-defun leader-prefix (str &optional (prefix leader-key))
     "Append a leader key to the given string"
@@ -497,7 +487,6 @@ also generated for [[#which-key][ ~which-key~ ]].
                       (seq-partition (remove-keyword-args args) 3))))
 #+END_SRC
 Usage:
-#+NAME: subleaders
 #+BEGIN_SRC emacs-lisp
   (define-subleader
     "e" "eval" eval-key-def
@@ -677,7 +666,8 @@ Type =y= or =n=, not =yes= or =no=.
 #+END_SRC
 
 ** Clipboard
-Enable vim-like clipboard.
+Enable vim-like clipboard. This puts text copied from programs other
+than emacs into the "+" register.
 #+BEGIN_SRC emacs-lisp
 (setq select-enable-clipboard nil)
 #+END_SRC
@@ -1213,6 +1203,9 @@ project.
       '(("__HASKELL-PACKAGES__" . (lambda () (read-string "Haskell packages: ")))
         ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
       :after-creation (lambda (dir) (setup--lorri dir)))
+
+    ;; Extending built-in project types
+  
 
     ;;keybindings
     (project-key-def 'normal
@@ -1974,7 +1967,7 @@ Create a table of contents without exporting.
   (add-hook 'org-mode-hook 'toc-org-mode))
 #+END_SRC
 ** Nix
-These are tools for dealing with NixOS, my operating system.
+These are tools for dealing with the package manager Nix, and NixOS, my operating system.
 *** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
@@ -1993,6 +1986,10 @@ Features for dealing with nix-shell in Emacs.
                 (setq tab-always-indent nil)
                 (setq indent-tabs-mode t))))
 
+#+END_SRC
+*** Updating Nix hashes
+#+BEGIN_SRC emacs-lisp
+  (use-package nix-update)
 #+END_SRC
 ** Bash
 #+BEGIN_COMMENT 
@@ -2244,6 +2241,8 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 
    alacritty
 
+   (multimc :in-workspace "minecraft")
+ 
    (firefox :in-workspace "firefox")
 
    (steam :in-workspace "steam")
