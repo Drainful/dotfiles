@@ -42,6 +42,7 @@
   - [[#delimiters][Delimiters]]
   - [[#ediff][Ediff]]
   - [[#which-key][Which-key]]
+  - [[#default-browser][Default browser]]
 - [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -93,6 +94,7 @@
   - [[#document-viewer][Document viewer]]
   - [[#emms][EMMS]]
   - [[#irc][IRC]]
+  - [[#bitwarden][Bitwarden]]
 - [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
 
@@ -594,6 +596,8 @@ which integrates well across Emacs.
     :config
     (helm-mode t)
 
+    (setq helm-display-buffer-default-height 34)
+    (setq helm-default-display-buffer-functions '(display-buffer-in-side-window))
     ;; Do not create a new frame with helm completion.
     (setq helm-show-completion-display-function
           #'helm-show-completion-default-display-function))
@@ -711,6 +715,18 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
     :config
     (which-key-mode t))
 #+END_SRC
+** Default browser
+#+BEGIN_SRC emacs-lisp
+  (defun qute-browse (url &rest args)
+    (interactive (browse-url-interactive-arg "URL: "))
+    (setq url (browse-url-encode-url url))
+    (let* ((process-environment (browse-url-process-environment)))
+      (start-process
+       (concat "qutebrowser" url) nil
+       "qutebrowser" url)))
+
+  (setq browse-url-browser-function #'qute-browse)
+#+END_SRC
 ** COMMENT Beacon
 Highlight the cursor when switching buffers.
 #+BEGIN_SRC emacs-lisp
@@ -756,6 +772,30 @@ primary shell.
           (concat
            (abbreviate-file-name (eshell/pwd))
            (if (= (user-uid) 0) " # " " $ "))))
+
+  (defun eshell-buffer-name-function ()
+    (concat "*eshell " (abbreviate-file-name default-directory) "*"))
+
+  (defun eshell-new ()
+    "Open a new instance of eshell."
+    (interactive)
+    (let ((eshell-buffer-name (eshell-buffer-name-function)))
+      (eshell 'N)))
+
+  (defun eshell-singular ()
+    "Open or switch to eshell"
+    (interactive)
+    (let ((eshell-buffer-name (eshell-buffer-name-function)))
+      (eshell)))
+
+  (defun eshell-at (directory)
+    "Open a new instance of eshell in a new directory."
+    (let ((default-directory directory))
+      (eshell-temp)))
+
+  (defun eshell-rename-buffer ()
+    (rename-buffer (eshell-buffer-name-function)))
+  (add-hook 'eshell-directory-change-hook 'eshell-rename-buffer)
 #+END_SRC
 *** Commands
 ~eshell~ commands
@@ -2080,10 +2120,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-`] . projectile-run-eshell)
-            ([?\s-1] . eshell)
-            ([?\s-2] . eshell-temp)
-            ([?\s-3] . exlaunch/alacritty)
+            ([?\s-1] . eshell-new)
+            ([?\s-2] . exlaunch/alacritty)
+            ([?\s-3] . exlaunch/qutebrowser)
+            ([?\s--] . helm-exwm)
 
             ;; ,@(mapcar (lambda (n)
             ;;             `(,(kbd (format "s-%d" n)) .
@@ -2098,12 +2138,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
             ;;workspaces
             ([?\s-d] . exwm-named-workspace-delete)
-
-            ;; Switch between workspaces with global keys to better deal
-            ;; with exwm's fullscreen mode.
-            ([?\s-n] . exwm-named-workspace-next)
-            ([?\s-p] . exwm-named-workspace-previous)
-
             ([s-return] . exwm-named-workspace-make-or-switch)
 
             ;; bind "s-[direction] to switch windows"
@@ -2111,6 +2145,16 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-j] . windmove-down)
             ([?\s-k] . windmove-up)
             ([?\s-l] . windmove-right)
+            ;; bind "s-arrow" or caps to move, "maximize" or "minimize" a window
+            ([s-right] . windows-right)
+            ([s-down] . evil-quit)
+            ([s-up] . delete-other-windows)
+            ([s-left] . windows-left)
+
+            ([s-H] . windows-right)
+            ([s-J] . evil-quit)
+            ([s-K] . delete-other-windows)
+            ([s-L] . windows-left)
 
             ;; Brightness
             ([C-XF86MonBrightnessUp] . desktop-environment-brightness-increment-very-slowly)
@@ -2132,11 +2176,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                            (exwm-named-workspace-make-or-switch "default-workspace")
                            (switch-to-buffer "*scratch*"))))
 
-            ;; bind "s-arrow" to move, "maximize" or "minimize" a window
-            ([s-right] . windows-right)
-            ([s-down] . evil-quit)
-            ([s-up] . delete-other-windows)
-            ([s-left] . windows-left)
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
@@ -2176,7 +2215,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                                   (elt (kbd "s-<tab>") 0)
                                   (elt (kbd "<s-iso-lefttab>") 0)))
 
-    ; (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
+                                          ; (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
     ;; Do not allow pulling a window between workspaces by switching to its buffer
     ;; to see x windows on other workspaces, do C-c a
@@ -2239,11 +2278,13 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 
   (exlaunch-shortcuts
 
-   alacritty
+   (alacritty :switch-to nil)
 
    (multimc :in-workspace "minecraft")
- 
+
    (firefox :in-workspace "firefox")
+
+   (qutebrowser :switch-to nil)
 
    (steam :in-workspace "steam")
 
@@ -2305,7 +2346,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
                         "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
                         "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly))
 #+END_SRC
-*** EXWM firefox
+*** COMMENT EXWM firefox
 #+BEGIN_SRC emacs-lisp
   (use-package exwm-firefox-core)
 
@@ -2345,6 +2386,17 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
 *** Window class specific settings
+*** Other config
+#+BEGIN_SRC emacs-lisp
+  ;; Rename exwm buffers to window title
+  (defun exwm-rename-buffer-to-title () (exwm-workspace-rename-buffer exwm-title))
+  (add-hook 'exwm-update-title-hook 'exwm-rename-buffer-to-title)
+
+  ;;; Allow non-floating resizing with mouse.
+  (setq window-divider-default-bottom-width 0
+        window-divider-default-right-width 6)
+  (window-divider-mode)
+#+END_SRC
 *** COMMENT autominimize
 #+BEGIN_SRC emacs-lisp
   (defvar autominimize-list (list "love"))
@@ -2407,6 +2459,15 @@ I wrote a package to launch programs which integrates with ~exwm~ and
              :tls nil
              :nick ,me/freenode-nick
              :nickserv-password me/nickserv-password))))
+#+END_SRC
+** Bitwarden
+el interface to ~bitwarden-cli~ 
+#+BEGIN_SRC emacs-lisp
+  (use-package bitwarden
+    :straight (:host github :repo "seanfarley/emacs-bitwarden")
+    :config
+    (setq bitwarden-automatic-unlock (lambda ()
+                                       (read-passwd "Password: "))))
 #+END_SRC
 * Files and backups
 Don't make backups.
@@ -2474,17 +2535,6 @@ Various small functions which are evaluated before anything else in the file.
         (other-window 1)
         (next-buffer)
         (other-window 1))))
-
-  (defun eshell-temp ()
-    "Open a new instance of eshell."
-    (interactive)
-    (let ((eshell-buffer-name "*temporary eshell*"))
-      (eshell 'N)))
-
-  (defun eshell-at (directory)
-    "Open a new instance of eshell in a new directory."
-    (let ((default-directory directory))
-      (eshell-temp)))
 
   (defun move-line-up ()
     "Move up the current line."
