@@ -3,17 +3,7 @@
 
 config_version: 2
 settings:
-  qt.highdpi:
-    global: true
-  scrolling.smooth:
-    global: false
   statusbar.hide:
-    global: false
-  tabs.tabs_are_windows:
     global: true
-  url.default_page:
-    global: 'false'
-  window.hide_decoration:
-    global: false
-  zoom.default:
-    global: 67%
+  tabs.show:
+    global: never

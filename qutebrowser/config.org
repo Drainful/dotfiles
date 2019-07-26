@@ -1,0 +1,41 @@
+#+TITLE: Qutebrowser Configuration
+* 
+:PROPERTIES:
+:header-args: :tangle ./config.py
+:END:
+The first heading only exists to contain this property which didn't
+work globally for some reason. 
+
+** User Interface
+
+#+BEGIN_SRC python
+  # smooth scrolling
+  c.scrolling.smooth = False
+
+  # hide statusbar
+  c.statusbar.hide = True
+#+END_SRC
+
+*** Hi Dpi
+There are also environment variables which may help, but I 
+don't use them.
+#+BEGIN_SRC python
+  c.qt.highdpi = True
+  c.zoom.default = 67
+#+END_SRC
+
+** Tabs and Windows
+I prefer to use my WM to manage tabs than the browser.
+#+BEGIN_SRC python
+  c.tabs.tabs_are_windows = True
+  c.tabs.show = "never"
+  c.window.title_format = "{perc}{title} - {current_url}"
+#+END_SRC
+** Url
+#+BEGIN_SRC python
+  # search engine
+  c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}
+
+  # default page
+  c.url.default_page = "https://google.com"
+#+END_SRC

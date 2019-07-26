@@ -16,7 +16,7 @@
   - [[#evil-easymotion][Evil easymotion]]
   - [[#evil-surround][Evil surround]]
   - [[#the-creation-of-text-objects][The creation of text objects]]
-- [[#keybindings-and-commands][Keybindings and commands]]
+- [[#keybindings-and-commands][Keybindings and Commands]]
   - [[#generalel][General.el]]
   - [[#hydrael][Hydra.el]]
   - [[#commands][Commands]]
@@ -28,7 +28,7 @@
   - [[#leader][Leader]]
   - [[#shell-commands][Shell Commands]]
   - [[#other-commands][Other Commands]]
-- [[#user-interface][User interface]]
+- [[#user-interface][User Interface]]
   - [[#startup-screen][Startup screen]]
   - [[#mode-line][Mode line]]
   - [[#helm][Helm]]
@@ -355,7 +355,7 @@ More complex text objects are defined manually:
     (list 1 (1+ (buffer-size))))
   (define-key evil-outer-text-objects-map "a" #'evil-entire-buffer)
 #+END_SRC
-* Keybindings and commands
+* Keybindings and Commands
 ** General.el
 I mainly use the the package ~general~ to define keybindings and
 commands. 
@@ -534,7 +534,7 @@ A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
   (defun nixconf ()
     (interactive)
-    (or (find-file "~/nixos-config/modules/core.nix")
+    (or (find-file "~/nixos-config/parts/core.nix")
         (find-file (concat me/nixos-directory
                            "configuration.nix"))))
 #+END_SRC
@@ -543,7 +543,7 @@ A command to configure emacs
 #+BEGIN_SRC emacs-lisp
   (defun econf () (interactive) (find-file (dotfiles "emacs/emacs.org")))
 #+END_SRC
-* User interface
+* User Interface
 These are settings related to the user interface of Emacs.
 ** Startup screen
 I disable the default startup screen and splash message.
@@ -585,6 +585,13 @@ Display time and battery in the mode line
   (display-time-mode)
   (setq display-time-default-load-average nil)
 #+END_SRC
+*** Shorten mode-line buffer names
+Since I rely on Emacs to show me the time and battery info, I can't be
+having the mode line crowded out by the buffer name. 46 characters of
+buffer name should do.
+#+BEGIN_SRC emacs-lisp
+  (setq-default mode-line-buffer-identification (list -46 (propertized-buffer-identification "%12b")))
+#+END_SRC
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
 which integrates well across Emacs.
@@ -596,11 +603,12 @@ which integrates well across Emacs.
     (helm-mode t)
 
     (setq helm-buffer-max-length 120)
-    (setq helm-display-buffer-default-height 34)
+    (setq helm-display-buffer-default-height 30)
     (setq helm-default-display-buffer-functions '(display-buffer-in-side-window))
     ;; Do not create a new frame with helm completion.
     (setq helm-show-completion-display-function
-          #'helm-show-completion-default-display-function))
+          #'helm-show-completion-default-display-function)
+    (setq helm-follow-mode-persistent t))
 #+END_SRC
 *** COMMENT Helper functions
 #+BEGIN_SRC emacs-lisp
@@ -1991,6 +1999,8 @@ literate source files like this one.
      '((lisp . t)))
     (setq org-babel-lisp-eval-fn #'sly-eval)
 
+    (add-hook 'org-mode-hook #'auto-fill-mode)
+
     ;; "C-j" 'evil-window-down
     ;; "C-k" 'evil-window-up
     ;; (define-key org-mode-map (kbd "<C-j>") nil)
@@ -2129,13 +2139,12 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-`] . qute-browse)
+            ([?\s-`] . helm-qutebrowser)
             ([?\s-1] . (lambda ()
                          (interactive)
                          (eshell-at-or-switch default-directory)))
             ([?\s-2] . eshell-at-or-switch)
             ([?\s-3] . exlaunch/alacritty)
-            ([?\s--] . helm-exwm)
 
             ;; ,@(mapcar (lambda (n)
             ;;             `(,(kbd (format "s-%d" n)) .
@@ -2228,9 +2237,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
                                           ; (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
-    ;; Do not allow pulling a window between workspaces by switching to its buffer
-    ;; to see x windows on other workspaces, do C-c a
-    (setq exwm-workspace-show-all-buffers nil)
+    ;; Allow pulling a window between workspaces by switching to its buffer
+    (setq exwm-workspace-show-all-buffers t)
     (setq exwm-layout-show-all-buffers t)
 
     ;; Redefine function to fix global-display-line-numbers-mode bug
@@ -2282,10 +2290,10 @@ style
 I wrote a package to launch programs which integrates with ~exwm~ and
 ~exwm-named-workspaces~.
 #+BEGIN_SRC emacs-lisp
+  (require 'exlaunch)
+
   (define-multi-macro-clauses exlaunch-shortcuts exlaunch-shortcut
     "Define functions to launch programs. ")
-
-  (require 'exlaunch)
 
   (exlaunch-shortcuts
 
@@ -2296,7 +2304,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
    (firefox :in-workspace "firefox")
 
    (qutebrowser :switch-to nil)
- 
+
    (steam :in-workspace "steam")
 
    (krita :in-workspace "art")
@@ -2323,7 +2331,28 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 #+BEGIN_SRC emacs-lisp
   (use-package helm-exwm
     :config
-    (setq helm-exwm-buffer-max-length 120))
+    (setq helm-exwm-buffer-max-length 120)
+
+    ;; preview buffer when switching
+    (add-to-list 'helm-source-names-using-follow "EXWM buffers")
+
+    (general-define-key :keymaps 'helm-exwm-map
+                        "M-d" #'helm-buffer-run-kill-persistent
+                        "S-<return>" #'helm-buffer-switch-buffers-other-window)
+
+
+    ;; Separate EXWM buffers in helm-mini
+    (setq helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
+    (setq helm-exwm-source (helm-exwm-build-source))
+    (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
+                                      helm-exwm-source
+                                      helm-source-recentf)))
+#+END_SRC
+**** Helm qutebrowser
+A helm source to switch between qutebrowser tabs (as windows) or to
+search for url if a matching tab is not found.
+#+BEGIN_SRC emacs-lisp
+  (require 'helm-qutebrowser)
 #+END_SRC
 *** Desktop Environment
 ~desktop-environment~ is a package which provides keybindings for tasks such as changing volume.
@@ -2397,43 +2426,6 @@ I wrote a package to launch programs which integrates with ~exwm~ and
   (define-start-process-shell-functions 
     wifi "cool-retro-term -e nmtui"
     spotify "spotify --force-device-scale-factor=2")
-#+END_SRC
-*** Window class specific settings
-*** Filtering
-Functions to select exwm buffers. 
-#+BEGIN_SRC emacs-lisp
-  (require 'helm-exwm)
-
-  (defun exwm-buffers-of-class (class)
-    (let ((filter (lambda ()
-                    (string= (downcase (or exwm-class-name ""))
-                             (downcase class)))))
-      (helm-exwm-candidates filter)))
-
-  (provide 'exwm-filtering)
-#+END_SRC
-*** Qutebrowser
-#+BEGIN_SRC emacs-lisp
-  (require 'exwm-filtering)
-
-  (defun qute-read-buffer-or-url ()
-    (let ((pointless " - qutebrowser"))
-      (concat (completing-read "URL: "
-                               (mapcar (lambda (buffer-name)
-                                         (substring buffer-name 0 (- (length buffer-name)
-                                                                     (length pointless))))
-                                       (exwm-buffers-of-class "qutebrowser")))
-              pointless)))
-
-  (defun qute-browse (url &rest args)
-    (interactive (list (qute-read-buffer-or-url)))
-    (if (get-buffer url)
-        (switch-to-buffer (get-buffer url))
-      (setq url (browse-url-encode-url url))
-      (let* ((process-environment (browse-url-process-environment)))
-        (start-process
-         (concat "qutebrowser" url) nil
-         "qutebrowser" url))))
 #+END_SRC
 *** Other config
 #+BEGIN_SRC emacs-lisp
