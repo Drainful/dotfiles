@@ -42,7 +42,6 @@
   - [[#delimiters][Delimiters]]
   - [[#ediff][Ediff]]
   - [[#which-key][Which-key]]
-  - [[#default-browser][Default browser]]
 - [[#dired][Dired]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
@@ -596,6 +595,7 @@ which integrates well across Emacs.
     :config
     (helm-mode t)
 
+    (setq helm-buffer-max-length 120)
     (setq helm-display-buffer-default-height 34)
     (setq helm-default-display-buffer-functions '(display-buffer-in-side-window))
     ;; Do not create a new frame with helm completion.
@@ -715,18 +715,6 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
     :config
     (which-key-mode t))
 #+END_SRC
-** Default browser
-#+BEGIN_SRC emacs-lisp
-  (defun qute-browse (url &rest args)
-    (interactive (browse-url-interactive-arg "URL: "))
-    (setq url (browse-url-encode-url url))
-    (let* ((process-environment (browse-url-process-environment)))
-      (start-process
-       (concat "qutebrowser" url) nil
-       "qutebrowser" url)))
-
-  (setq browse-url-browser-function #'qute-browse)
-#+END_SRC
 ** COMMENT Beacon
 Highlight the cursor when switching buffers.
 #+BEGIN_SRC emacs-lisp
@@ -773,8 +761,11 @@ primary shell.
            (abbreviate-file-name (eshell/pwd))
            (if (= (user-uid) 0) " # " " $ "))))
 
-  (defun eshell-buffer-name-function ()
-    (concat "*eshell " (abbreviate-file-name default-directory) "*"))
+  (defun eshell-buffer-name-function (&optional directory)
+    (concat "*eshell at "
+            (abbreviate-file-name (or directory
+                                      default-directory))
+            "*"))
 
   (defun eshell-new ()
     "Open a new instance of eshell."
@@ -790,11 +781,28 @@ primary shell.
 
   (defun eshell-at (directory)
     "Open a new instance of eshell in a new directory."
+    (interactive (list (read-file-name "Eshell at: ")))
     (let ((default-directory directory))
-      (eshell-temp)))
+      (eshell-new)))
+
+  (defun eshell-at-or-switch (directory)
+    (interactive (list (read-file-name "Eshell at: ")))
+    (let ((buffer (get-buffer (eshell-buffer-name-function directory))))
+      (if buffer
+          (switch-to-buffer buffer)
+        (eshell-at directory))))
 
   (defun eshell-rename-buffer ()
-    (rename-buffer (eshell-buffer-name-function)))
+    (let ((name (eshell-buffer-name-function)))
+      (if (get-buffer name)
+          (labels ((recur (number)
+                          (let ((new-name (set-buffer-number name number)))
+                            (if (not (get-buffer new-name))
+                                (rename-buffer new-name)
+                              (recur (1+ number))))))
+            (recur 1))
+        (rename-buffer name))))
+
   (add-hook 'eshell-directory-change-hook 'eshell-rename-buffer)
 #+END_SRC
 *** Commands
@@ -960,20 +968,21 @@ This code was the restult of a bad misunderstanding of the function of ~ansi-ter
 
   (defun protect-term-prompt ()
     (interactive)
-    (when (string-match (condition-case nil 
-                            (symbol-value 'term-prompt-regexp) 
-                          (void-variable "")) 
-                        (thing-at-point 'line t))
-      (let ((inhibit-field-text-motion t)
-            (inhibit-read-only t))
-        (add-text-properties
-         (point-at-bol)
-         (point-at-eol)
-         '(rear-nonsticky t
-                          inhibit-line-move-fiold-capture t
-                          field output
-                          read-only t
-                          front-sticky (field inhibit-line-move-field-capture))))))
+    (save-match-data
+      (when (string-match (condition-case nil 
+                              (symbol-value 'term-prompt-regexp) 
+                            (void-variable "")) 
+                          (thing-at-point 'line t))
+        (let ((inhibit-field-text-motion t)
+              (inhibit-read-only t))
+          (add-text-properties
+           (point-at-bol)
+           (point-at-eol)
+           '(rear-nonsticky t
+                            inhibit-line-move-fiold-capture t
+                            field output
+                            read-only t
+                            front-sticky (field inhibit-line-move-field-capture)))))))
 
   (advice-add 'term-send-input #'protect-term-prompt)
 #+END_SRC
@@ -1369,8 +1378,8 @@ buffers. Faster than ~,-b\r~.
     (add-to-list
      'aggressive-indent-dont-indent-if
      '(and (derived-mode-p 'c++-mode)
-           (null (string-match "\\([;{}]\\|\\b\\(if\\|for\\|while\\)\\b\\)"
-                               (thing-at-point 'line))))))
+           (null (string-match-p "\\([;{}]\\|\\b\\(if\\|for\\|while\\)\\b\\)"
+                                 (thing-at-point 'line))))))
 #+END_SRC
 ** Autocompletion
 I, like many others, use ~company~.
@@ -2120,9 +2129,12 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-1] . eshell-new)
-            ([?\s-2] . exlaunch/alacritty)
-            ([?\s-3] . exlaunch/qutebrowser)
+            ([?\s-`] . qute-browse)
+            ([?\s-1] . (lambda ()
+                         (interactive)
+                         (eshell-at-or-switch default-directory)))
+            ([?\s-2] . eshell-at-or-switch)
+            ([?\s-3] . exlaunch/alacritty)
             ([?\s--] . helm-exwm)
 
             ;; ,@(mapcar (lambda (n)
@@ -2145,16 +2157,12 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-j] . windmove-down)
             ([?\s-k] . windmove-up)
             ([?\s-l] . windmove-right)
-            ;; bind "s-arrow" or caps to move, "maximize" or "minimize" a window
+
+            ;; bind "s-arrow" to move, "maximize" or "minimize" a window
             ([s-right] . windows-right)
             ([s-down] . evil-quit)
             ([s-up] . delete-other-windows)
             ([s-left] . windows-left)
-
-            ([s-H] . windows-right)
-            ([s-J] . evil-quit)
-            ([s-K] . delete-other-windows)
-            ([s-L] . windows-left)
 
             ;; Brightness
             ([C-XF86MonBrightnessUp] . desktop-environment-brightness-increment-very-slowly)
@@ -2168,6 +2176,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
             ;; toggle window floating
             ([?\s-/] . exwm-floating-toggle-floating)
+
+            ;; switch between buffers
+            ([s-tab] . evil-buffer)
 
             ;; switch to default workspace and scratch buffer
             ([?\s-0] . (lambda ()
@@ -2285,7 +2296,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
    (firefox :in-workspace "firefox")
 
    (qutebrowser :switch-to nil)
-
+ 
    (steam :in-workspace "steam")
 
    (krita :in-workspace "art")
@@ -2310,7 +2321,9 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 *** Helm EXWM
 ~Helm-EXWM~ defines helm sources for exwm buffers
 #+BEGIN_SRC emacs-lisp
-  (use-package helm-exwm)
+  (use-package helm-exwm
+    :config
+    (setq helm-exwm-buffer-max-length 120))
 #+END_SRC
 *** Desktop Environment
 ~desktop-environment~ is a package which provides keybindings for tasks such as changing volume.
@@ -2386,6 +2399,42 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     spotify "spotify --force-device-scale-factor=2")
 #+END_SRC
 *** Window class specific settings
+*** Filtering
+Functions to select exwm buffers. 
+#+BEGIN_SRC emacs-lisp
+  (require 'helm-exwm)
+
+  (defun exwm-buffers-of-class (class)
+    (let ((filter (lambda ()
+                    (string= (downcase (or exwm-class-name ""))
+                             (downcase class)))))
+      (helm-exwm-candidates filter)))
+
+  (provide 'exwm-filtering)
+#+END_SRC
+*** Qutebrowser
+#+BEGIN_SRC emacs-lisp
+  (require 'exwm-filtering)
+
+  (defun qute-read-buffer-or-url ()
+    (let ((pointless " - qutebrowser"))
+      (concat (completing-read "URL: "
+                               (mapcar (lambda (buffer-name)
+                                         (substring buffer-name 0 (- (length buffer-name)
+                                                                     (length pointless))))
+                                       (exwm-buffers-of-class "qutebrowser")))
+              pointless)))
+
+  (defun qute-browse (url &rest args)
+    (interactive (list (qute-read-buffer-or-url)))
+    (if (get-buffer url)
+        (switch-to-buffer (get-buffer url))
+      (setq url (browse-url-encode-url url))
+      (let* ((process-environment (browse-url-process-environment)))
+        (start-process
+         (concat "qutebrowser" url) nil
+         "qutebrowser" url))))
+#+END_SRC
 *** Other config
 #+BEGIN_SRC emacs-lisp
   ;; Rename exwm buffers to window title
@@ -2396,6 +2445,8 @@ I wrote a package to launch programs which integrates with ~exwm~ and
   (setq window-divider-default-bottom-width 0
         window-divider-default-right-width 6)
   (window-divider-mode)
+
+  
 #+END_SRC
 *** COMMENT autominimize
 #+BEGIN_SRC emacs-lisp
@@ -2482,6 +2533,26 @@ Save cursor position in a file between sessions.
 Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
 #+BEGIN_SRC emacs-lisp
+  (defvar buffer-number-regex (rx "<" (* (not (any "<"))) ">" string-end)
+    "A regex to match that angle-bracketed number at the end of a
+    buffer name that represents that it is a duplicate of another
+    buffer.")
+
+  (defun get-buffer-number (buffer-name)
+    "Gets the number in angle brackets from the name of a buffer"
+    (save-match-data
+      (when (string-match buffer-number-regex buffer-name)
+        (let ((val (match-string 0 buffer-name)))
+          (string-to-number (substring val 1 (1- (length val))))))))
+
+  (defun set-buffer-number (buffer-name new-number)
+    "Return a new string with a different number in angle brackets at the end."
+    (let ((new-number-string (concat "<" (number-to-string new-number) ">")))
+      (save-match-data
+        (if (string-match buffer-number-regex buffer-name)
+            (replace-match new-number-string t t buffer-name)
+          (concat buffer-name new-number-string)))))
+
   (defun auto-mode-add (mode &rest filenames)
     "Add a number of file name patterns to the given mode in
     auto-mode-alist"

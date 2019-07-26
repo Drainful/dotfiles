@@ -4,4 +4,5 @@ card all {
     spark file emacs/emacs.sus
     spark file sbcl/sbcl.sus
     spark file games/games.sus
+    spark file qutebrowser.sus
 }
