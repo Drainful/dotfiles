@@ -44,9 +44,10 @@
   "Transformer function to highlight BUFFERS list.
 Should be called after others transformers i.e (boring buffers).
 Depends upon qutebrowser configuration found within these dotfiles, specifically
-  c.window.title_format = \"{title} - {current_url}\""
+  c.window.title_format = \"{title} -- {current_url}\""
   (cl-loop for i in buffers
-           for (name url) = (split-string i " - ")
+           for (name url) = (split-string i " -- ")
+           for truncurl = (when url (substring url 0 (min 100 (length url))))
            for truncbuf = (if (> (string-width name) helm-exwm-buffer-max-length)
                               (helm-substring-by-width
                                name helm-exwm-buffer-max-length
@@ -62,11 +63,11 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
                      (cons (if helm-buffer-details-flag
                                (concat
                                 (funcall helm-fuzzy-matching-highlight-fn truncbuf)
-                                "  " (propertize url 'face 'helm-buffer-process))
+                                (when truncurl (concat "  " (propertize truncurl 'face 'helm-buffer-process))))
                              (funcall helm-fuzzy-matching-highlight-fn name))
                            (get-buffer i)))))
 
-(defvar helm-qutebrowser-buffer-source
+(defvar helm-qutebrowser-buffers-source
   (helm-build-sync-source "Qutebrowser tabs"
     :candidates (lambda () (helm-exwm-candidates (lambda ()
                                                    (string= (downcase (or exwm-class-name ""))
@@ -80,8 +81,14 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
     :persistent-action 'helm-buffers-list-persistent-action
     :keymap helm-exwm-map))
 
-(defvar helm-qutebrowser-sources '(helm-qutebrowser-buffer-source
-                                   helm-qutebrowser-source-not-found))
+(defvar helm-qutebrowser-sources '(helm-qutebrowser-buffers-source
+                   helm-qutebrowser-source-not-found))
+
+(defun helm-qutebrowser-build-exwm-source ()
+  "Build a Helm source for all non-EXWM buffers."
+  (helm-exwm-build-source (lambda ()
+                            (not (string= (downcase (or exwm-class-name ""))
+                                          (downcase "qutebrowser"))))))
 
 (defun helm-qutebrowser ()
   (interactive)

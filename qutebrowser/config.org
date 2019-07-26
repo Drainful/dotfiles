@@ -29,7 +29,8 @@ I prefer to use my WM to manage tabs than the browser.
 #+BEGIN_SRC python
   c.tabs.tabs_are_windows = True
   c.tabs.show = "never"
-  c.window.title_format = "{perc}{title} - {current_url}"
+  # This title format is parsed by the emacs config in these dotfiles.
+  c.window.title_format = "{perc}{title} -- {current_url}"
 #+END_SRC
 ** Url
 #+BEGIN_SRC python

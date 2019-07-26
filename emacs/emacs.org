@@ -2341,11 +2341,14 @@ I wrote a package to launch programs which integrates with ~exwm~ and
                         "S-<return>" #'helm-buffer-switch-buffers-other-window)
 
 
-    ;; Separate EXWM buffers in helm-mini
+    (require 'helm-qutebrowser)
+
+    ;; Separate EXWM and qutebrowser buffers in helm-mini
     (setq helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
-    (setq helm-exwm-source (helm-exwm-build-source))
+    (setq helm-exwm-source (helm-qutebrowser-build-exwm-source))
     (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
                                       helm-exwm-source
+                                      helm-qutebrowser-buffer-source
                                       helm-source-recentf)))
 #+END_SRC
 **** Helm qutebrowser

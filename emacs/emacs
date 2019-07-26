@@ -50,7 +50,9 @@
      (basic-save-buffer . helm-read-file-name-handler-1)
      (write-file . helm-read-file-name-handler-1)
      (write-region . helm-read-file-name-handler-1))))
- '(helm-source-names-using-follow (quote ("Qutebrowser tabs" "qute-browse" "EXWM buffers")))
+ '(helm-source-names-using-follow
+   (quote
+    ("Emacs buffers" "Qutebrowser tabs" "qute-browse" "EXWM buffers")))
  '(inferior-shen-program "~/Projects/common-lisp/my-forks/shen-cl/bin/sbcl/shen" t)
  '(jdee-db-active-breakpoint-face-colors (cons "#1B2229" "#51afef"))
  '(jdee-db-requested-breakpoint-face-colors (cons "#1B2229" "#98be65"))
