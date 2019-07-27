@@ -55,10 +55,12 @@
 - [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
   - [[#doom-themes][Doom Themes]]
   - [[#poet-theme][Poet Theme]]
+  - [[#chocolate-theme][Chocolate theme]]
   - [[#theme][Theme]]
 - [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
+  - [[#helm-winconf][Helm winconf]]
   - [[#projects][Projects]]
   - [[#fzf][FZF]]
   - [[#file-navigation][File navigation]]
@@ -451,8 +453,8 @@ First ~which-key~ must be loaded early
 then I define the leader keys,
 #+BEGIN_SRC emacs-lisp
   (cl-eval-when (compile load eval)
-   (defconst leader-key ",")
-   (defconst alt-leader "SPC"))
+    (defconst leader-key ",")
+    (defconst alt-leader-key "SPC"))
 
   (general-create-definer leader-key-def
     :prefix leader-key)
@@ -605,11 +607,18 @@ which integrates well across Emacs.
     (setq helm-buffer-max-length 120)
     (setq helm-display-buffer-default-height 30)
     (setq helm-default-display-buffer-functions '(display-buffer-in-side-window))
+    ;; (setq helm-autoresize-mode t)
     ;; Do not create a new frame with helm completion.
     (setq helm-show-completion-display-function
           #'helm-show-completion-default-display-function)
-    (setq helm-follow-mode-persistent t))
+    (setq helm-follow-mode-persistent t)
+
+    ;; How helm should handle opening new windows
+    (setq helm-window-prefer-horizontal-split t)
+    (setq helm-window-show-buffers-function 'helm-window-mosaic-fn))
+
 #+END_SRC
+*** Extending helm-highight-buffers
 *** COMMENT Helper functions
 #+BEGIN_SRC emacs-lisp
   (defun helm-rec-find-directory-old (&optional starting-directory)
@@ -856,10 +865,13 @@ primary shell.
                                   "C-k" #'evil-window-up
                                   "I" #'comint-style-insert-line
                                   "A" #'comint-style-append-line
-                                  "M-<tab>" (lambda ()
-                                              (interactive)
-                                              (workspace-history-delta 1)
-                                              (hydra-workspace-history/body)))))
+                                  ;; "M-<tab>" #'persp-next
+                                  )))
+
+                                  ;; "M-<tab>" (lambda ()
+                                  ;;             (interactive)
+                                  ;;             (workspace-history-delta 1)
+                                  ;;             (hydra-workspace-history/body)))))
 #+END_SRC
 *** Helm support
 ~helm~ can be used for ~eshell~ completions with the following code.
@@ -1141,14 +1153,17 @@ Doom Emacs looks good. I want those themes.
 ** Poet Theme
 I also use the ~poet~ theme, but I install it through ~package-install~
 rather than through ~use-package~ due to a bug.
+** Chocolate theme
+#+BEGIN_SRC emacs-lisp
+(use-package chocolate-theme)
+#+END_SRC
 ** Theme
 #+BEGIN_SRC emacs-lisp
   (defun disable-all-themes ()
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  ;; I'll stick with default for noww
-  ;; (switch-theme 'doom-one-light)
+    (switch-theme 'doom-one-light)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1182,6 +1197,75 @@ I abbreviate the command with ~hydra~.
     "Window configuration history"
     ("u" winner-undo)
     ("r" winner-redo))
+#+END_SRC
+** Helm winconf
+A small and simple package for managing named window configurations.
+#+BEGIN_SRC emacs-lisp
+  (require 'helm-winconf)
+
+  (general-define-key "M-<tab>" #'helm-winconf-swap)
+
+  (unless (featurep 'exwm)
+    (alt-leader-key-def 'normal
+      "RET" #'helm-winconf))
+#+END_SRC
+*** COMMENT Alt tab style winconf switching
+And an alt-tab hydra for it. Doomed to fail.
+#+BEGIN_SRC emacs-lisp
+  (lexical-let (winconf-list length)
+
+    (defun helm-winconf-history-delta (delta)
+      (assert (or (= delta 1)
+                  (= delta -1)))
+      (setq winconf-list (cd*r (if (minusp delta)
+                                   (+ length delta)
+                                 delta)
+                               winconf-list))
+      (set-window-configuration (cdar winconf-list)))
+
+    (defun helm-winconf-update-history ()
+      (cl-flet ((helm-winconf--rassoc (conf)
+                                      (car (rassoc conf helm-winconf--names-alist)))))
+      (helm-winconf--new (helm-winconf--current))
+      (let ((conf (current-window-configuration))
+            (name-and-conf (cons (helm-winconf--rassoc conf)
+                                 conf)))
+        (setq helm-winconf--names-alist (cons name-and-conf
+                                              (remove name-and-conf
+                                                      helm-winconf--names-alist)))))
+
+    (general-define-key
+     "M-<tab>" (lambda ()
+                 (interactive)
+                 (setq length (length helm-winconf--names-alist))
+                 (setq winconf-list (circular helm-winconf--names-alist))
+                 (helm-winconf-history-delta 1)
+                 (hydra-winconf-history/body)))
+
+    (defhydra hydra-winconf-history (:timeout 2
+                                              :post (helm-winconf-update-history))
+      "Winconf history: "
+      ("M-<tab>" (helm-winconf-history-delta 1))
+      ("M-<S-iso-lefttab>" (helm-winconf-history-delta -1))))
+#+END_SRC
+** COMMENT Persp-mode
+~persp-mode~ is a package for managing window configurations. I prefer
+this to managing frames.
+#+BEGIN_SRC emacs-lisp
+  (use-package persp-mode
+    :config
+
+
+    (persp-mode)
+
+    ;; I just want to use `persp-mode' as a layout saver, so I remove
+    ;; all inter-persp buffer restrictions
+    (setq persp-disable-buffer-restriction-once t)
+    (setq persp-kill-foreign-buffer-behaviour 'just-kill)
+
+    (general-define-key :keymap 'persp-mode-map
+                        "M-<tab>" #'persp-next
+                        "<M-iso-lefttab>" #'persp-prev))
 #+END_SRC
 ** Projects
 *** Projectile
@@ -1352,11 +1436,11 @@ still be replicated with a hydra with a timeout
              (helm-mini)
              (hydra-helm-mini/body)))
 
-(defhydra hydra-helm-mini (:timeout 2
-                                    :post (helm-execute-selection-action))
-  "Buffer history: "
-  ("M-<tab>" (helm-next-line))
-  ("M-<S-iso-lefttab>" (helm-previous-line)))
+  (defhydra hydra-helm-mini (:timeout 2
+                                      :post (helm-execute-selection-action))
+    "Buffer history: "
+    ("M-<tab>" (helm-next-line))
+    ("M-<S-iso-lefttab>" (helm-previous-line)))
 #+END_SRC
 *** COMMENT Buffer rotating
 I bind tab and shift-tab to functions which switch to the previous and
@@ -2000,6 +2084,8 @@ literate source files like this one.
     (setq org-babel-lisp-eval-fn #'sly-eval)
 
     (add-hook 'org-mode-hook #'auto-fill-mode)
+    (require 'delight)
+    (delight 'auto-fill-function "" t)
 
     ;; "C-j" 'evil-window-down
     ;; "C-k" 'evil-window-up
@@ -2109,9 +2195,18 @@ Control spotify running on any device from Emacs.
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
   (use-package exwm
+    :delight
     :config
     (fringe-mode 1)
     (require 'exwm-config)
+    (setq exwm-mode-hook nil)
+    (add-hook 'exwm-mode-hook (lambda ()
+                                (setq mode-line-format
+                                      (list
+                                       ;; buffer
+                                       " " mode-line-buffer-identification " "
+                                       mode-line-modes
+                                       mode-line-misc-info))))
     (add-hook 'exwm-update-class-hook
               (lambda ()
                 (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
@@ -2157,9 +2252,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; Bind "s- " to launch external commands through my launcher.
             ([?\s- ] . exlaunch)
 
-            ;;workspaces
-            ([?\s-d] . exwm-named-workspace-delete)
-            ([s-return] . exwm-named-workspace-make-or-switch)
+            ;; Winconf
+            ([s-return] . helm-winconf)
 
             ;; bind "s-[direction] to switch windows"
             ([?\s-h] . windmove-left)
@@ -2189,12 +2283,11 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; switch between buffers
             ([s-tab] . evil-buffer)
 
-            ;; switch to default workspace and scratch buffer
+            ;; switch to scratch winconf and scratch buffer
             ([?\s-0] . (lambda ()
                          (interactive)
-                         (let ((exwm-named-workspace--message-on-switch t))
-                           (exwm-named-workspace-make-or-switch "default-workspace")
-                           (switch-to-buffer "*scratch*"))))
+                         (helm-winconf-switch "scratch")
+                         (switch-to-buffer "*scratch*")))
 
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
@@ -2252,7 +2345,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                   )
         (display-line-numbers-mode))))
 #+END_SRC
-*** Named Workspaces
+*** COMMENT Named Workspaces
 I wrote a small package to replace the numbered workspaces of exwm
 with named ones. This includes creation, deletion, and switching by
 narrowing name.
@@ -2296,29 +2389,19 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     "Define functions to launch programs. ")
 
   (exlaunch-shortcuts
-
    (alacritty :switch-to nil)
-
-   (multimc :in-workspace "minecraft")
-
-   (firefox :in-workspace "firefox")
-
+   multimc
+   firefox
    (qutebrowser :switch-to nil)
-
-   (steam :in-workspace "steam")
-
-   (krita :in-workspace "art")
-   (gimp :in-workspace "art")
-
+   steam
+   krita
+   gimp
    (spotify :args "--force-device-scale-factor=2"
             :other-window t)
-
    (nmtui :shell-command "alacritty"
           :args "-e nmtui")
-
    (alsamixer :shell-command "alacritty"
               :args "-e alsamixer")
-
    (bluetooth :shell-command "blueman-manager"
               :other-window t))
 #+END_SRC
@@ -2348,7 +2431,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     (setq helm-exwm-source (helm-qutebrowser-build-exwm-source))
     (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
                                       helm-exwm-source
-                                      helm-qutebrowser-buffer-source
+                                      helm-qutebrowser--buffers-source
                                       helm-source-recentf)))
 #+END_SRC
 **** Helm qutebrowser
@@ -2643,7 +2726,12 @@ Various small functions which are evaluated before anything else in the file.
                                (mapcar 'symbol-name
                                        (custom-available-themes))))))
     (disable-most-recent-theme)
-    (load-theme theme t))
+    (load-theme theme t)
+
+    ;; this properly sets the color of the system tray icon backgrounds.
+    (when (featurep 'exwm)
+      (exwm-workspace-add)
+      (exwm-workspace-delete)))
 
   (defun string-represents-integer-p (string)
     "Truthy if string is a representation of an integer (leading

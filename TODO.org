@@ -1,18 +1,9 @@
 * Emacs
-** appearance
-a launch screen to replace the scratch buffer. (like that dave fellow)
 ** language tools
 - Add Rust editing tools
 ** projects
 *** Projectile
 - Add flycheck file and #autosave# or whatever file to projectile exclusions
-*** Nix Daemon
-- Create a command to start a second daemon for nix project DONE
-  - Name the daemon after the nix project DONE
-  - some kind of daemon switching facility 
-  - minimize startup time
-  - Communicate through with daemon to create new frames etc.
-  - Make the daemon buffer provide useful information
 *** Lorri
 - Lorri commands to watch and to refresh direnv bound to hotkeys DONE
 - Lorri auto-watch on entering a project (if not already watching) DONE
@@ -64,9 +55,9 @@ I imagine that it will become useful to others, so why not make a package?
 
 The .desktop parser just outputs launch functions AKA shortcuts whose
 properties can be overriden by ~launcher-shortcuts~.
+** Keybindings
+- Bind leader to also be s-, so that you can access leader in helm buffers.
 ** Other 
-brightness tick at 1% (maybe 2% too)
-
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.
 * Other

@@ -67,7 +67,7 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
                              (funcall helm-fuzzy-matching-highlight-fn name))
                            (get-buffer i)))))
 
-(defvar helm-qutebrowser-buffers-source
+(defvar helm-qutebrowser--buffers-source
   (helm-build-sync-source "Qutebrowser tabs"
     :candidates (lambda () (helm-exwm-candidates (lambda ()
                                                    (string= (downcase (or exwm-class-name ""))
@@ -81,7 +81,7 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
     :persistent-action 'helm-buffers-list-persistent-action
     :keymap helm-exwm-map))
 
-(defvar helm-qutebrowser-sources '(helm-qutebrowser-buffers-source
+(defvar helm-qutebrowser-sources '(helm-qutebrowser--buffers-source
                    helm-qutebrowser-source-not-found))
 
 (defun helm-qutebrowser-build-exwm-source ()

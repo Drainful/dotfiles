@@ -3,7 +3,7 @@
 
 config_version: 2
 settings:
+  scrolling.bar:
+    global: when-searching
   statusbar.hide:
     global: true
-  tabs.show:
-    global: never
