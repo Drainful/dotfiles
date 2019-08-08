@@ -3,11 +3,8 @@
 - Add Rust editing tools
 ** projects
 *** Projectile
-- Add flycheck file and #autosave# or whatever file to projectile exclusions
-*** Lorri
-- Lorri commands to watch and to refresh direnv bound to hotkeys DONE
-- Lorri auto-watch on entering a project (if not already watching) DONE
-- Eventually set up direnv auto-refresh?
+- Add flycheck file and #autosave# or whatever file to projectile
+  exclusions !!!!!!
 *** Skeletor
 - contribute the subdirectory feature, ~:subdir~ keyword.
 - Make a completion source that uses nix packages list to select packages for a project.
@@ -18,7 +15,7 @@
   - C++
   - Rust
   - Prolog
-** Launcher (MOSTLY DONE)
+** COMMENT Launcher
 I want the following features:
 Simple macro to create launcher shortcuts
 example usage:
@@ -57,9 +54,22 @@ The .desktop parser just outputs launch functions AKA shortcuts whose
 properties can be overriden by ~launcher-shortcuts~.
 ** Keybindings
 - Bind leader to also be s-, so that you can access leader in helm buffers.
+** Qutebrowser
+I want qutebrowser and exwm buffers to be part of the same helm source
+in helm-mini, but the default display for helm buffers hangs for
+absurdly long URLs in the qutebrowser buffer's title. You need to make
+a source patch to helm-mini to fix this. Look at helm-exwm and
+helm-qutebrowser for inspiration.
+** Mode line
+I want to use a heavily customizable mode line like spaceline in order
+to maximize information and space. For example, only display battery
+and time in the bottom right most mode line
 ** Other 
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.
+
+
+
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗

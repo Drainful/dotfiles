@@ -1,4 +1,5 @@
 #+TITLE: Emacs Configuration
+#+CREATOR: Adrian Fullmer
 
 * Table of contents                                                     :TOC:
 - [[#startup][Startup]]
@@ -7,6 +8,7 @@
   - [[#filename-handlers][Filename Handlers]]
   - [[#load-helper-functions][Load helper functions]]
   - [[#load-secrets][Load secrets]]
+  - [[#load-non-secret-environment-variables][Load non-secret environment variables]]
   - [[#constants][Constants]]
   - [[#load-path][Load Path]]
 - [[#packages][Packages]]
@@ -155,7 +157,10 @@ Secrets are stored in ~~/.emacs.d/.secrets.el~.
     (when (file-exists-p secret.el)
       (load secret.el)))
 #+END_SRC
-
+** Load non-secret environment variables
+#+BEGIN_SRC emacs-lisp
+;; (require 'my-env)
+#+END_SRC
 ** Constants
 I create a few constants for later use
 #+BEGIN_SRC emacs-lisp
@@ -163,6 +168,8 @@ I create a few constants for later use
   (defconst me/dotfiles "~/.dotfiles/")
   ;; directory containing my nixos configutation
   (defconst me/nixos-directory "/sudo::/etc/nixos/") 
+
+  (defconst me/music-directory "~/Music/")
 #+END_SRC
 
 ** Load Path
@@ -507,7 +514,8 @@ Usage:
     "d" 'fzf-directory-from-home
     "h" 'help
     "o" 'occur 
-    "i" 'imenu
+    "i" 'helm-imenu
+    "8" 'helm-imenu-in-all-buffers
     "RET" (kbd ":noh"))
 #+END_SRC
 *** Visual Mode
@@ -2323,6 +2331,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
+                                  (elt (kbd "s-m") 0)
                                   (elt (kbd "M-<tab>") 0)
                                   (elt (kbd "<M-iso-lefttab>") 0)
                                   (elt (kbd "s-<tab>") 0)
@@ -2474,6 +2483,12 @@ search for url if a matching tab is not found.
                         "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
                         "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly))
 #+END_SRC
+*** COMMENT Qutebrowser
+#+BEGIN_SRC emacs-lisp
+  (setq browse-url-browser-function #'browse-url-generic)
+  (setq browse-url-generic-program "qutebrowser")
+#+END_SRC
+
 *** COMMENT EXWM firefox
 #+BEGIN_SRC emacs-lisp
   (use-package exwm-firefox-core)
@@ -2559,7 +2574,107 @@ search for url if a matching tab is not found.
     (pdf-loader-install))
 #+END_SRC
 ** EMMS
+#+BEGIN_SRC emacs-lisp
+  (use-package emms
+    :config
+    (require 'emms-setup)
+    (require 'emms-player-mpd)
+    (emms-all)
+    ;; (emms-default-players)
+    (require 'emms-player-mpd)
+    (require 'emms-volume)
+    (setq emms-player-seek-seconds 5
+          emms-source-file-default-directory "~/Music/"
+          emms-player-list '(emms-player-mpd
+                             emms-player-vlc
+                             emms-player-vlc-playlist)
+          emms-player-mpd-music-directory "/home/adrian/Music"
+          emms-info-functions '(emms-info-mpd)
+          emms-volume-change-function #'emms-volume-mpd-change
+          emms-volume-change-amount 5)
 
+    (general-create-definer emms-key-def
+      :prefix "s-m")
+
+    (general-define-key 
+     "<XF86AudioPrev>" 'emms-previous
+     "<XF86AudioNext>" 'emms-next
+     "<XF86AudioPlay>" 'emms-pause
+     "<XF86AudioPause>" 'emms-pause
+     "<XF86AudioStop>" 'emms-stop)
+
+    (emms-key-def 'normal 
+      "s-m" 'emms-pause
+      "m" 'emms
+      "b" 'emms-browse-by-album
+      "r" 'emms-player-mpd-update-all-reset-cache))
+#+END_SRC
+*** Uncle Dave's Commands
+Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDavesEmacs]]
+#+BEGIN_SRC emacs-lisp
+  (defun mpd/start-music-daemon ()
+    "Start MPD, connects to it and syncs the metadata cache."
+    (interactive)
+    (shell-command "mpd")
+    (mpd/update-database)
+    (emms-player-mpd-connect)
+    (emms-cache-set-from-mpd-all)
+    (message "MPD Started!"))
+
+  (defun mpd/kill-music-daemon ()
+    "Stops playback and kill the music daemon."
+    (interactive)
+    (emms-stop)
+    (call-process "killall" nil nil nil "mpd")
+    (message "MPD Killed!"))
+
+  (defun mpd/update-database ()
+    "Updates the MPD database synchronously."
+    (interactive)
+    (call-process "mpc" nil nil nil "update")
+    (message "MPD Database Updated!"))
+
+  (emms-key-def 'normal
+    "s" 'mpd/start-music-daemon
+    "k" 'mpd/kill-music-daemon
+    "u" 'mpd/update-database)
+#+END_SRC
+*** Other commands 
+#+BEGIN_SRC emacs-lisp
+  ;; from https://www.emacswiki.org/emacs/EMMS#toc36
+  (defun my-emms-playlist-total-time-below-point ()
+    "Calculates the total time taken for all the tracks currently in playlist and below point"
+    (interactive)
+    (let ((move-forward t)
+          (total-playlist-time 0))
+      (save-excursion 		
+        (while move-forward
+          (setq total-playlist-time (+ total-playlist-time (or (emms-track-get (emms-playlist-track-at (point)) 'info-playing-time) 0)))
+          (forward-line 1)
+          (setq move-forward (next-single-property-change (point) 'emms-track))))
+      (setq total-hour-only (/ total-playlist-time 3600)
+            total-minutes-only (/ (% total-playlist-time 3600) 60)
+            total-seconds-only (% total-playlist-time 60))
+      (message "Total time is %dh:%dm:%ds" total-hour-only total-minutes-only total-seconds-only)))
+
+  (leader-key-def normal emms-playlist-mode-map
+    "t" #'my-emms-playlist-total-time-below-point)
+#+END_SRC
+*** Helm EMMS
+#+BEGIN_SRC emacs-lisp
+  (use-package helm-emms
+    :config
+    ;; (setq helm-emms-dired-directories `(,me/music-directory))
+    ;; (setq helm-emms-dired-directories nil)
+    (defun helm-emms-sans-dired ()
+      (interactive)
+      (helm :sources '(helm-source-emms-files
+                       helm-source-emms-streams)
+            :buffer "*Helm Emms*"))
+
+    (emms-key-def 'normal
+      "," 'helm-emms))
+#+END_SRC
 ** IRC
 #+BEGIN_SRC emacs-lisp
   (use-package circe
