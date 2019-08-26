@@ -1,4 +1,4 @@
-#+TITLE: Emacs Configuration
+#hTITLE: Emacs Configuration
 #+CREATOR: Adrian Fullmer
 
 * Table of contents                                                     :TOC:
@@ -866,13 +866,14 @@ primary shell.
     (evil-append-line count))
 
   ;; Let me use C-j/k
-  (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb
+  (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb/stupid
             (lambda ()
               (general-define-key :states 'normal :keymaps 'eshell-mode-map
                                   "C-j" #'evil-window-down
                                   "C-k" #'evil-window-up
                                   "I" #'comint-style-insert-line
                                   "A" #'comint-style-append-line
+                                  "M-<tab>" #'helm-winconf-swap
                                   ;; "M-<tab>" #'persp-next
                                   )))
 
@@ -983,11 +984,13 @@ I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
   (push (cons "\\*shell\\*" display-buffer--same-window-action) display-buffer-alist)
 #+END_SRC
 ** Term mode
-Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~ to escape.
+Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~
+to normal mode, and ~<escape>~ to escape in the terminal.
 #+BEGIN_SRC emacs-lisp
   (general-define-key :states 'insert
                       :keymaps 'term-raw-map
-                      "C-g" 'term-send-esc)
+                      "<escape>" 'term-send-esc
+                      "C-g" 'evil-force-normal-state)
 #+END_SRC
 *** COMMENT Protect Prompt
 This code was the restult of a bad misunderstanding of the function of ~ansi-term~.
@@ -1482,22 +1485,24 @@ buffers. Faster than ~,-b\r~.
                                  (thing-at-point 'line))))))
 #+END_SRC
 ** Autocompletion
-I, like many others, use ~company~.
+I, like many others, use ~Company~.
 #+BEGIN_SRC emacs-lisp
-    (use-package company
-      :delight
-      :config
-      (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
-      (add-to-list 'completion-styles 'initials t)
-      ;;(add-to-list 'completion-styles 'substring t)
-      (define-key company-active-map (kbd "M-.") 'company-show-location)
-      (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
-      ;;(setq company-dabbrev-downcase 0)
-      (setq company-minimum-prefix-length 2)
-      (setq company-idle-delay 0)
-      (add-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.5)
-                                                 (setq company-minimum-prefix-length 3))))
-      (global-company-mode nil))
+  (use-package company
+    :delight
+    :config
+    (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
+    (add-to-list 'completion-styles 'initials t)
+    ;;(add-to-list 'completion-styles 'substring t)
+    (define-key company-active-map (kbd "M-.") 'company-show-location)
+    (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
+    ;;(setq company-dabbrev-downcase 0)
+
+    (setq company-minimum-prefix-length 2)
+    (setq company-idle-delay 0)
+    ;; (remove-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.1)
+    ;;                                               (setq company-minimum-prefix-length 2))))
+
+    (global-company-mode nil))
 #+END_SRC
 *** COMMENT Autocomplete
 I have ~auto-complete~ installed for cases where a company package does not exist.
@@ -2144,6 +2149,11 @@ Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package nix-update)
 #+END_SRC
+*** Nixos options search
+#+BEGIN_SRC emacs-lisp
+  (use-package nixos-options)
+  (use-package helm-nixos-options)
+#+END_SRC
 ** Bash
 #+BEGIN_COMMENT 
 I use a zero width space here to escape the underscore 
@@ -2247,7 +2257,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive)
                          (eshell-at-or-switch default-directory)))
             ([?\s-2] . eshell-at-or-switch)
-            ([?\s-3] . exlaunch/alacritty)
+            ([?\s-3] . multi-term)
 
             ;; ,@(mapcar (lambda (n)
             ;;             `(,(kbd (format "s-%d" n)) .
@@ -2435,13 +2445,16 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 
     (require 'helm-qutebrowser)
 
-    ;; Separate EXWM and qutebrowser buffers in helm-mini
-    (setq helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
-    (setq helm-exwm-source (helm-qutebrowser-build-exwm-source))
-    (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
-                                      helm-exwm-source
-                                      helm-qutebrowser--buffers-source
-                                      helm-source-recentf)))
+    ;; ;; Separate EXWM and qutebrowser buffers in helm-mini
+    ;; (setq helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
+    ;; (setq helm-exwm-source (helm-qutebrowser-build-exwm-source))
+    ;; (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
+    ;;                                   helm-exwm-source
+    ;;                                   helm-qutebrowser--buffers-source
+    ;;                                   helm-source-recentf))
+    (setq helm-mini-default-sources `(helm-source-buffers-list
+                                      helm-source-recentf
+                                      helm-source-buffer-not-found)))
 #+END_SRC
 **** Helm qutebrowser
 A helm source to switch between qutebrowser tabs (as windows) or to
@@ -2539,7 +2552,7 @@ search for url if a matching tab is not found.
         window-divider-default-right-width 6)
   (window-divider-mode)
 
-  
+
 #+END_SRC
 *** COMMENT autominimize
 #+BEGIN_SRC emacs-lisp
