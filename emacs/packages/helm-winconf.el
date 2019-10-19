@@ -90,11 +90,10 @@ already in use, override that winconf."
       (if (string= (helm-winconf--current)
                    name)
           (symbol-macrolet ((next (cadr helm-winconf--names-alist)))
-            (if next
-                (progn
-                  (helm-winconf--switch-to-cons next)
-                  (helm-winconf--removef name) t)
-              nil))
+            (progn
+              (when next
+                (helm-winconf--switch-to-cons next))
+              (helm-winconf--removef name) t))
         (helm-winconf--removef name) t) )))
 
 (defvar helm-winconf--map

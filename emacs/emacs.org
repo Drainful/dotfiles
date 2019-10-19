@@ -35,16 +35,17 @@
   - [[#mode-line][Mode line]]
   - [[#helm][Helm]]
   - [[#hideshow][Hideshow]]
+  - [[#prettify-symbols][Prettify Symbols]]
   - [[#unnecessary-ui-elements][Unnecessary UI elements]]
   - [[#line-and-column-numbers][Line and Column numbers]]
   - [[#line-wrap][Line wrap]]
   - [[#start-frame-maximized][Start frame maximized]]
   - [[#confirmation][Confirmation]]
-  - [[#clipboard][Clipboard]]
   - [[#delimiters][Delimiters]]
   - [[#ediff][Ediff]]
   - [[#which-key][Which-key]]
 - [[#dired][Dired]]
+  - [[#dired-hacks][Dired Hacks]]
 - [[#shell][Shell]]
   - [[#eshell][Eshell]]
   - [[#comint-mode][Comint Mode]]
@@ -56,8 +57,6 @@
   - [[#daemon-management][Daemon Management]]
 - [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
   - [[#doom-themes][Doom Themes]]
-  - [[#poet-theme][Poet Theme]]
-  - [[#chocolate-theme][Chocolate theme]]
   - [[#theme][Theme]]
 - [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
@@ -71,6 +70,7 @@
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
   - [[#git][Git]]
+  - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
   - [[#documentation][Documentation]]
@@ -86,6 +86,7 @@
   - [[#shen][Shen]]
   - [[#prolog][Prolog]]
   - [[#cccppcppsepples][C/C++/CPP/Cpp/Sepples]]
+  - [[#rust][Rust]]
   - [[#julia][Julia]]
   - [[#haskell][Haskell]]
   - [[#elm][Elm]]
@@ -613,18 +614,21 @@ which integrates well across Emacs.
     (helm-mode t)
 
     (setq helm-buffer-max-length 120)
-    (setq helm-display-buffer-default-height 30)
-    (setq helm-default-display-buffer-functions '(display-buffer-in-side-window))
+    ;; (setq helm-display-buffer-default-height 30)
+    (setq helm-display-buffer-default-height nil)
+    (setq helm-default-display-buffer-functions '(display-buffer-same-window))
     ;; (setq helm-autoresize-mode t)
     ;; Do not create a new frame with helm completion.
     (setq helm-show-completion-display-function
           #'helm-show-completion-default-display-function)
-    (setq helm-follow-mode-persistent t)
+    (setq helm-follow-mode-persistent nil)
 
     ;; How helm should handle opening new windows
     (setq helm-window-prefer-horizontal-split t)
-    (setq helm-window-show-buffers-function 'helm-window-mosaic-fn))
+    (setq helm-window-show-buffers-function 'helm-window-mosaic-fn)
 
+    ;; Refresh helm-top
+    (helm-top-poll-mode))
 #+END_SRC
 *** Extending helm-highight-buffers
 *** COMMENT Helper functions
@@ -657,6 +661,13 @@ which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (delight 'hs-minor-mode nil "hideshow")
+#+END_SRC
+** Prettify Symbols
+#+BEGIN_SRC emacs-lisp
+  (setq prettify-symbols-alist
+        '(("lambda" . 955) ; λ
+          ))
+  (global-prettify-symbols-mode 1)
 #+END_SRC
 ** Unnecessary UI elements
 Emacs comes with such useless features as a tool bar. Turn them off.
@@ -694,7 +705,7 @@ Type =y= or =n=, not =yes= or =no=.
 (fset 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
-** Clipboard
+** COMMENT Clipboard
 Enable vim-like clipboard. This puts text copied from programs other
 than emacs into the "+" register.
 #+BEGIN_SRC emacs-lisp
@@ -751,12 +762,57 @@ Highlight the cursor when switching buffers.
 * Dired
 Some dired configuration
 #+BEGIN_SRC emacs-lisp
+  (setq image-dired-thumb-size 400)
+  (setq image-dired-thumb-width 400)
+  (setq image-dired-thumb-height 400)
+  (setq image-dired-thumb-margin 6)
+  (setq image-dired-thumb-relief 6)
   ;; Use atool for compression and extraction
   (use-package dired-atool
     :config
     (leader-key-def normal dired-mode-map
       "z" #'dired-atool-do-unpack
       "Z" #'dired-atool-do-pack))
+#+END_SRC
+** Dired Hacks
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-subtree
+      :config
+      (defun me/dired-subtree-toggle ()
+        "Insert subtree at point or remove it if it was not present."
+        (interactive)
+        (if (dired-subtree--dired-line-is-directory-or-link-p)
+            (progn
+              (if (dired-subtree--is-expanded-p)
+                  (progn
+                    (dired-next-line 1)
+                    (dired-subtree-remove))
+                (save-excursion (dired-subtree-insert)))
+              t)
+          (if (> (line-number-at-pos) 5)
+              (let ((prev-point (point)))
+                (dired-previous-line 1)
+                (unless (me/dired-subtree-toggle)
+                  ;; (set-window-point nil prev-point)
+                  ))
+            nil)))
+
+      (general-def 'normal dired-mode-map
+        "z a" #'me/dired-subtree-toggle))
+
+  ;; This allows seamless archive browsing
+  (use-package dired-avfs)
+
+  ;; multi-stage copy/paste
+  (use-package dired-ranger)
+#+END_SRC
+** COMMENT image-dired
+#+BEGIN_SRC emacs-lisp
+  (use-package image-dired+
+    :config
+    (setq image-dired-thumb-width 300)
+    (setq image-dired-thumb-height 300)
+    (setq image-dired-thumb-size 300))
 #+END_SRC
 * Shell
 ** Eshell
@@ -775,7 +831,7 @@ primary shell.
 
   ;; Eshell modules
   (require 'esh-module)
-  (add-to-list 'eshell-modules-list 'eshell-tramp)
+  ;; (add-to-list 'eshell-modules-list 'eshell-tramp)
 
   (setq password-cache t) ; enable password caching
   (setq password-cache-expiry 3600) ; for one hour (time in secs)
@@ -783,8 +839,12 @@ primary shell.
   (setq eshell-prompt-function
         (lambda ()
           (concat
-           (abbreviate-file-name (eshell/pwd))
-           (if (= (user-uid) 0) " # " " $ "))))
+           ;;          "
+           ;; "
+           "[" (abbreviate-file-name (eshell/pwd)) "]"
+           "
+  "
+           " " (if (= (user-uid) 0) "-->" "==>") " ")))
 
   (defun eshell-buffer-name-function (&optional directory)
     (concat "*eshell at "
@@ -820,11 +880,11 @@ primary shell.
   (defun eshell-rename-buffer ()
     (let ((name (eshell-buffer-name-function)))
       (if (get-buffer name)
-          (labels ((recur (number)
-                          (let ((new-name (set-buffer-number name number)))
-                            (if (not (get-buffer new-name))
-                                (rename-buffer new-name)
-                              (recur (1+ number))))))
+          (cl-labels ((recur (number)
+                             (let ((new-name (set-buffer-number name number)))
+                               (if (not (get-buffer new-name))
+                                   (rename-buffer new-name)
+                                 (recur (1+ number))))))
             (recur 1))
         (rename-buffer name))))
 
@@ -835,18 +895,21 @@ primary shell.
 #+BEGIN_SRC emacs-lisp
   (defun eshell/e (&rest args)
     "Open the given files"
-    (dolist (file args) (find-file file t)))
+    (dolist (file args) (if (listp file)
+                            (dolist (file file)
+                              (find-file file t))                          
+                          (find-file file t))))
 
-  (defun eshell/fd (&optional from-directory)
-    "Run fzf to open a directory in dired"
-    (fzf-directory-from (or from-directory
-                            default-directory)))
+    (defun eshell/fd (&optional from-directory)
+      "Run fzf to open a directory in dired"
+      (fzf-directory-from (or from-directory
+                              default-directory)))
 
-  (defun eshell/fh ()
-    (eshell/fd "~"))
+    (defun eshell/fh ()
+      (eshell/fd "~"))
 
-  (defun eshell/econf () (econf))
-  (defun eshell/nixconf () (nixconf))
+    (defun eshell/econf () (econf))
+    (defun eshell/nixconf () (nixconf))
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -865,22 +928,25 @@ primary shell.
     (evil-goto-line)
     (evil-append-line count))
 
-  ;; Let me use C-j/k
-  (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb/stupid
-            (lambda ()
-              (general-define-key :states 'normal :keymaps 'eshell-mode-map
-                                  "C-j" #'evil-window-down
-                                  "C-k" #'evil-window-up
-                                  "I" #'comint-style-insert-line
-                                  "A" #'comint-style-append-line
-                                  "M-<tab>" #'helm-winconf-swap
-                                  ;; "M-<tab>" #'persp-next
-                                  )))
+  (defun eshell-properly-send-input ()
+    "Go to end of buffer and send eshell input"
+    (interactive)
+    (evil-goto-line)
+    (eshell-send-input))
 
-                                  ;; "M-<tab>" (lambda ()
-                                  ;;             (interactive)
-                                  ;;             (workspace-history-delta 1)
-                                  ;;             (hydra-workspace-history/body)))))
+  (defun set-eshell-keybinds ()
+    (general-def :states 'normal :keymaps 'eshell-mode-map
+      ;; Let me use C-j/k
+      "C-j" #'evil-window-down
+      "C-k" #'evil-window-up
+
+      "I" #'comint-style-insert-line
+      "A" #'comint-style-append-line
+      "M-<tab>" #'helm-winconf-swap
+      "<return>" #'eshell-properly-send-input))
+
+  (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb/stupid
+            #'set-eshell-keybinds)
 #+END_SRC
 *** Helm support
 ~helm~ can be used for ~eshell~ completions with the following code.
@@ -960,7 +1026,7 @@ This code is the sum of failed attempts to get the above feature working.
         comint-move-point-for-output nil  ; reduce frequent redisplays
         comint-scroll-show-maximum-output nil)
 
-  (general-define-key
+  (general-def
    :states 'normal
    :keymaps 'comint-mode-map
    ;; was overridden
@@ -975,7 +1041,7 @@ This code is the sum of failed attempts to get the above feature working.
 I prefer ~shell-mode~ to ~ansi-term~ because ~comint-mode~, the mode which
 ~shell-mode~ is based on, plays well with ~evil~.
 #+BEGIN_SRC emacs-lisp
-  (general-define-key :states 'normal :keymaps 'shell-mode-map
+  (general-def :states 'normal :keymaps 'shell-mode-map
      "C-j" 'evil-window-down
      "C-k" 'evil-window-up)
 #+END_SRC
@@ -987,10 +1053,22 @@ I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
 Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~
 to normal mode, and ~<escape>~ to escape in the terminal.
 #+BEGIN_SRC emacs-lisp
-  (general-define-key :states 'insert
-                      :keymaps 'term-raw-map
-                      "<escape>" 'term-send-esc
-                      "C-g" 'evil-force-normal-state)
+  (general-def :states 'insert
+    :keymaps 'term-raw-map
+    "<escape>" 'term-send-esc
+    "C-g" 'evil-force-normal-state)
+
+
+  ;; https://emacs.stackexchange.com/questions/17005/killing-ansi-term-says-has-a-running-process
+  (defun set-no-process-query-on-exit ()
+    (let ((proc (get-buffer-process (current-buffer))))
+      (when (processp proc)
+        (set-process-query-on-exit-flag proc nil))))
+
+  (add-hook 'term-exec-hook 'set-no-process-query-on-exit)
+
+  ;; stop paste from entering commands.
+  (setq term-suppress-hard-newline t)
 #+END_SRC
 *** COMMENT Protect Prompt
 This code was the restult of a bad misunderstanding of the function of ~ansi-term~.
@@ -1029,7 +1107,7 @@ reason I need multiple, I have this plugin.
   (define-key global-map "\eO2D" (kbd "S-<left>"))
   (define-key global-map "\eO2C" (kbd "S-<right>"))
   ;; term movement
-  (general-define-key
+  (general-def
    :states 'normal
    :keymaps 'term-mode-map
    "S-<right>" 'multi-term-next
@@ -1048,17 +1126,15 @@ Emacs.
     (eshell-at me/serenity-path))
 #+END_SRC
 * Emacs client/server settings
-One of the personal breakthroughs I made when starting with Emacs was
-realizing that I didn't have to wait for emacs to start every time I
-wanted to edit a file. By running Emacs as a daemon, frames could be
-opened instantaneously. Of course at this point I almost never close
-my Emacs frame in the first place.
 #+BEGIN_SRC emacs-lisp
-;; easily restart emacs daemon
-(use-package restart-emacs)
+  ;; run emacs server
+  (server-start)
 
-;; focus any new frames
-(add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
+  ;; easily restart emacs daemon
+  (use-package restart-emacs)
+
+  ;; focus any new frames
+  (add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
 #+END_SRC
 ** Daemon Management
 I wrote this code to help manage daemons. It is usually fine to
@@ -1161,12 +1237,13 @@ Doom Emacs looks good. I want those themes.
   ;; flash mode line when emacs bell rings
   (doom-themes-visual-bell-config))
 #+END_SRC
-** Poet Theme
-I also use the ~poet~ theme, but I install it through ~package-install~
-rather than through ~use-package~ due to a bug.
-** Chocolate theme
+** COMMENT Poet Theme
 #+BEGIN_SRC emacs-lisp
-(use-package chocolate-theme)
+  (use-package poet-theme)
+#+END_SRC
+** COMMENT Chocolate theme
+#+BEGIN_SRC emacs-lisp
+  (use-package chocolate-theme)
 #+END_SRC
 ** Theme
 #+BEGIN_SRC emacs-lisp
@@ -1214,7 +1291,7 @@ A small and simple package for managing named window configurations.
 #+BEGIN_SRC emacs-lisp
   (require 'helm-winconf)
 
-  (general-define-key "M-<tab>" #'helm-winconf-swap)
+  (general-def "M-<tab>" #'helm-winconf-swap)
 
   (unless (featurep 'exwm)
     (alt-leader-key-def 'normal
@@ -1245,7 +1322,7 @@ And an alt-tab hydra for it. Doomed to fail.
                                               (remove name-and-conf
                                                       helm-winconf--names-alist)))))
 
-    (general-define-key
+    (general-def
      "M-<tab>" (lambda ()
                  (interactive)
                  (setq length (length helm-winconf--names-alist))
@@ -1274,7 +1351,7 @@ this to managing frames.
     (setq persp-disable-buffer-restriction-once t)
     (setq persp-kill-foreign-buffer-behaviour 'just-kill)
 
-    (general-define-key :keymap 'persp-mode-map
+    (general-def :keymap 'persp-mode-map
                         "M-<tab>" #'persp-next
                         "<M-iso-lefttab>" #'persp-prev))
 #+END_SRC
@@ -1287,7 +1364,7 @@ project.
     :delight " P"
     :after general
     :config
-    (general-define-key
+    (general-def
      :states 'normal
      :keymaps 'override
    "C-p" 'helm-projectile-find-file)
@@ -1326,16 +1403,19 @@ project.
         (skeletor-shell-command "direnv allow")
         (projectile-lorri-watch)))
 
+    ;; I don't like the default skeletons.
+    (setq skeletor--project-types nil)
 
-    ;; Custom project types
+    ;; Custom project skeletons
     (skeletor-define-template "generic"
       :title "Generic Project"
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages to use: "))))
       :after-creation (lambda (dir) (setup--lorri dir)))
                                           ; a lambda is used to avoid a
-                                          ; failed assertation.  maybe
-                                          ; reporthe bug.
+                                          ; failed assertation where the
+                                          ; function itself would
+                                          ; do. maybe report the bug.
 
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
@@ -1344,7 +1424,7 @@ project.
       :after-creation (lambda (dir) (setup--lorri dir)))
 
     (skeletor-define-template "python"
-      :title "Python Library"
+      :title "Python Project"
       :substitutions
       '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
       :after-creation (lambda (dir) (setup--lorri dir)))
@@ -1356,8 +1436,11 @@ project.
         ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
       :after-creation (lambda (dir) (setup--lorri dir)))
 
-    ;; Extending built-in project types
-  
+    (skeletor-define-template "clojurescript"
+      :title "Clojurescript Project"
+      :after-creation (lambda (dir) (setup--lorri dir)))
+
+    ;; Extending built-in project types seems hard.
 
     ;;keybindings
     (project-key-def 'normal
@@ -1420,7 +1503,7 @@ still be replicated with a hydra with a timeout
     (defun update-buffer-history ()
       (switch-to-buffer (current-buffer)))
 
-    (general-define-key
+    (general-def
      "M-<tab>" (lambda ()
                  (interactive)
                  (setq length-blist (length (buffer-list)))
@@ -1441,7 +1524,7 @@ While emacs is missing key raised events, alt-tab style behavior can
 still be replicated with a hydra with a timeout
 (broken)
 #+BEGIN_SRC emacs-lisp
-  (general-define-key
+  (general-def
    "C-M-`" (lambda ()
              (interactive)
              (helm-mini)
@@ -1458,7 +1541,7 @@ I bind tab and shift-tab to functions which switch to the previous and
 next buffer with content respectively.
 #+BEGIN_SRC emacs-lisp
   (defun content-buffer-p (buffer))
-(general-define-key :states 'normal :keymaps 'override
+(general-def :states 'normal :keymaps 'override
                     "<tab>" 'previous-buffer
                     "<backtab>" 'next-buffer)
 #+END_SRC
@@ -1466,7 +1549,7 @@ next buffer with content respectively.
 This is a keybinding for toggling between 2
 buffers. Faster than ~,-b\r~.
 #+BEGIN_SRC emacs-lisp
-  (general-define-key :states 'normal ; :keymaps 'override
+  (general-def :states 'normal ; :keymaps 'override
                       "<tab>" 'evil-buffer)
 #+END_SRC
 * Programming tools and settings
@@ -1480,7 +1563,7 @@ buffers. Faster than ~,-b\r~.
     (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
     (add-to-list
      'aggressive-indent-dont-indent-if
-     '(and (derived-mode-p 'c++-mode)
+     '(and (or (derived-mode-p 'c-mode) (derived-mode-p 'c++-mode))
            (null (string-match-p "\\([;{}]\\|\\b\\(if\\|for\\|while\\)\\b\\)"
                                  (thing-at-point 'line))))))
 #+END_SRC
@@ -1503,6 +1586,12 @@ I, like many others, use ~Company~.
     ;;                                               (setq company-minimum-prefix-length 2))))
 
     (global-company-mode nil))
+#+END_SRC
+*** COMMENT Company Box
+#+BEGIN_SRC emacs-lisp
+  (use-package company-box
+    :delight
+    :hook (company-mode . company-box-mode))
 #+END_SRC
 *** COMMENT Autocomplete
 I have ~auto-complete~ installed for cases where a company package does not exist.
@@ -1535,16 +1624,20 @@ and a leader shortcut.
 (leader-key-def 'normal
   "m" 'magit)
 #+END_SRC
-** COMMENT Snippets
+** Snippets
 ~yasnippet~ allows the creation of snippets to automate repetitive typing.
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
     :delight yas-minor-mode
     :config
     (yas-global-mode t)
-    (setq yas-snippet-dirs
-          (list (dotfiles "emacs/snippets") yasnippet-snippets-dir))
-    (yas-reload-all))
+    ;; (setq yas/root-directory
+    ;;       nil
+    ;;       ;; (list (dotfiles "emacs/snippets")
+    ;;       ;;       yas/root-directory)
+    ;;       )
+    ;; (ys-reload-all)
+    )
 #+END_SRC
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+BEGIN_SRC emacs-lisp
@@ -1571,11 +1664,14 @@ languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~f
   (use-package lsp-mode
     :commands lsp
     :config
-    (setq lsp-prefer-flymake nil))
+    (setq lsp-prefer-flymake t))
 
   (use-package lsp-ui :commands lsp-ui-mode) ; adds flycheck support
   (use-package company-lsp :commands company-lsp) ; links with company
-  (add-hook 'lsp-mode-hook 'lsp-ui-mode)
+  (use-package helm-lsp :commands helm-lsp-workspace-symbol)
+  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+  ;; optionally if you want to use debugger
+  (use-package dap-mode)
 #+END_SRC
 ** Compilation
 I wrote this function to run ~make~ on a recursive upward
@@ -1640,15 +1736,28 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
       `(mapcar (lambda (mode) (add-to-list 'direnv-non-file-modes mode)) (list ,@body)))
 
     ;; Advice to run emacsHook
-    ;; (defun run-emacs-hook ()
-    ;;   (if (getenv "emacsHook")
-    ;;       (eval (car (read-from-string
-    ;;                   (format "(progn %s)"
-    ;;                           (getenv "emacsHook")))))))
+    (defun run-emacs-hook ()
+      (if (getenv "emacsHook")
+          (eval (car (read-from-string
+                      (format "(progn %s)"
+                              (getenv "emacsHook")))))))
 
-    ;; (advice-add 'direnv-update-directory-environment
-    ;;             :after
-    ;;             #'run-emacs-hook)
+    (advice-add 'direnv-update-directory-environment
+                :after
+                #'run-emacs-hook)
+
+    (defvar to-add-to-ld-library-path "")
+
+    (defun add-to-ld-library-path ()
+      (let ((new-to-add (or (getenv "emacsAddLdLibraryPath")
+                            "")))
+        (remove-from-path to-add-to-ld-library-path "LD_LIBRARY_PATH" ":")
+        (setq to-add-to-ld-library-path new-to-add)
+        (add-to-path to-add-to-ld-library-path "LD_LIBRARY_PATH" ":")))
+
+    (advice-add 'direnv-update-directory-environment
+                :after
+                #'add-to-ld-library-path)
 
     (add-direnv-non-file-modes
      'sly-mode
@@ -1688,6 +1797,23 @@ through ~lispyville~ minor mode.
       (escape insert)
       (additional-movement normal visual motion))))
 #+END_SRC
+
+*** Lisp keybindings
+Lispy is a de-facto mode for lisp languages, so lisp-specific
+functionality can be appended to it.
+#+BEGIN_SRC emacs-lisp
+  (general-def :states 'insert
+                      :keymaps '(lispyville-mode-map sly-mode-map)
+                      "M-l" (lambda () (interactive)
+                              (insert "lambda"))
+                      "M-k" #'lispy-slurp-or-barf-right
+                      "M-j" #'lispy-slurp-or-barf-left)
+
+  (general-def :states 'normal
+                      :keymaps '(lispyville-mode-map sly-mode-map)
+                      "M-k" #'lispy-slurp-or-barf-right
+                      "M-j" #'lispy-slurp-or-barf-left)
+#+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a different color.
 #+BEGIN_SRC emacs-lisp
@@ -1702,7 +1828,7 @@ This uses font-lock to hide namespace prefixes automatically.
     :delight
     :config
     (add-hook 'emacs-lisp-mode-hook #'nameless-mode)
-    (general-define-key :states 'insert
+    (general-def :states 'insert
                         :keymaps 'emacs-lisp-mode-map
                         "C-:" 'nameless-insert-name)
     (setq nameless-global-aliases '(("fl" . "font-lock")
@@ -1749,13 +1875,21 @@ This uses font-lock to hide namespace prefixes automatically.
     ;; Avoid using helm when bugget at sly-read-symbol-name functions
     (add-to-list 'helm-completing-read-handlers-alist
                  '(sly-describe-symbol . nil)
-                 '(sly-describe-function . nil)))
+                 '(sly-describe-function . nil))
+    (general-def
+      :states 'normal
+      :keymaps 'sly-mrepl-mode-map
+      "<return>" #'sly-mrepl-return
+
+      "I" #'comint-style-insert-line
+      "A" #'comint-style-append-line))
 #+END_SRC
 
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-  (general-define-key :states 'normal :mode 'sly-mode-map
-                      "K" 'sly-describe-symbol)
+  (general-def :states 'normal :keymaps 'sly-mode-map
+    "K" 'sly-describe-symbol
+    "M-." #'sly-edit-definition)
 
   (leader-key-def 'normal sly-mode-map
     "z" 'sly-switch-to-output-buffer
@@ -1777,16 +1911,17 @@ A popular lisp on the JVM.
 #+BEGIN_SRC emacs-lisp
 (use-package clojure-mode)
 #+END_SRC
-*** COMMENT Cider
+*** Cider
 It's like ~slime~ for Clojure! Kinda.
 #+BEGIN_SRC emacs-lisp
-(use-package cider
-  :config
-  (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
-  (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion))
+  (use-package cider
+    :config
+    (add-hook 'cider-repl-mode-hook #'cider-company-enable-fuzzy-completion)
+    (add-hook 'cider-mode-hook #'cider-company-enable-fuzzy-completion)
+    (setq cider-shadow-cljs-command "shadow-cljs"))
 
-;; some visual flare
-(use-package spinner)
+  ;; some visual flare
+  (use-package spinner)
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -1805,7 +1940,7 @@ It's like ~slime~ for Scheme. Kinda.
 #+BEGIN_SRC emacs-lisp
 (use-package geiser
   :config
-  (setq geiser-active-implementations '(racket))
+  (setq geiser-active-implementations '(chez))
   ;; geiser keybindings
   (leader-key-def 'normal geiser-mode-map
     "z" 'geiser-mode-switch-to-repl
@@ -1821,7 +1956,7 @@ It's like ~slime~ for Scheme. Kinda.
     "f" 'geiser-eval-definition)
   (eval-key-def 'visual 'geiser-mode-map
     "r" 'geiser-eval-region)
-  (general-define-key
+  (general-def
    :states 'normal
    :keymaps 'geiser-repl-mode-map
    ;; was overridden
@@ -2038,6 +2173,11 @@ Enable ~flycheck~
 (setq-default c-basic-offset 4
               c-default-style "linux")
 #+END_SRC
+** Rust
+#+BEGIN_SRC emacs-lisp
+  (use-package rust-mode)
+  (add-hook 'rust-mode-hook #'lsp)
+#+END_SRC
 ** Julia
 #+BEGIN_SRC emacs-lisp
 (use-package julia-repl
@@ -2071,6 +2211,7 @@ literate source files like this one.
     :delight org-indent-mode
     ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
     :config
+    (load "/home/adrian/.emacs.d/straight/repos/org/lisp/org-compat.el")
     (setq header-line-format " ")
     ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
     ;; (lambda () (progn
@@ -2089,8 +2230,8 @@ literate source files like this one.
           org-fontify-done-headline t
           org-fontify-quote-and-verse-blocks t
           org-src-ask-before-returning-to-edit-buffer nil)
-    (general-define-key :states 'normal :mode 'org-mode-map
-                        "C-`" 'org-edit-special)
+    (general-def :states 'normal :keymaps 'org-mode-map
+      "C-`" 'org-edit-special)
     (org-babel-do-load-languages
      'org-babel-load-languages
      '((lisp . t)))
@@ -2107,9 +2248,9 @@ literate source files like this one.
     (leader-key-def 'normal org-src-mode-map
       "q" 'org-edit-src-exit)
     (add-hook 'org-mode-hook (lambda ()
-                               (general-define-key :states 'normal :mode 'org-mode-map
-                                                   "C-j" 'evil-window-down
-                                                   "C-k" 'evil-window-up))))
+                               (general-def :states 'normal :keymaps 'org-mode-map
+                                 "C-j" 'evil-window-down
+                                 "C-k" 'evil-window-up))))
 #+END_SRC
 A hydra to jump between org-babel source blocks:
 #+BEGIN_SRC emacs-lisp
@@ -2236,9 +2377,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                           (string-prefix-p "sun-awt-X11-" exwm-instance-name)
                           (string= "gimp" exwm-instance-name))
                   (exwm-workspace-rename-buffer exwm-title))))
-    (general-define-key :keymaps 'exwm-mode-map
-                        "C-c C-f" 'exwm-layout-toggle-fullscreen
-                        "C-c C-l" 'exwm-floating-toggle-floating)
+    (general-def :keymaps 'exwm-mode-map
+      "C-c C-f" 'exwm-layout-toggle-fullscreen
+      "C-c C-l" 'exwm-floating-toggle-floating)
 
     (setq exwm-input-global-keys
           `(;; Bind "s-r" to exit char-mode and fullscreen mode.
@@ -2337,7 +2478,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (define-multi-macro startup-programs start-process-shell-command 3)
 
     (startup-programs
-     "networkmanager applet" nil "nm-applet")
+     "networkmanager applet" nil "nm-applet"
+     "compton" nil "compton --config ~/comptonconfig.txt"
+     "avfs" nil "mountavfs")
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -2383,7 +2526,7 @@ style
       (exwm-named-workspace-history (+ history-element delta) t)
       (incf history-element delta))
 
-    (general-define-key
+    (general-def
      "M-<tab>" (lambda ()
                  (interactive)
                  (workspace-history-delta 1)
@@ -2416,6 +2559,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
    krita
    gimp
    (spotify :args "--force-device-scale-factor=2"
+            :shell-command "~/bin/spotify-wrapper.sh"
             :other-window t)
    (nmtui :shell-command "alacritty"
           :args "-e nmtui")
@@ -2438,7 +2582,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     ;; preview buffer when switching
     (add-to-list 'helm-source-names-using-follow "EXWM buffers")
 
-    (general-define-key :keymaps 'helm-exwm-map
+    (general-def :keymaps 'helm-exwm-map
                         "M-d" #'helm-buffer-run-kill-persistent
                         "S-<return>" #'helm-buffer-switch-buffers-other-window)
 
@@ -2492,11 +2636,11 @@ search for url if a matching tab is not found.
       (interactive)
       (desktop-environment-brightness-set desktop-environment-brightness-tiny-decrement))
 
-    (general-define-key ; :keymaps 'dekstop-environment-mode-map
+    (general-def ; :keymaps 'dekstop-environment-mode-map
                         "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
                         "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly))
 #+END_SRC
-*** COMMENT Qutebrowser
+*** Qutebrowser
 #+BEGIN_SRC emacs-lisp
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "qutebrowser")
@@ -2609,7 +2753,7 @@ search for url if a matching tab is not found.
     (general-create-definer emms-key-def
       :prefix "s-m")
 
-    (general-define-key 
+    (general-def 
      "<XF86AudioPrev>" 'emms-previous
      "<XF86AudioNext>" 'emms-next
      "<XF86AudioPlay>" 'emms-pause
@@ -2895,6 +3039,17 @@ Various small functions which are evaluated before anything else in the file.
                          (string= s path))
                        (split-string (getenv env) seperator))
         (add-to-env env (concat seperator paths)))))
+
+  (cl-defun remove-from-path (paths &optional (env "PATH") (seperator ":"))
+    (let ((new-path (getenv env)))
+      (dolist (path (split-string paths seperator))
+        (setq new-path (reduce (lambda (a b)
+                                 (if a (if b (concat a seperator b) a)
+                                   (if b b "")))
+                               (mapcar (lambda (s)
+                                         (if (string= s path) nil s))
+                                       (split-string new-path seperator)))))
+      (setenv env new-path)))
 
   (defun lua-path+ (val)
     (add-to-path val
