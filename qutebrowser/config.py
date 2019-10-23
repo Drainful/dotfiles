@@ -14,5 +14,13 @@ c.window.title_format = "{perc}{title} -- {current_url}"
 # search engine
 c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}
 
+# keybindings
+config.bind('xm', 'spawn --userscript view_in_mpv')
+
 # default page
-c.url.default_page = "https://google.com"
+c.url.default_page = "about:blank"
+
+# command aliases
+c.aliases['reader-mode'] = "spawn --userscript readability"
+c.aliases['bitwarden'] = "spawn --userscript qute-bitwarden"
+c.aliases['mpv'] = "spawn --userscript view_in_mpv"

@@ -94,7 +94,7 @@
   - [[#nix][Nix]]
   - [[#bash][Bash]]
 - [[#emacs-does-everything][Emacs does everything]]
-  - [[#emacs-window-manager][Emacs window manager]]
+  - [[#emacs-window-manager-exwm][Emacs window manager (EXWM)]]
   - [[#document-viewer][Document viewer]]
   - [[#emms][EMMS]]
   - [[#irc][IRC]]
@@ -464,8 +464,17 @@ then I define the leader keys,
     (defconst leader-key ",")
     (defconst alt-leader-key "SPC"))
 
-  (general-create-definer leader-key-def
+  (general-create-definer no-super-leader-key-def
     :prefix leader-key)
+
+  (general-create-definer super-leader-key-def
+    :prefix (concat "s-" leader-key))
+
+  (defmacro leader-key-def (&rest args)
+    `(progn
+       (no-super-leader-key-def ,@args)
+       ,(when (featurep 'exwm)
+          `(super-leader-key-def ,@args))))
 
   (general-create-definer alt-leader-key-def
     :prefix alt-leader-key)
@@ -484,8 +493,14 @@ also generated for [[#which-key][ ~which-key~ ]].
     `(progn
        (which-key-add-key-based-replacements
          (leader-prefix ,key ,leader) ,name)
+       (when (featurep 'exwm)
+         (which-key-add-key-based-replacements
+           (leader-prefix ,key ,(concat "s-" leader)) ,name))
        (general-create-definer ,general-definer-name
-         :prefix (leader-prefix ,key ,leader))))
+         :prefix (leader-prefix ,key ,leader))
+       (when (featurep 'exwm)
+         (general-create-definer ,general-definer-name
+           :prefix (leader-prefix ,key ,(concat "s-" leader))))))
 
   ;; the format for the input of this function is inspired by general's
   ;; easy to use functions.
@@ -510,6 +525,7 @@ Usage:
   (leader-key-def 'normal
     "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
     "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
+    "a" 'bury-buffer              ; ",a" to send buffer to the end of recently used.
     "b" 'helm-mini                     ; ",b" to switch buffers.
     "f" 'helm-find-files               ; ",f" to find file (replace :e)
     "d" 'fzf-directory-from-home
@@ -581,28 +597,42 @@ blurbs.
 	       (org-src-mode nil "org-src")
 	       (org-indent-mode nil "org"))))
 #+END_SRC
-*** Display information
-Display time and battery in the mode line
+*** Format
 #+BEGIN_SRC emacs-lisp
-  (display-battery-mode)
-
-  ;; (use-package fancy-battery
-  ;;   :config
-  ;;   (setq fancy-battery-mode-line
-  ;;       '(:eval (unless (string= (cdr (assq 66 fancy-battery-last-status)) "Charging")
-  ;;                 (fancy-battery-default-mode-line))))
-  ;;   (fancy-battery-mode))
-
-  (display-time-mode)
-  (setq display-time-default-load-average nil)
+  (setq-default mode-line-format
+                '("%e" mode-line-front-space
+                  mode-line-mule-info
+                  mode-line-client
+                  mode-line-modified
+                  mode-line-remote
+                  mode-line-frame-identification
+                  mode-line-buffer-identification
+                  "   " mode-line-position
+                  evil-mode-line-tag
+                  (vc-mode vc-mode)
+                  "  " mode-line-modes
+                  mode-line-end-spaces))
 #+END_SRC
 *** Shorten mode-line buffer names
-Since I rely on Emacs to show me the time and battery info, I can't be
-having the mode line crowded out by the buffer name. 46 characters of
-buffer name should do.
+
 #+BEGIN_SRC emacs-lisp
-  (setq-default mode-line-buffer-identification (list -46 (propertized-buffer-identification "%12b")))
+(setq-default mode-line-buffer-identification (list -70 (propertized-buffer-identification "%12b")))
 #+END_SRC
+*** Minibuffer line
+Package to use the minibuffer in the manner of the mode line.
+#+begin_src emacs-lisp
+(use-package minibuffer-line
+  :config
+  (setq minibuffer-line-format
+        '("%e" mode-line-misc-info mode-line-end-spaces))
+  (setq minibuffer-line-refresh-interval 0.5)
+  (setq display-time-format " %R %d %b")
+  (setq display-time-default-load-average nil)
+  (display-time-mode)
+  (setq battery-mode-line-format " | %p%% %B %t")
+  (display-battery-mode)
+  (minibuffer-line-mode))
+#+end_src
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
 which integrates well across Emacs.
@@ -716,7 +746,7 @@ than emacs into the "+" register.
 *** Electric pair mode
 Close delimiters automatically as I write.
 #+BEGIN_SRC emacs-lisp
-(electric-pair-mode nil)
+  (electric-pair-mode t) 
 #+END_SRC
 *** Matching parens
 Highlight the parentheis whose pair is under the point.
@@ -831,10 +861,9 @@ primary shell.
 
   ;; Eshell modules
   (require 'esh-module)
-  ;; (add-to-list 'eshell-modules-list 'eshell-tramp)
-
-  (setq password-cache t) ; enable password caching
-  (setq password-cache-expiry 3600) ; for one hour (time in secs)
+  (add-to-list 'eshell-modules-list 'eshell-tramp)
+  ;; (setq password-cache t) ; enable password caching
+  ;; (setq password-cache-expiry 3600) ; for one hour (time in secs)
 
   (setq eshell-prompt-function
         (lambda ()
@@ -1122,8 +1151,8 @@ reason I need multiple, I have this plugin.
 access remote files as if they were part of my filesystem within
 Emacs.
 #+BEGIN_SRC emacs-lisp
-  (defun connect-to-serenity ()
-    (eshell-at me/serenity-path))
+  ;; try ftp passive mode
+  (setq ange-ftp-try-passive-mode t)
 #+END_SRC
 * Emacs client/server settings
 #+BEGIN_SRC emacs-lisp
@@ -2296,15 +2325,12 @@ Features for dealing with nix-shell in Emacs.
   (use-package helm-nixos-options)
 #+END_SRC
 ** Bash
-#+BEGIN_COMMENT 
-I use a zero width space here to escape the underscore 
-#+END_COMMENT
-Enter mode for bash on .profile, .bash_​aliases, and .inputrc
+Shell mode for shell files sans the dot.
 #+BEGIN_SRC emacs-lisp
-  (auto-mode-add 'shell-script-mode
-                 ".profile\\'"
-                 ".bash_aliases\\'"
-                 ".inputrc\\'")
+  (auto-mode-add 'sh-mode
+                 "\\(/\\|\\`\\)\\(bash_\\(aliases\\|profile\\|history\\|log\\(in\\|out\\)\\)\\|z?log\\(in\\|out\\)\\)\\'"
+                 "\\(/\\|\\`\\)\\(shrc\\|zshrc\\|m?kshrc\\|bashrc\\|inputrc\\|t?cshrc\\|esrc\\)\\'"
+                 "\\(/\\|\\`\\)\\([kz]shenv\\|xinitrc\\|startxrc\\|xsession\\)\\'")
 #+END_SRC
 *** Auto Mode
 Enter ~common-lisp-mode~ in the following files
@@ -2349,13 +2375,36 @@ Control spotify running on any device from Emacs.
 
     ;; (spot4e-player-do-action "PUT" (concat "/volume?volume_percent=" (number-to-string volume)))
 #+END_SRC
-** Emacs window manager
+** Emacs window manager (EXWM)
 *** Main Package
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
   (use-package exwm
+    :straight (:host github :repo "ch11g/exwm")
     :delight
     :config
+
+    (defvar clear-minibuffer-delay "2 sec")
+
+    (defun clear-minibuffer ()
+      (message nil))
+
+    (defun clear-minibuffer-delayed ()
+      (if (current-message)
+          (run-at-time clear-minibuffer-delay
+                       nil #'clear-minibuffer)))
+
+    (defun set-clear-minibuffer-delayed ()
+      (interactive)
+      (add-hook 'post-command-hook
+                #'clear-minibuffer-delayed
+                nil t))
+
+    (defun unset-clear-minibuffer-delayed ()
+      (interactive)
+      (remove-hook 'post-command-hook
+                   #'clear-minibuffer-delayed t))
+
     (fringe-mode 1)
     (require 'exwm-config)
     (setq exwm-mode-hook nil)
@@ -2365,7 +2414,13 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                                        ;; buffer
                                        " " mode-line-buffer-identification " "
                                        mode-line-modes
-                                       mode-line-misc-info))))
+                                       ;; mode-line-misc-info
+                                       ))))
+
+    (add-hook 'exwm-mode-hook #'set-clear-minibuffer-delayed)
+                                          ; Make sure minibuffer-line is
+                                          ; visible after a command.
+
     (add-hook 'exwm-update-class-hook
               (lambda ()
                 (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
@@ -2463,6 +2518,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; program, and "s-w" to kill the current buffer AND window
             ([?\s-w] . actually-kill-this-buffer)
             ([?\s-q] . evil-delete-buffer)
+            ([?\s-a] . bury-buffer)
             ;; bind "s-g" to keyboard-quit
             ([?\s-g] . keyboard-quit)))
 
@@ -2484,6 +2540,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
+                                  (elt (kbd "s-,") 0)
                                   (elt (kbd "s-m") 0)
                                   (elt (kbd "M-<tab>") 0)
                                   (elt (kbd "<M-iso-lefttab>") 0)
@@ -2559,7 +2616,7 @@ I wrote a package to launch programs which integrates with ~exwm~ and
    krita
    gimp
    (spotify :args "--force-device-scale-factor=2"
-            :shell-command "~/bin/spotify-wrapper.sh"
+            :shell-command "spotify"
             :other-window t)
    (nmtui :shell-command "alacritty"
           :args "-e nmtui")
@@ -2637,8 +2694,19 @@ search for url if a matching tab is not found.
       (desktop-environment-brightness-set desktop-environment-brightness-tiny-decrement))
 
     (general-def ; :keymaps 'dekstop-environment-mode-map
-                        "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
-                        "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly))
+      "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
+      "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly)
+
+    ;; better mute function (single line output)
+    (defun desktop-environment-toggle-mute ()
+      "Toggle between muted and un-muted."
+      (interactive)
+      (message "%s"
+               (if (find "off" (split-string (shell-command-to-string desktop-environment-volume-toggle-command)
+                                             (rx (or "[" "]")))
+                         :test #'string=)
+                   "Sound Off"
+                 "Sound On"))))
 #+END_SRC
 *** Qutebrowser
 #+BEGIN_SRC emacs-lisp
@@ -2743,22 +2811,25 @@ search for url if a matching tab is not found.
     (setq emms-player-seek-seconds 5
           emms-source-file-default-directory "~/Music/"
           emms-player-list '(emms-player-mpd
-                             emms-player-vlc
-                             emms-player-vlc-playlist)
+                             ;; emms-player-vlc
+                             ;; emms-player-vlc-playlist
+                             )
           emms-player-mpd-music-directory "/home/adrian/Music"
           emms-info-functions '(emms-info-mpd)
           emms-volume-change-function #'emms-volume-mpd-change
-          emms-volume-change-amount 5)
+          emms-volume-change-amount 5
+          emms-mode-line-format " | %s"
+          emms-mode-line-mode-line-function #'emms-mode-line-playlist-current)
 
     (general-create-definer emms-key-def
       :prefix "s-m")
 
     (general-def 
-     "<XF86AudioPrev>" 'emms-previous
-     "<XF86AudioNext>" 'emms-next
-     "<XF86AudioPlay>" 'emms-pause
-     "<XF86AudioPause>" 'emms-pause
-     "<XF86AudioStop>" 'emms-stop)
+      "<XF86AudioPrev>" 'emms-previous
+      "<XF86AudioNext>" 'emms-next
+      "<XF86AudioPlay>" 'emms-pause
+      "<XF86AudioPause>" 'emms-pause
+      "<XF86AudioStop>" 'emms-stop)
 
     (emms-key-def 'normal 
       "s-m" 'emms-pause
@@ -2998,12 +3069,7 @@ Various small functions which are evaluated before anything else in the file.
                                (mapcar 'symbol-name
                                        (custom-available-themes))))))
     (disable-most-recent-theme)
-    (load-theme theme t)
-
-    ;; this properly sets the color of the system tray icon backgrounds.
-    (when (featurep 'exwm)
-      (exwm-workspace-add)
-      (exwm-workspace-delete)))
+    (load-theme theme t))
 
   (defun string-represents-integer-p (string)
     "Truthy if string is a representation of an integer (leading

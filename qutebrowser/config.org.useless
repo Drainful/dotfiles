@@ -38,5 +38,10 @@ I prefer to use my WM to manage tabs than the browser.
   c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}
 
   # default page
-  c.url.default_page = "https://google.com"
+  c.url.default_page = "about:blank"
+#+END_SRC
+** Commands
+#+BEGIN_SRC python
+  c.aliases['reader-mode'] = "spawn --userscript readability"
+  c.aliases['bitwarden'] = "spawn --userscript qute-bitwarden"
 #+END_SRC
