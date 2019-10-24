@@ -11,11 +11,14 @@ c.tabs.tabs_are_windows = True
 c.tabs.show = "never"
 c.window.title_format = "{perc}{title} -- {current_url}"
 
-# search engine
+# url
 c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}
+c.url.start_pages = ["about:blank"]
 
 # keybindings
-config.bind('xm', 'spawn --userscript view_in_mpv')
+config.bind('xM', 'spawn --userscript view_in_mpv')
+config.bind('xm', 'hint links userscript view_in_mpv')
+config.bind('Q', 'config-cycle scrolling.bar always never')
 
 # default page
 c.url.default_page = "about:blank"
@@ -24,3 +27,9 @@ c.url.default_page = "about:blank"
 c.aliases['reader-mode'] = "spawn --userscript readability"
 c.aliases['bitwarden'] = "spawn --userscript qute-bitwarden"
 c.aliases['mpv'] = "spawn --userscript view_in_mpv"
+
+# ui
+c.scrolling.bar = "never"
+
+# style
+c.content.user_stylesheets = "./user.css"

@@ -1,4 +1,4 @@
-#hTITLE: Emacs Configuration
+#TITLE: Emacs Configuration
 #+CREATOR: Adrian Fullmer
 
 * Table of contents                                                     :TOC:
@@ -41,12 +41,18 @@
   - [[#line-wrap][Line wrap]]
   - [[#start-frame-maximized][Start frame maximized]]
   - [[#confirmation][Confirmation]]
+  - [[#adaptive-cursor-width][Adaptive Cursor Width]]
   - [[#delimiters][Delimiters]]
   - [[#ediff][Ediff]]
   - [[#which-key][Which-key]]
 - [[#dired][Dired]]
+  - [[#keybindings][Keybindings]]
+  - [[#dired-fl][Dired FL]]
+  - [[#dired-atool][Dired Atool]]
+  - [[#dired-du][Dired Du]]
   - [[#dired-hacks][Dired Hacks]]
 - [[#shell][Shell]]
+  - [[#fishbash-completion][Fish/Bash Completion]]
   - [[#eshell][Eshell]]
   - [[#comint-mode][Comint Mode]]
   - [[#shell-1][Shell]]
@@ -57,6 +63,7 @@
   - [[#daemon-management][Daemon Management]]
 - [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
   - [[#doom-themes][Doom Themes]]
+  - [[#spacemacs-themes][Spacemacs themes]]
   - [[#theme][Theme]]
 - [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
@@ -69,7 +76,7 @@
   - [[#agressive-indent][Agressive Indent]]
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
-  - [[#git][Git]]
+  - [[#git-magit][Git (Magit)]]
   - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
@@ -274,6 +281,9 @@ using emacs today if it were not for ~evil-mode~.
     ;; settings for evil-collection integration
     (setq evil-want-keybinding nil)
     (setq evil-want-integration t)
+    (setq evil-want-minibuffer t)
+  
+  
     :config
     (evil-mode 1)
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
@@ -297,7 +307,6 @@ This provides ~evil~ friendly keybindings for a variety of modes.
     :after evil
     :config
     ;; (setq evil-collection-term-sync-state-and-mode-p nil)
-    (evil-collection-minibuffer-setup)
     (evil-collection-init))
 #+END_SRC
 ** Evil easymotion
@@ -473,8 +482,10 @@ then I define the leader keys,
   (defmacro leader-key-def (&rest args)
     `(progn
        (no-super-leader-key-def ,@args)
-       ,(when (featurep 'exwm)
-          `(super-leader-key-def ,@args))))
+       (super-leader-key-def ,@args)
+       ;; ,(when (featurep 'exwm)
+       ;;    `(super-leader-key-def ,@args))
+       ))
 
   (general-create-definer alt-leader-key-def
     :prefix alt-leader-key)
@@ -490,17 +501,30 @@ also generated for [[#which-key][ ~which-key~ ]].
 
   (cl-defmacro define--subleader (key name general-definer-name &key (leader leader-key))
     "Both create a general definer, and a which-key replacement for the given subleader."
-    `(progn
-       (which-key-add-key-based-replacements
-         (leader-prefix ,key ,leader) ,name)
-       (when (featurep 'exwm)
+    (let ((no-super-name (intern (concat "no-super-"
+                                         (symbol-name general-definer-name))))
+          (super-name (intern (concat "super-"
+                                      (symbol-name general-definer-name)))))
+      `(progn
          (which-key-add-key-based-replacements
-           (leader-prefix ,key ,(concat "s-" leader)) ,name))
-       (general-create-definer ,general-definer-name
-         :prefix (leader-prefix ,key ,leader))
-       (when (featurep 'exwm)
-         (general-create-definer ,general-definer-name
-           :prefix (leader-prefix ,key ,(concat "s-" leader))))))
+           (leader-prefix ,key ,leader) ,name)
+
+         (which-key-add-key-based-replacements
+           (leader-prefix ,key ,(concat "s-" leader)) ,name)
+
+         (general-create-definer ,no-super-name
+           :prefix (leader-prefix ,key ,leader))
+
+         (general-create-definer ,super-name
+           :prefix (leader-prefix ,key ,(concat "s-" leader)))
+
+         (defmacro ,general-definer-name (&rest args)
+           (let ((no-super-name ',no-super-name)
+                 (super-name ',super-name))
+             `(progn
+                (,no-super-name ,@args)
+                (,super-name ,@args)))))))
+
 
   ;; the format for the input of this function is inspired by general's
   ;; easy to use functions.
@@ -523,17 +547,18 @@ Usage:
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal
-    "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
-    "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
-    "a" 'bury-buffer              ; ",a" to send buffer to the end of recently used.
-    "b" 'helm-mini                     ; ",b" to switch buffers.
-    "f" 'helm-find-files               ; ",f" to find file (replace :e)
-    "d" 'fzf-directory-from-home
-    "h" 'help
-    "o" 'occur 
-    "i" 'helm-imenu
-    "8" 'helm-imenu-in-all-buffers
-    "RET" (kbd ":noh"))
+                  "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
+                  "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
+                  "a" 'bury-buffer              ; ",a" to send buffer to the end of recently used.
+                  "b" 'helm-mini                     ; ",b" to switch buffers.
+                  "f" 'helm-find-files               ; ",f" to find file (replace :e)
+                  "d" 'fzf-directory-from-home
+                  "h" 'help
+                  "o" 'occur 
+                  "i" 'helm-imenu
+                  "8" 'helm-imenu-in-all-buffers
+                  ";" 'eval-expression
+                  "RET" (kbd ":noh"))
 #+END_SRC
 *** Visual Mode
 #+BEGIN_SRC emacs-lisp
@@ -570,13 +595,24 @@ A command to configure emacs
 #+BEGIN_SRC emacs-lisp
   (defun econf () (interactive) (find-file (dotfiles "emacs/emacs.org")))
 #+END_SRC
+
+A command to create a new scratch buffer
+#+BEGIN_SRC emacs-lisp
+  (defun scratch ()
+    (interactive)
+    (let ((buffer (or (get-buffer "*scratch*")
+                      (generate-new-buffer "*scratch*"))))
+      (set-window-buffer nil buffer)
+      (with-current-buffer buffer
+        (funcall (default-value 'major-mode)))))
+#+END_SRC
 * User Interface
 These are settings related to the user interface of Emacs.
 ** Startup screen
 I disable the default startup screen and splash message.
 #+BEGIN_SRC emacs-lisp
-(setq inhibit-splash-screen t
-      initial-scratch-message nil)
+  (setq inhibit-splash-screen t
+        initial-scratch-message nil)
 #+END_SRC
 *** Scratch buffer
 Set the initial mode in the scratch buffer to emacs.
@@ -657,8 +693,16 @@ which integrates well across Emacs.
     (setq helm-window-prefer-horizontal-split t)
     (setq helm-window-show-buffers-function 'helm-window-mosaic-fn)
 
+    (defun me/helm-fix-insert-state-keys ()
+      (define-key evil-insert-state-local-map (kbd "C-n") #'helm-next-line)
+      (define-key evil-insert-state-local-map (kbd "C-p") #'helm-previous-line))
+    ;; (setq-local evil-insert-state-map (make-keymap ))
+
+    (add-hook 'helm--minor-mode-hook
+              #'me/helm-fix-insert-state-keys)
+
     ;; Refresh helm-top
-    (helm-top-poll-mode))
+    (helm-top-poll-mode 1))
 #+END_SRC
 *** Extending helm-highight-buffers
 *** COMMENT Helper functions
@@ -735,6 +779,11 @@ Type =y= or =n=, not =yes= or =no=.
 (fset 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
 
+** Adaptive Cursor Width
+Makes the cursor the full width of the current character.
+#+BEGIN_SRC emacs-lisp
+  (setq x-stretch-cursor t)
+#+END_SRC
 ** COMMENT Clipboard
 Enable vim-like clipboard. This puts text copied from programs other
 than emacs into the "+" register.
@@ -792,49 +841,108 @@ Highlight the cursor when switching buffers.
 * Dired
 Some dired configuration
 #+BEGIN_SRC emacs-lisp
+  (add-hook 'dired-mode-hook #'dired-hide-details-mode)
   (setq image-dired-thumb-size 400)
   (setq image-dired-thumb-width 400)
   (setq image-dired-thumb-height 400)
   (setq image-dired-thumb-margin 6)
   (setq image-dired-thumb-relief 6)
-  ;; Use atool for compression and extraction
-  (use-package dired-atool
+
+  (setq dired-listing-switches "-alh")
+
+  (defun me/dired-sort ()
+    (interactive)
+    (dired-sort-other
+     (let ((alist '(("name" . "-Al")
+                    ("date" .  "-Al -t")
+                    ("size" . "-Al -S"))))
+       (cdr (assoc (ido-completing-read "Sort by:" alist)
+                   alist)))))
+#+END_SRC
+** Keybindings
+#+BEGIN_SRC emacs-lisp
+  (leader-key-def normal dired-mode-map
+                  "i" (lambda nil (interactive)
+                        (image-dired default-directory)))
+
+  (general-def normal dired-mode-map
+    "s" #'me/dired-sort)
+#+END_SRC
+** Dired FL
+Add additional font lock rules for dired
+#+BEGIN_SRC emacs-lisp
+  (use-package diredfl
     :config
-    (leader-key-def normal dired-mode-map
-      "z" #'dired-atool-do-unpack
-      "Z" #'dired-atool-do-pack))
+    (diredfl-global-mode 1))
+#+END_SRC
+** Dired Atool
+Use atool for compression and extraction
+#+BEGIN_SRC emacs-lisp
+(use-package dired-atool
+  :config
+  (leader-key-def normal dired-mode-map
+                  "z" #'dired-atool-do-unpack
+                  "Z" #'dired-atool-do-pack))
+#+END_SRC
+** Dired Du
+Use du to list folder sizes
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-du
+    :config
+    (setq dired-du-size-format t)
+    (leader-key-def 'normal dired-mode-map
+                    "d" #'dired-du-mode))
 #+END_SRC
 ** Dired Hacks
+[[https://github.com/Fuco1/dired-hacks#dired-rainbow][Various packages]] providing dired features
+*** Dired AVFS
+This allows seamless archive browsing
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-avfs)
+#+END_SRC
+
+*** Dired Subtree
+
 #+BEGIN_SRC emacs-lisp
   (use-package dired-subtree
-      :config
-      (defun me/dired-subtree-toggle ()
-        "Insert subtree at point or remove it if it was not present."
-        (interactive)
-        (if (dired-subtree--dired-line-is-directory-or-link-p)
-            (progn
-              (if (dired-subtree--is-expanded-p)
-                  (progn
-                    (dired-next-line 1)
-                    (dired-subtree-remove))
-                (save-excursion (dired-subtree-insert)))
-              t)
-          (if (> (line-number-at-pos) 5)
-              (let ((prev-point (point)))
-                (dired-previous-line 1)
-                (unless (me/dired-subtree-toggle)
-                  ;; (set-window-point nil prev-point)
-                  ))
-            nil)))
+    :config
+    (defun me/dired-subtree-toggle ()
+      "Insert subtree at point or remove it if it was not present."
+      (interactive)
+      (if (dired-subtree--dired-line-is-directory-or-link-p)
+          (progn
+            (if (dired-subtree--is-expanded-p)
+                (progn
+                  (dired-next-line 1)
+                  (dired-subtree-remove))
+              (save-excursion (dired-subtree-insert)))
+            t)
+        (if (> (line-number-at-pos) 5)
+            (let ((prev-point (point)))
+              (dired-previous-line 1)
+              (unless (me/dired-subtree-toggle)
+                ;; (set-window-point nil prev-point)
+                ))
+          nil)))
 
-      (general-def 'normal dired-mode-map
-        "z a" #'me/dired-subtree-toggle))
+    (general-def 'normal dired-mode-map
+      "z a" #'dired-subtree-toggle))
+#+END_SRC
 
-  ;; This allows seamless archive browsing
-  (use-package dired-avfs)
-
-  ;; multi-stage copy/paste
+*** Dired Ranger
+Multi-stage copy/paste
+#+BEGIN_SRC emacs-lisp
   (use-package dired-ranger)
+#+END_SRC
+*** Dired Narrow
+Interactively narrow/filter a dired buffer. Usually I just use
+helm-find-file, but sometimes it's nice to narrow for a Dired
+selection.
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-narrow
+    :config
+    (leader-key-def normal dired-mode-map
+                    "n" #'dired-narrow))
 #+END_SRC
 ** COMMENT image-dired
 #+BEGIN_SRC emacs-lisp
@@ -845,6 +953,20 @@ Some dired configuration
     (setq image-dired-thumb-size 300))
 #+END_SRC
 * Shell
+** Fish/Bash Completion
+Get completion hints from bash and fish.
+#+BEGIN_SRC emacs-lisp
+  (use-package bash-completion
+    :config
+    (add-hook 'shell-dynamic-complete-functions
+              'bash-completion-dynamic-complete))
+
+  (use-package fish-completion
+    :after bash-completion
+    :config
+    (global-fish-completion-mode 1)
+    (setq fish-completion-fallback-on-bash-p t))
+#+END_SRC
 ** Eshell
 ~eshell~ is a shell that operates entirely within emacs. It is my
 primary shell.
@@ -922,23 +1044,66 @@ primary shell.
 *** Commands
 ~eshell~ commands
 #+BEGIN_SRC emacs-lisp
-  (defun eshell/e (&rest args)
-    "Open the given files"
-    (dolist (file args) (if (listp file)
-                            (dolist (file file)
-                              (find-file file t))                          
-                          (find-file file t))))
+    (defun eshell/e (&rest args)
+      "Open the given files"
+      (dolist (file args) (if (listp file)
+                              (dolist (file file)
+                                (find-file file t))                          
+                            (find-file file t))))
 
-    (defun eshell/fd (&optional from-directory)
-      "Run fzf to open a directory in dired"
-      (fzf-directory-from (or from-directory
-                              default-directory)))
+      (defun eshell/fd (&optional from-directory)
+        "Run fzf to open a directory in dired"
+        (fzf-directory-from (or from-directory
+                                default-directory)))
 
-    (defun eshell/fh ()
-      (eshell/fd "~"))
+      (defun eshell/fh ()
+        (eshell/fd "~"))
 
-    (defun eshell/econf () (econf))
-    (defun eshell/nixconf () (nixconf))
+      (defun eshell/econf () (econf))
+      (defun eshell/nixconf () (nixconf))
+
+  (defun eshell/sudo (&rest args)
+    "Alias \"sudo\" to call Tramp. Without help flag (gets in the
+    way of other -h flags, like du -h)
+
+  Uses the system sudo through TRAMP's sudo method."
+    (setq args (eshell-stringify-list (eshell-flatten-list args)))
+    (let ((orig-args (copy-tree args)))
+      (eshell-eval-using-options
+       "sudo" args
+       '(;(?h "help" nil nil "show this usage screen")
+         (?u "user" t user "execute a command as another USER")
+         :show-usage
+         :usage "[(-u | --user) USER] COMMAND
+  Execute a COMMAND as the superuser or another USER.")
+       (throw 'eshell-external
+              (let ((user (or user "root"))
+                    (host (or (file-remote-p default-directory 'host)
+                              "localhost"))
+                    (dir (file-local-name (expand-file-name default-directory)))
+                    (prefix (file-remote-p default-directory)))
+                ;; `eshell-eval-using-options' reads options of COMMAND.
+                (while (and (stringp (car orig-args))
+                            (member (car orig-args) '("-u" "--user")))
+                  (setq orig-args (cddr orig-args)))
+                (let ((default-directory
+                        (if (and prefix
+                                 (or
+                                  (not
+                                   (string-equal
+                                    "sudo"
+                                    (file-remote-p default-directory 'method)))
+                                  (not
+                                   (string-equal
+                                    user
+                                    (file-remote-p default-directory 'user)))))
+                            (format "%s|sudo:%s@%s:%s"
+                                    (substring prefix 0 -1) user host dir)
+                          (format "/sudo:%s@%s:%s" user host dir))))
+                  (eshell-named-command (car orig-args) (cdr orig-args))))))))
+
+  (if (executable-find "du")
+      (fmakunbound 'eshell/du)) ; for speed
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -972,18 +1137,22 @@ primary shell.
       "I" #'comint-style-insert-line
       "A" #'comint-style-append-line
       "M-<tab>" #'helm-winconf-swap
-      "<return>" #'eshell-properly-send-input))
+      "<return>" #'eshell-properly-send-input)
+    (leader-key-def normal eshell-mode-map
+                    "e" #'helm-eshell-history))
 
   (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb/stupid
             #'set-eshell-keybinds)
+
 #+END_SRC
 *** Helm support
 ~helm~ can be used for ~eshell~ completions with the following code.
 #+BEGIN_SRC emacs-lisp
+  (defun setup-eshell-helm-completion ()
+    (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete))
+
   (add-hook 'eshell-mode-hook
-            (lambda ()
-              (eshell-cmpl-initialize)
-              (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete)))
+            #'setup-eshell-helm-completion)
 #+END_SRC
 *** Disable Company
 While company mode is widely useful, helm does better for eshell.
@@ -993,7 +1162,7 @@ While company mode is widely useful, helm does better for eshell.
 #+END_SRC
 *** Properly Protect Prompt
 ~eshell~ doesn't play with ~evil~ with commands such as ~dd~ which target
-tej whole line. This code (inspired by spacemacs shell layer) solves
+the whole line. This code (inspired by spacemacs shell layer) solves
 that problem.
 #+BEGIN_SRC emacs-lisp
   (defun protect-eshell-prompt ()
@@ -1266,6 +1435,10 @@ Doom Emacs looks good. I want those themes.
   ;; flash mode line when emacs bell rings
   (doom-themes-visual-bell-config))
 #+END_SRC
+** Spacemacs themes
+#+BEGIN_SRC emacs-lisp
+(use-package spacemacs-theme)
+#+END_SRC
 ** COMMENT Poet Theme
 #+BEGIN_SRC emacs-lisp
   (use-package poet-theme)
@@ -1390,16 +1563,16 @@ this to managing frames.
 project.
 #+BEGIN_SRC emacs-lisp
   (use-package projectile
-    :delight " P"
+    :delight ""
     :after general
     :config
     (general-def
-     :states 'normal
-     :keymaps 'override
-   "C-p" 'helm-projectile-find-file)
+      :states 'normal
+      :keymaps 'override
+      "C-p" 'helm-projectile-find-file)
     (project-key-def 'normal 'projectile-mode-map
-      "p" 'projectile-switch-project
-      "e" 'projectile-run-eshell)
+                     "p" 'projectile-switch-project
+                     "e" 'projectile-run-eshell)
     (projectile-mode +1))
 
   ;; use helm for projectile
@@ -1581,6 +1754,52 @@ buffers. Faster than ~,-b\r~.
   (general-def :states 'normal ; :keymaps 'override
                       "<tab>" 'evil-buffer)
 #+END_SRC
+;; (use-package org
+;;   :delight org-indent-mode
+;;   ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
+;;   :config
+;;   ;; (load "/home/adrian/.emacs.d/straight/repos/org/lisp/org-compat.el")
+;;   (setq header-line-format " ")
+;;   ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
+;;   ;; (lambda () (progn
+;;   ;;              (setq left-margin-width 2)
+;;   ;;              (setq right-margin-width 2)
+;;   ;;              (set-window-buffer nil (current-buffer))))
+;;   ;;(setq line-spacing 0.1)
+;;   (setq org-startup-indented t
+;;         ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+;;         ;;org-ellipsis "  " ;; folding symbol
+;;         org-pretty-entities t
+;;         org-hide-emphasis-markers t
+;;         ;; show actually italicized text instead of /italicized text/
+;; ;;;org-agenda-block-separator ""
+;;         org-fontify-whole-heading-line t
+;;         org-fontify-done-headline t
+;;         org-fontify-quote-and-verse-blocks t
+;;         org-src-ask-before-returning-to-edit-buffer nil
+;;         org-src-window-setup 'current-window)
+;;   (general-def :states 'normal :keymaps 'org-mode-map
+;;     "C-`" 'org-edit-special)
+;;   (org-babel-do-load-languages
+;;    'org-babel-load-languages
+;;    '((lisp . t)))
+;;   (setq org-babel-lisp-eval-fn #'sly-eval)
+
+;;   (add-hook 'org-mode-hook #'auto-fill-mode)
+;;   (require 'delight)
+;;   (delight 'auto-fill-function "" t)
+
+;;   ;; "C-j" 'evil-window-down
+;;   ;; "C-k" 'evil-window-up
+;;   ;; (define-key org-mode-map (kbd "<C-j>") nil)
+;;   ;; (define-key org-mode-map (kbd "<C-k>") nil)
+;;   (leader-key-def 'normal org-src-mode-map
+;;                   "q" 'org-edit-src-exit)
+;;   (add-hook 'org-mode-hook (lambda ()
+;;                              (general-def :states 'normal :keymaps 'org-mode-map
+;;                                "C-j" 'evil-window-down
+;;                                "C-k" 'evil-window-up))))
+
 * Programming tools and settings
 ** Agressive Indent
 ~agressive-indent-mode~ maintaints indentation as code is reformatted
@@ -1637,7 +1856,7 @@ I also, like many others, use ~flycheck~.
   :config
   (setq flycheck-global-modes '(not c-mode c++-mode)))
 #+END_SRC
-** Git
+** Git (Magit)
 I also also, like many others, use ~magit~, a very nice Git interface.
 #+BEGIN_SRC emacs-lisp
 (use-package magit
@@ -1652,6 +1871,11 @@ and a leader shortcut.
 #+BEGIN_SRC emacs-lisp
 (leader-key-def 'normal
   "m" 'magit)
+#+END_SRC
+*** Magit Forge
+A package to interact with Git forges like Gitlab.
+#+BEGIN_SRC emacs-lisp
+  (use-package forge)
 #+END_SRC
 ** Snippets
 ~yasnippet~ allows the creation of snippets to automate repetitive typing.
@@ -1728,7 +1952,7 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
     :delight
     :after projectile          ; I integrate projectile with direnv here
     :config
-    (direnv-mode)
+    (direnv-mode 1)
 
     ;; Keybindings to direnv refresh and lorri watch
 
@@ -1753,8 +1977,8 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
           (error (concat "There is no shell.nix for " project-name)))))
 
     (project-key-def 'normal
-      "d" 'direnv-update-directory-environment
-      "l" 'projectile-lorri-watch)
+                     "d" 'direnv-update-directory-environment
+                     "l" 'projectile-lorri-watch)
 
     ;; Lorri watch the given project when switching to a new project.
     (add-hook 'projectile-after-switch-project-hook
@@ -2058,7 +2282,7 @@ Python support is built in to ~lsp-mode~.
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-lua))
-                                (auto-complete-mode))))
+                                (auto-complete-mode 1))))
 
   (use-package auto-complete-love
     :after auto-complete-lua
@@ -2067,7 +2291,7 @@ Python support is built in to ~lsp-mode~.
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-love))
                                 (push ac-source-lua ac-sources)
-                                (auto-complete-mode))))
+                                (auto-complete-mode 1))))
 #+END_SRC
 *** Lank
 #+BEGIN_SRC emacs-lisp
@@ -2236,50 +2460,48 @@ Enable ~flycheck~
 ~org-mode~ is a markup mode with many features, including creating
 literate source files like this one.
 #+BEGIN_SRC emacs-lisp
-  (use-package org
-    :delight org-indent-mode
-    ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
-    :config
-    (load "/home/adrian/.emacs.d/straight/repos/org/lisp/org-compat.el")
-    (setq header-line-format " ")
-    ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
-    ;; (lambda () (progn
-    ;;              (setq left-margin-width 2)
-    ;;              (setq right-margin-width 2)
-    ;;              (set-window-buffer nil (current-buffer))))
-    ;;(setq line-spacing 0.1)
-    (setq org-startup-indented t
-          ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-          ;;org-ellipsis "  " ;; folding symbol
-          org-pretty-entities t
-          org-hide-emphasis-markers t
-          ;; show actually italicized text instead of /italicized text/
+  (setq header-line-format " ")
+  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
+  ;; (lambda () (progn
+  ;;              (setq left-margin-width 2)
+  ;;              (setq right-margin-width 2)
+  ;;              (set-window-buffer nil (current-buffer))))
+  ;;(setq line-spacing 0.1)
+  (setq org-startup-indented t
+        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+        ;;org-ellipsis "  " ;; folding symbol
+        org-pretty-entities t
+        org-hide-emphasis-markers t
+        ;; show actually italicized text instead of /italicized text/
   ;;;org-agenda-block-separator ""
-          org-fontify-whole-heading-line t
-          org-fontify-done-headline t
-          org-fontify-quote-and-verse-blocks t
-          org-src-ask-before-returning-to-edit-buffer nil)
-    (general-def :states 'normal :keymaps 'org-mode-map
-      "C-`" 'org-edit-special)
-    (org-babel-do-load-languages
-     'org-babel-load-languages
-     '((lisp . t)))
-    (setq org-babel-lisp-eval-fn #'sly-eval)
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t
+        org-src-ask-before-returning-to-edit-buffer nil
+        org-src-window-setup 'current-window)
+  (general-def :states 'normal :keymaps 'org-mode-map
+    "C-`" 'org-edit-special)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((lisp . t)))
+  (setq org-babel-lisp-eval-fn #'sly-eval)
 
-    (add-hook 'org-mode-hook #'auto-fill-mode)
-    (require 'delight)
-    (delight 'auto-fill-function "" t)
+  (add-hook 'org-mode-hook #'auto-fill-mode)
+  (require 'delight)
+  (delight 'auto-fill-function "" t)
+  (delight 'org-indent-mode "" t)
 
-    ;; "C-j" 'evil-window-down
-    ;; "C-k" 'evil-window-up
-    ;; (define-key org-mode-map (kbd "<C-j>") nil)
-    ;; (define-key org-mode-map (kbd "<C-k>") nil)
-    (leader-key-def 'normal org-src-mode-map
-      "q" 'org-edit-src-exit)
-    (add-hook 'org-mode-hook (lambda ()
-                               (general-def :states 'normal :keymaps 'org-mode-map
-                                 "C-j" 'evil-window-down
-                                 "C-k" 'evil-window-up))))
+  ;; "C-j" 'evil-window-down
+  ;; "C-k" 'evil-window-up
+  ;; (define-key org-mode-map (kbd "<C-j>") nil)
+  ;; (define-key org-mode-map (kbd "<C-k>") nil)
+  (leader-key-def 'normal org-src-mode-map
+                  "q" 'org-edit-src-exit)
+
+  (add-hook 'org-mode-hook (lambda ()
+                             (general-def :states 'normal :keymaps 'org-mode-map
+                               "C-j" 'evil-window-down
+                               "C-k" 'evil-window-up)))
 #+END_SRC
 A hydra to jump between org-babel source blocks:
 #+BEGIN_SRC emacs-lisp
@@ -2452,7 +2674,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-1] . (lambda ()
                          (interactive)
                          (eshell-at-or-switch default-directory)))
-            ([?\s-2] . eshell-at-or-switch)
+            ([?\s-2] . helm-find-files)
             ([?\s-3] . multi-term)
 
             ;; ,@(mapcar (lambda (n)
@@ -2540,14 +2762,12 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
-                                  (elt (kbd "s-,") 0)
-                                  (elt (kbd "s-m") 0)
+                                  ?\s-,
+                                  ?\s-m
                                   (elt (kbd "M-<tab>") 0)
                                   (elt (kbd "<M-iso-lefttab>") 0)
                                   (elt (kbd "s-<tab>") 0)
                                   (elt (kbd "<s-iso-lefttab>") 0)))
-
-                                          ; (setq exwm-input-prefix-keys (nconc exwm-input-prefix-keys my-exwm-prefix-keys))
 
     ;; Allow pulling a window between workspaces by switching to its buffer
     (setq exwm-workspace-show-all-buffers t)
@@ -2562,7 +2782,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                   nil
                   ;; (and (daemonp) (null (frame-parameter nil 'client)))
                   )
-        (display-line-numbers-mode))))
+        (display-line-numbers-mode 1))))
 #+END_SRC
 *** COMMENT Named Workspaces
 I wrote a small package to replace the numbered workspaces of exwm
@@ -2669,7 +2889,7 @@ search for url if a matching tab is not found.
   (use-package desktop-environment
     :delight
     :config
-    (desktop-environment-mode)
+    (desktop-environment-mode 1)
     (defun desktop-environment-lock-screen ()
       "Lock the screen, preventing anyone without a password from using the system."
       (interactive)
@@ -2762,7 +2982,7 @@ search for url if a matching tab is not found.
   ;;; Allow non-floating resizing with mouse.
   (setq window-divider-default-bottom-width 0
         window-divider-default-right-width 6)
-  (window-divider-mode)
+  (window-divider-mode 1)
 
 
 #+END_SRC
