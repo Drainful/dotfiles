@@ -82,7 +82,7 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
     :keymap helm-exwm-map))
 
 (defvar helm-qutebrowser-sources '(helm-qutebrowser--buffers-source
-                   helm-qutebrowser-source-not-found))
+                                   helm-qutebrowser-source-not-found))
 
 (defun helm-qutebrowser-build-exwm-source ()
   "Build a Helm source for all non-EXWM buffers."

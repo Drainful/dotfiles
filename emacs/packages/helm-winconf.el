@@ -64,7 +64,7 @@ the alist.)"
 already in use, override that winconf."
   (interactive "M")
   (helm-winconf--save-window-config (current-window-configuration)
-                        name))
+                                    name))
 
 (defun helm-winconf--switch-to-cons (name-and-conf)
   "Switch to the named cofiguration given by by the cons cell
@@ -75,8 +75,8 @@ already in use, override that winconf."
       (helm-winconf--new current)
       (set-window-configuration (cdr name-and-conf))
       (setq helm-winconf--names-alist (cons name-and-conf
-                                (remove name-and-conf
-                                        helm-winconf--names-alist))))))
+                                            (remove name-and-conf
+                                                    helm-winconf--names-alist))))))
 
 (defun helm-winconf-switch (name)
   "Switch to the first winconf candidate."
@@ -121,7 +121,7 @@ already in use, override that winconf."
     :keymap helm-winconf--map))
 
 (defvar helm-winconf--sources (list helm-winconf--source
-                        helm-winconf--source-not-found))
+                                    helm-winconf--source-not-found))
 
 (defun helm-winconf ()
   (interactive)

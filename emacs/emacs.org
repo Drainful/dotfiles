@@ -1,4 +1,4 @@
-#TITLE: Emacs Configuration
+TITLE: Emacs Configuration
 #+CREATOR: Adrian Fullmer
 
 * Table of contents                                                     :TOC:
@@ -15,7 +15,6 @@
   - [[#straightel][Straight.el]]
 - [[#evil][Evil]]
   - [[#evil-collection][Evil collection]]
-  - [[#evil-easymotion][Evil easymotion]]
   - [[#evil-surround][Evil surround]]
   - [[#the-creation-of-text-objects][The creation of text objects]]
 - [[#keybindings-and-commands][Keybindings and Commands]]
@@ -37,7 +36,9 @@
   - [[#hideshow][Hideshow]]
   - [[#prettify-symbols][Prettify Symbols]]
   - [[#unnecessary-ui-elements][Unnecessary UI elements]]
+  - [[#files-and-backups][Files and backups]]
   - [[#line-and-column-numbers][Line and Column numbers]]
+  - [[#tabs-and-indentation][Tabs and Indentation]]
   - [[#line-wrap][Line wrap]]
   - [[#start-frame-maximized][Start frame maximized]]
   - [[#confirmation][Confirmation]]
@@ -45,6 +46,9 @@
   - [[#delimiters][Delimiters]]
   - [[#ediff][Ediff]]
   - [[#which-key][Which-key]]
+  - [[#help][Help]]
+- [[#text-editing][Text editing]]
+  - [[#iedit][Iedit]]
 - [[#dired][Dired]]
   - [[#keybindings][Keybindings]]
   - [[#dired-fl][Dired FL]]
@@ -65,7 +69,6 @@
   - [[#doom-themes][Doom Themes]]
   - [[#spacemacs-themes][Spacemacs themes]]
   - [[#theme][Theme]]
-- [[#text-tab-and-indent-related][Text, tab and indent related]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
   - [[#helm-winconf][Helm winconf]]
@@ -106,7 +109,6 @@
   - [[#emms][EMMS]]
   - [[#irc][IRC]]
   - [[#bitwarden][Bitwarden]]
-- [[#files-and-backups][Files and backups]]
 - [[#helper-functions][Helper functions]]
 
 * Startup
@@ -309,14 +311,14 @@ This provides ~evil~ friendly keybindings for a variety of modes.
     ;; (setq evil-collection-term-sync-state-and-mode-p nil)
     (evil-collection-init))
 #+END_SRC
-** Evil easymotion
+** COMMENT Evil easymotion
 This package helps with the issue of not knowing how many times to
 repeat an ~evil~ motion by providing a tag at the location of
 each possible motion result.
 #+BEGIN_SRC emacs-lisp
-(use-package evil-easymotion
-  :config
-  (evilem-default-keybindings "SPC"))
+  (use-package evil-easymotion
+    :config
+    (evilem-default-keybindings "C-M-S-~"))
 #+END_SRC
 ** Evil surround
 This solves the tricky issue of surrounding a block of text with
@@ -438,12 +440,12 @@ qThese are normal mode mappings not specific to any major mode.
     "C-j" 'evil-window-down
     "C-k" 'evil-window-up
     "C-l" 'evil-window-right
-    "C--" 'helm-projectile-grep
+    "C--" 'helm-do-ag-project-root
+    "C-=" 'helm-do-ag
     ;; Move a line of text using ALT+[jk]
-    "M-j" (kbd ":move + RET")
-    "M-k" (kbd ":move .-2 RET")
     "M-j" 'move-line-down
-    "M-k" 'move-line-up)
+    "M-k" 'move-line-up
+    "/" 'evil-ex-search-forward)
 #+END_SRC
 ** Visual Mode
 And these are visual mode mappings not specific to any major mode.
@@ -554,7 +556,8 @@ Usage:
                   "f" 'helm-find-files               ; ",f" to find file (replace :e)
                   "d" 'fzf-directory-from-home
                   "h" 'help
-                  "o" 'occur 
+                  "O" 'helm-do-ag-this-file 
+                  "o" 'helm-occur 
                   "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
@@ -563,7 +566,9 @@ Usage:
 *** Visual Mode
 #+BEGIN_SRC emacs-lisp
 (leader-key-def 'visual
-  "c" 'comment-or-uncomment-region)
+  "c" 'comment-or-uncomment-region
+  "O" 'helm-do-ag-this-file 
+  "o" 'helm-occur)
 #+END_SRC
 ** Shell Commands
 M-x commands for common shell commands such as reboot.
@@ -694,6 +699,7 @@ which integrates well across Emacs.
     (setq helm-window-show-buffers-function 'helm-window-mosaic-fn)
 
     (defun me/helm-fix-insert-state-keys ()
+      (setq evil-insert-state-local-map (make-keymap))
       (define-key evil-insert-state-local-map (kbd "C-n") #'helm-next-line)
       (define-key evil-insert-state-local-map (kbd "C-p") #'helm-previous-line))
     ;; (setq-local evil-insert-state-map (make-keymap ))
@@ -703,6 +709,13 @@ which integrates well across Emacs.
 
     ;; Refresh helm-top
     (helm-top-poll-mode 1))
+#+END_SRC
+*** Helm ag
+#+BEGIN_SRC emacs-lisp
+  (use-package helm-ag
+    :config
+    ;; (setq helm-ag-insert-at-point 'symbol)
+    (setq helm-ag-base-command "rg --no-heading"))
 #+END_SRC
 *** Extending helm-highight-buffers
 *** COMMENT Helper functions
@@ -752,6 +765,15 @@ Emacs comes with such useless features as a tool bar. Turn them off.
 (add-to-list 'default-frame-alist
              '(vertical-scroll-bars . nil))
 #+END_SRC
+** Files and backups
+Don't make backups.
+#+BEGIN_SRC emacs-lisp
+(setq make-backup-files nil)
+#+END_SRC
+Save cursor position in a file between sessions.
+#+BEGIN_SRC emacs-lisp
+(save-place-mode 1)
+#+END_SRC
 ** Line and Column numbers
 Display them both in the mode line, and show line number on the side
 of the screen in ~prog-mode~.
@@ -762,6 +784,12 @@ of the screen in ~prog-mode~.
     "l" #'display-line-numbers-mode)
 
   (setq column-number-mode t)
+#+END_SRC
+** Tabs and Indentation
+I use 4 spaces by default.
+#+BEGIN_SRC emacs-lisp
+(setq-default tab-width 4
+              indent-tabs-mode nil)
 #+END_SRC
 ** Line wrap
 Do not truncate lines.
@@ -830,6 +858,12 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
     :config
     (which-key-mode t))
 #+END_SRC
+** Help
+#+BEGIN_SRC emacs-lisp
+  (general-nmap help-mode-map
+    "H" #'help-go-back
+    "L" #'help-go-forward)
+#+END_SRC
 ** COMMENT Beacon
 Highlight the cursor when switching buffers.
 #+BEGIN_SRC emacs-lisp
@@ -837,6 +871,23 @@ Highlight the cursor when switching buffers.
     :delight
     :config
     (beacon-mode 1))
+#+END_SRC
+* Text editing
+** Iedit
+
+#+BEGIN_SRC emacs-lisp
+  (use-package iedit)
+
+  (use-package evil-iedit-state
+    :config
+    (defun me/evil-iedit-toggle ()
+      (interactive)
+      (if (evil-iedit-state-p)
+          (evil-iedit-state/quit-iedit-mode)
+        (evil-iedit-state/iedit-mode)))
+
+    (general-def global-map
+      "C-;" #'me/evil-iedit-toggle))
 #+END_SRC
 * Dired
 Some dired configuration
@@ -1453,7 +1504,7 @@ Doom Emacs looks good. I want those themes.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-    (switch-theme 'doom-one-light)
+  (switch-theme 'doom-vibrant)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1469,12 +1520,6 @@ The theme loaded depends upon time of day. Causes slight face issues.
     (setq calendar-latitude me/calendar-latitude)
     (setq calendar-longitude me/calendar-longitude)
     (change-theme 'doom-one-light 'doom-one))
-#+END_SRC
-* Text, tab and indent related
-I use 4 spaces by default.
-#+BEGIN_SRC emacs-lisp
-(setq-default tab-width 4
-              indent-tabs-mode nil)
 #+END_SRC
 * Moving around, buffers, windows and splits
 ** Winner Mode
@@ -1568,7 +1613,7 @@ project.
     :config
     (general-def
       :states 'normal
-      :keymaps 'override
+      :keymaps 'projectile-mode-map
       "C-p" 'helm-projectile-find-file)
     (project-key-def 'normal 'projectile-mode-map
                      "p" 'projectile-switch-project
@@ -1747,59 +1792,13 @@ next buffer with content respectively.
                     "<tab>" 'previous-buffer
                     "<backtab>" 'next-buffer)
 #+END_SRC
-*** Buffer toggling
+*** COMMENT Buffer toggling
 This is a keybinding for toggling between 2
 buffers. Faster than ~,-b\r~.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'normal ; :keymaps 'override
                       "<tab>" 'evil-buffer)
 #+END_SRC
-;; (use-package org
-;;   :delight org-indent-mode
-;;   ;; :hook (org-mode ((lambda nil (load-theme-buffer-local 'tsdh-light (current-buffer)))))
-;;   :config
-;;   ;; (load "/home/adrian/.emacs.d/straight/repos/org/lisp/org-compat.el")
-;;   (setq header-line-format " ")
-;;   ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
-;;   ;; (lambda () (progn
-;;   ;;              (setq left-margin-width 2)
-;;   ;;              (setq right-margin-width 2)
-;;   ;;              (set-window-buffer nil (current-buffer))))
-;;   ;;(setq line-spacing 0.1)
-;;   (setq org-startup-indented t
-;;         ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-;;         ;;org-ellipsis "  " ;; folding symbol
-;;         org-pretty-entities t
-;;         org-hide-emphasis-markers t
-;;         ;; show actually italicized text instead of /italicized text/
-;; ;;;org-agenda-block-separator ""
-;;         org-fontify-whole-heading-line t
-;;         org-fontify-done-headline t
-;;         org-fontify-quote-and-verse-blocks t
-;;         org-src-ask-before-returning-to-edit-buffer nil
-;;         org-src-window-setup 'current-window)
-;;   (general-def :states 'normal :keymaps 'org-mode-map
-;;     "C-`" 'org-edit-special)
-;;   (org-babel-do-load-languages
-;;    'org-babel-load-languages
-;;    '((lisp . t)))
-;;   (setq org-babel-lisp-eval-fn #'sly-eval)
-
-;;   (add-hook 'org-mode-hook #'auto-fill-mode)
-;;   (require 'delight)
-;;   (delight 'auto-fill-function "" t)
-
-;;   ;; "C-j" 'evil-window-down
-;;   ;; "C-k" 'evil-window-up
-;;   ;; (define-key org-mode-map (kbd "<C-j>") nil)
-;;   ;; (define-key org-mode-map (kbd "<C-k>") nil)
-;;   (leader-key-def 'normal org-src-mode-map
-;;                   "q" 'org-edit-src-exit)
-;;   (add-hook 'org-mode-hook (lambda ()
-;;                              (general-def :states 'normal :keymaps 'org-mode-map
-;;                                "C-j" 'evil-window-down
-;;                                "C-k" 'evil-window-up))))
-
 * Programming tools and settings
 ** Agressive Indent
 ~agressive-indent-mode~ maintaints indentation as code is reformatted
@@ -2031,6 +2030,13 @@ files.
 #+END_SRC
 * Language specific tools and settings
 ** Lisps
+#+BEGIN_SRC emacs-lisp
+  (defvar me/lisp-modes
+    '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map))
+
+  (cl-defun me/lisp-mode-p (&optional (mode major-mode))
+    (find mode me/lisp-modes))
+#+END_SRC
 *** Lispy/ville
 ~lispy~ is my S-expr editing tool of choice. It integrates with ~evil~
 through ~lispyville~ minor mode.
@@ -2056,16 +2062,16 @@ Lispy is a de-facto mode for lisp languages, so lisp-specific
 functionality can be appended to it.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'insert
-                      :keymaps '(lispyville-mode-map sly-mode-map)
-                      "M-l" (lambda () (interactive)
-                              (insert "lambda"))
-                      "M-k" #'lispy-slurp-or-barf-right
-                      "M-j" #'lispy-slurp-or-barf-left)
+    :keymaps '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map)
+    "M-l" (lambda () (interactive)
+            (insert "lambda"))
+    "M-k" #'lispy-slurp-or-barf-right
+    "M-j" #'lispy-slurp-or-barf-left)
 
   (general-def :states 'normal
-                      :keymaps '(lispyville-mode-map sly-mode-map)
-                      "M-k" #'lispy-slurp-or-barf-right
-                      "M-j" #'lispy-slurp-or-barf-left)
+    :keymaps '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map)
+    "M-k" #'lispy-slurp-or-barf-right
+    "M-j" #'lispy-slurp-or-barf-left)
 #+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a different color.
@@ -2758,7 +2764,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (startup-programs
      "networkmanager applet" nil "nm-applet"
      "compton" nil "compton --config ~/comptonconfig.txt"
-     "avfs" nil "mountavfs")
+     "avfs" nil "mountavfs"
+     "restart redshift" nil "systemctl --user restart redshift.service")
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -3160,15 +3167,6 @@ el interface to ~bitwarden-cli~
     :config
     (setq bitwarden-automatic-unlock (lambda ()
                                        (read-passwd "Password: "))))
-#+END_SRC
-* Files and backups
-Don't make backups.
-#+BEGIN_SRC emacs-lisp
-(setq make-backup-files nil)
-#+END_SRC
-Save cursor position in a file between sessions.
-#+BEGIN_SRC emacs-lisp
-(save-place-mode 1)
 #+END_SRC
 * Helper functions
 Various small functions which are evaluated before anything else in the file.

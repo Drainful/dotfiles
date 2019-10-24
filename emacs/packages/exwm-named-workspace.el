@@ -153,9 +153,9 @@ current workspace on top of the history stack."
 
 (defun exwm-named-workspace--remove-strings (strings list)
   (mapcar (lambda (string)
-         (cl-remove-if (lambda (s) (string= string s))
-                    list))
-       strings))
+            (cl-remove-if (lambda (s) (string= string s))
+                          list))
+          strings))
 
 (cl-defun exwm-named-workspace-read (&key prompt
                      ;; without-default-workspaces
@@ -212,19 +212,19 @@ workspaces. Interactive."
   (exwm-workspace-delete (exwm-named-workspace--name->frame workspace)))
 
 (defun exwm-named-workspace--circular-copy (list)
-    "Return a copy of the given list where the last element points
+  "Return a copy of the given list where the last element points
   to the first, rather than to nil."
-    (when list
-      (let ((new-list (cl-copy-list list)))
-         (setf (cdr (last new-list))
-                  new-list))))
+  (when list
+    (let ((new-list (cl-copy-list list)))
+      (setf (cdr (last new-list))
+            new-list))))
 
 (defun exwm-named-workspace-history (n &optional norecord)
   "Switch to the Nth element of the workspace history
 circularly. If norecord is non-nil, do not update the history."
   (let ((exwm-named-workspace-message-on-switch t))
     (exwm-named-workspace--switch (exwm-named-workspace--frame->name
-               (nth n (exwm-named-workspace--circular-copy exwm-named-workspace--history)))
-              norecord)))
+                                   (nth n (exwm-named-workspace--circular-copy exwm-named-workspace--history)))
+                                  norecord)))
 
 (provide 'exwm-named-workspace)

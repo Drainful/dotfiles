@@ -9,7 +9,7 @@ c.zoom.default = 67
 
 c.tabs.tabs_are_windows = True
 c.tabs.show = "never"
-c.window.title_format = "{perc}{title} -- {current_url}"
+c.window.title_format = "{perc}{current_title} -- {current_url}"
 
 # url
 c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}

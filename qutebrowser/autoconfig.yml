@@ -4,4 +4,4 @@
 config_version: 2
 settings:
   scrolling.bar:
-    global: never
+    global: always

@@ -45,12 +45,12 @@ class (`exwm-class-name')"
     (car last)))
 
 (cl-defmacro exlaunch-shortcut (name &key shell-command args
-                             (switch-to t)
-                             exwm-class
-                             other-window
-                             before
-                             after
-                             in-workspace)
+                                     (switch-to t)
+                                     exwm-class
+                                     other-window
+                                     before
+                                     after
+                                     in-workspace)
   "Create a function to launch the program given by NAME. 
 
 The following keyword args are available:
