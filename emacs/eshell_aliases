@@ -1,19 +1,20 @@
-alias ll ls -l $*
-alias md mkdir $*
-alias ~ cd ~
-alias .. cd ..
-alias ... cd ../..
-alias spdep spark deploy ~/.dotfiles/dotfiles.sus
-alias nrs sudo nixos-rebuild switch
-alias nrb sudo nixos-rebuild boot
-alias nfind nix-env -f '<nixpkgs>' -qaP $*
-alias nquery nix-env --query $*
-alias nuninstall sudo nix-env -f '<nixpkgs>' --uninstall $*
-alias nget sudo nix-env -f '<nixpkgs>' --install -A $*
-alias qlrun rlwrap quicklisp run $*
-alias shen rlwrap /home/adrian/code/common-lisp/my-forks/shen-cl/bin/sbcl/shen -l ~/.shen-cl.shen
-alias ns nix-shell
-alias :q exit
-alias spotify spotify --force-device-scale-factor=2.0 > out.log 2> /dev/null &
-alias def bash ~/auto/def/def.bash
+alias clear clear t
 alias tb nc termbin.com 9999
+alias def bash ~/auto/def/def.bash
+alias spotify spotify --force-device-scale-factor=2.0 > out.log 2> /dev/null &
+alias :q exit
+alias ns nix-shell
+alias shen rlwrap /home/adrian/code/common-lisp/my-forks/shen-cl/bin/sbcl/shen -l ~/.shen-cl.shen
+alias qlrun rlwrap quicklisp run $*
+alias nget sudo nix-env -f '<nixpkgs>' --install -A $*
+alias nuninstall sudo nix-env -f '<nixpkgs>' --uninstall $*
+alias nquery nix-env --query $*
+alias nfind nix-env -f '<nixpkgs>' -qaP $*
+alias nrb sudo nixos-rebuild boot
+alias nrs sudo nixos-rebuild switch
+alias spdep spark deploy ~/.dotfiles/dotfiles.sus
+alias ... cd ../..
+alias .. cd ..
+alias ~ cd ~
+alias md mkdir $*
+alias ll ls -l $*

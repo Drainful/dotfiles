@@ -80,7 +80,6 @@ TITLE: Emacs Configuration
   - [[#autocompletion][Autocompletion]]
   - [[#linting][Linting]]
   - [[#git-magit][Git (Magit)]]
-  - [[#snippets][Snippets]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
   - [[#documentation][Documentation]]
@@ -103,11 +102,13 @@ TITLE: Emacs Configuration
   - [[#org][Org]]
   - [[#nix][Nix]]
   - [[#bash][Bash]]
+- [[#external-tools][External tools]]
 - [[#emacs-does-everything][Emacs does everything]]
   - [[#emacs-window-manager-exwm][Emacs window manager (EXWM)]]
   - [[#document-viewer][Document viewer]]
   - [[#emms][EMMS]]
   - [[#irc][IRC]]
+  - [[#weather][Weather]]
   - [[#bitwarden][Bitwarden]]
 - [[#helper-functions][Helper functions]]
 
@@ -276,20 +277,19 @@ I have switched to straight.el for my packaging needs.
 These are settings for the emulation of Vim in Emacs. I would not be
 using emacs today if it were not for ~evil-mode~.
 #+BEGIN_SRC emacs-lisp
+  ;; settings for evil-collection integration
+  (setq evil-want-keybinding nil)
+  (setq evil-want-integration t)
+  (setq evil-want-minibuffer t)
+
   (use-package evil
-    :init
-    ;; highlight all search results
-    (setq evil-search-module 'evil-search)
-    ;; settings for evil-collection integration
-    (setq evil-want-keybinding nil)
-    (setq evil-want-integration t)
-    (setq evil-want-minibuffer t)
-  
-  
     :config
     (evil-mode 1)
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
     (global-undo-tree-mode -1)
+
+    ;; highlight all search results
+    (setq evil-search-module 'evil-search)
 
     ;; ex commands
     (eval-after-load 'evil-ex
@@ -433,7 +433,7 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
   ;;            ")" "0")
 #+END_SRC
 ** Normal Mode
-qThese are normal mode mappings not specific to any major mode.
+These are normal mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
   (general-nmap
     "C-h" 'evil-window-left
@@ -445,7 +445,14 @@ qThese are normal mode mappings not specific to any major mode.
     ;; Move a line of text using ALT+[jk]
     "M-j" 'move-line-down
     "M-k" 'move-line-up
-    "/" 'evil-ex-search-forward)
+    ;; "/" 'evil-ex-search-forward
+    "t" 'evil-avy-goto-char-timer
+    "q" 'evil-avy-goto-subword-1
+    "g r" 'revert-buffer)
+
+  (general-vmap
+    "t" 'evil-avy-goto-char
+    "q" 'evil-avy-goto-subword-1)
 #+END_SRC
 ** Visual Mode
 And these are visual mode mappings not specific to any major mode.
@@ -548,10 +555,15 @@ Usage:
 #+END_SRC
 *** Normal Mode
 #+BEGIN_SRC emacs-lisp
+  (defun bury-evil-buffer ()
+    (interactive)
+    (bury-buffer)
+    (call-interactively #'evil-buffer))
+
   (leader-key-def 'normal
                   "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
                   "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
-                  "a" 'bury-buffer              ; ",a" to send buffer to the end of recently used.
+                  "a" #'bury-evil-buffer
                   "b" 'helm-mini                     ; ",b" to switch buffers.
                   "f" 'helm-find-files               ; ",f" to find file (replace :e)
                   "d" 'fzf-directory-from-home
@@ -562,6 +574,15 @@ Usage:
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
                   "RET" (kbd ":noh"))
+  (alt-leader-key-def 'normal
+    "q" 'evil-record-macro
+    "j" 'evil-avy-goto-line-below
+    "k" 'evil-avy-goto-line-above)
+
+  (alt-leader-key-def 'normal
+    "q" 'evil-record-macro
+    "j" 'evil-avy-goto-line-below
+    "k" 'evil-avy-goto-line-above)
 #+END_SRC
 *** Visual Mode
 #+BEGIN_SRC emacs-lisp
@@ -684,19 +705,14 @@ which integrates well across Emacs.
     :config
     (helm-mode t)
 
-    (setq helm-buffer-max-length 120)
-    ;; (setq helm-display-buffer-default-height 30)
-    (setq helm-display-buffer-default-height nil)
-    (setq helm-default-display-buffer-functions '(display-buffer-same-window))
-    ;; (setq helm-autoresize-mode t)
-    ;; Do not create a new frame with helm completion.
-    (setq helm-show-completion-display-function
-          #'helm-show-completion-default-display-function)
-    (setq helm-follow-mode-persistent nil)
-
-    ;; How helm should handle opening new windows
-    (setq helm-window-prefer-horizontal-split t)
-    (setq helm-window-show-buffers-function 'helm-window-mosaic-fn)
+    (setq helm-buffer-max-length 120
+          helm-display-buffer-default-height nil
+          helm-show-completion-display-function #'helm-show-completion-default-display-function
+          helm-follow-mode-persistent nil
+          helm-window-prefer-horizontal-split t
+          helm-window-show-buffers-function 'helm-window-mosaic-fn
+          helm-split-window-default-side 'same)
+  
 
     (defun me/helm-fix-insert-state-keys ()
       (setq evil-insert-state-local-map (make-keymap))
@@ -828,9 +844,9 @@ Close delimiters automatically as I write.
 *** Matching parens
 Highlight the parentheis whose pair is under the point.
 #+BEGIN_SRC emacs-lisp
-  (show-paren-mode t)
-  (setq show-paren-delay 0)
-  (setq show-paren-style 'parenthesis)
+  (show-paren-mode 1)
+  (setq show-paren-delay 0
+        show-paren-style 'parenthesis)
 #+END_SRC
 *** Highlight parentheses
 Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/questions/34846531/show-parentheses-when-inside-them-emacs][this]] thread.
@@ -857,6 +873,73 @@ key press. ~which-key~ key replacements are generated [[#leader][here]].
     :delight
     :config
     (which-key-mode t))
+#+END_SRC
+*** Prefix command completion
+From [[https://with-emacs.com/posts/prefix-command-completion/][this blog post]], offer compltion of key prefix candidates via the
+prefix-help-command.
+#+BEGIN_SRC emacs-lisp
+  (defun which-key-M-x-prefix+ (&optional _)
+    "Completing read and execute command from current prefix map.
+
+  This command can be used as `prefix-help-command'.
+
+  The optional argument is ignored and only for compatability with
+  `which-key-C-h-dispatch' so this command can be bound in
+  `which-key-C-h-map', too."
+    (interactive)
+    (let* ((evs (if (which-key--current-prefix)
+                    (which-key--current-key-list)
+                  (butlast (append (this-command-keys-vector) nil))))
+           (key (apply #'vector evs))
+           (map (key-binding key)))
+      (which-key--execute-binding+ map (key-description key))))
+
+  (defun which-key--execute-binding+ (map &optional prefix)
+    "Completing read command from MAP and execute it.
+
+  If PREFIX is given it should be a key description which will be
+  included in the prompt."
+    (let ((cmd (which-key--completing-read-cmd+ map prefix)))
+      (when (commandp cmd)
+        (which-key--execute-cmd+ cmd))))
+
+  (defun which-key--completing-read-cmd+ (map &optional prefix)
+    "Completing read command from MAP.
+
+  Include PREFIX in prompt if given."
+    (which-key--hide-popup-ignore-command)
+    (let* ((desc
+            (completing-read
+             (if prefix
+                 (format "Execute (%s): " prefix)
+               "Execute: ")
+             (mapcar #'which-key--completing-read-format+
+                     (which-key--get-keymap-bindings map 'all)))))
+      (intern (car (split-string desc)))))
+
+  (defun which-key--execute-cmd+ (cmd)
+    "Execute command CMD as if invoked by key sequence."
+    (setq prefix-arg current-prefix-arg)
+    (setq this-command cmd)
+    (setq real-this-command cmd)
+    (command-execute cmd 'record))
+
+  (defun which-key--completing-read-format+ (bnd)
+    "Format binding BND for `completing-read'."
+    (let* ((key (car bnd))
+           (cmd (cdr bnd))
+           (desc (format "%s (%s)" cmd
+                         (propertize key 'face 'which-key-key-face))))
+      (let ((which-key-show-docstrings t))
+        (which-key--maybe-add-docstring
+         (format "%-50s" desc) cmd))))
+
+  (setq prefix-help-command
+        #'which-key-C-h-dispatch)
+
+  ;; (setq prefix-help-command #'which-key-M-x-prefix+)
+  (general-def which-key-C-h-map
+    "C-h" #'which-key-M-x-prefix+)
 #+END_SRC
 ** Help
 #+BEGIN_SRC emacs-lisp
@@ -1040,14 +1123,12 @@ primary shell.
 
   (setq eshell-prompt-function
         (lambda ()
-          (concat
-           ;;          "
-           ;; "
-           "[" (abbreviate-file-name (eshell/pwd)) "]"
-           "
-  "
-           " " (if (= (user-uid) 0) "-->" "==>") " ")))
-
+          (let ((pwd (concat "[" (abbreviate-file-name (eshell/pwd)) "]")))
+            (concat pwd
+                    (when (< 0.5 (/ (* 1.0 (length pwd))
+                                    (window-width))) "
+  ")
+                    " " (if (= (user-uid) 0) "Λ" "λ") " "))))
   (defun eshell-buffer-name-function (&optional directory)
     (concat "*eshell at "
             (abbreviate-file-name (or directory
@@ -1373,6 +1454,11 @@ Emacs.
 #+BEGIN_SRC emacs-lisp
   ;; try ftp passive mode
   (setq ange-ftp-try-passive-mode t)
+
+  ;; Some quick functions
+  (defun me/~club ()
+    (interactive)
+    (find-file "/ssh:ipkcle@tilde.club:/home/ipkcle"))
 #+END_SRC
 * Emacs client/server settings
 #+BEGIN_SRC emacs-lisp
@@ -1488,7 +1574,7 @@ Doom Emacs looks good. I want those themes.
 #+END_SRC
 ** Spacemacs themes
 #+BEGIN_SRC emacs-lisp
-(use-package spacemacs-theme)
+;; (use-package spacemacs-theme)
 #+END_SRC
 ** COMMENT Poet Theme
 #+BEGIN_SRC emacs-lisp
@@ -1504,7 +1590,7 @@ Doom Emacs looks good. I want those themes.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-vibrant)
+  (switch-theme 'doom-one)
   ;; (if (display-graphic-p)
   ;;     (load-theme 'badwolf t)
   ;;   (disable-all-themes))
@@ -1876,7 +1962,7 @@ A package to interact with Git forges like Gitlab.
 #+BEGIN_SRC emacs-lisp
   (use-package forge)
 #+END_SRC
-** Snippets
+** COMMENT Snippets
 ~yasnippet~ allows the creation of snippets to automate repetitive typing.
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
@@ -1983,10 +2069,6 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
     (add-hook 'projectile-after-switch-project-hook
               (lambda () (ignore-errors (projectile-lorri-watch))))
 
-    ;; Non-file modes which should also be synched with direnv
-    (defmacro add-direnv-non-file-modes (&rest body)
-      `(mapcar (lambda (mode) (add-to-list 'direnv-non-file-modes mode)) (list ,@body)))
-
     ;; Advice to run emacsHook
     (defun run-emacs-hook ()
       (if (getenv "emacsHook")
@@ -1994,9 +2076,9 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
                       (format "(progn %s)"
                               (getenv "emacsHook")))))))
 
-    (advice-add 'direnv-update-directory-environment
-                :after
-                #'run-emacs-hook)
+    ;; (advice-add 'direnv-update-directory-environment
+    ;;             :after
+    ;;             #'run-emacs-hook)
 
     (defvar to-add-to-ld-library-path "")
 
@@ -2007,9 +2089,13 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
         (setq to-add-to-ld-library-path new-to-add)
         (add-to-path to-add-to-ld-library-path "LD_LIBRARY_PATH" ":")))
 
-    (advice-add 'direnv-update-directory-environment
-                :after
-                #'add-to-ld-library-path)
+    ;; (advice-add 'direnv-update-directory-environment
+    ;;             :after
+    ;;             #'add-to-ld-library-path)
+
+    ;; Non-file modes which should also be synched with direnv
+    (defmacro add-direnv-non-file-modes (&rest body)
+      `(mapcar (lambda (mode) (add-to-list 'direnv-non-file-modes mode)) (list ,@body)))
 
     (add-direnv-non-file-modes
      'sly-mode
@@ -2062,14 +2148,14 @@ Lispy is a de-facto mode for lisp languages, so lisp-specific
 functionality can be appended to it.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'insert
-    :keymaps '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map)
+    :keymaps 'lispyville-mode-map
     "M-l" (lambda () (interactive)
             (insert "lambda"))
     "M-k" #'lispy-slurp-or-barf-right
     "M-j" #'lispy-slurp-or-barf-left)
 
   (general-def :states 'normal
-    :keymaps '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map)
+    :keymaps 'lispyville-mode-map
     "M-k" #'lispy-slurp-or-barf-right
     "M-j" #'lispy-slurp-or-barf-left)
 #+END_SRC
@@ -2568,6 +2654,20 @@ Enter ~common-lisp-mode~ in the following files
        ".lisprc\\'"
        ".otherlisprc\\'")
 #+END_SRC
+* External tools
+Prodigy mode provides a better interface to emacs child services.
+#+BEGIN_SRC emacs-lisp
+  ;; startup programs
+  (define-multi-macro startup-programs start-process-shell-command 3)
+
+  (startup-programs
+   "networkmanager applet" nil "nm-applet"
+   "compton" nil "compton --config ~/comptonconfig.txt"
+   "avfs" nil "mountavfs"
+   "restart redshift" nil "systemctl --user restart redshift.service")
+
+  (use-package prodigy)
+#+END_SRC
 * Emacs does everything
 ** COMMENT Spotify
 Control spotify running on any device from Emacs.
@@ -2607,6 +2707,8 @@ Control spotify running on any device from Emacs.
 *** Main Package
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
+  (setq mouse-autoselect-window t
+        focus-follows-mouse t)
   (use-package exwm
     :straight (:host github :repo "ch11g/exwm")
     :delight
@@ -2746,7 +2848,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; program, and "s-w" to kill the current buffer AND window
             ([?\s-w] . actually-kill-this-buffer)
             ([?\s-q] . evil-delete-buffer)
-            ([?\s-a] . bury-buffer)
+            ([?\s-a] . bury-evil-buffer)
             ;; bind "s-g" to keyboard-quit
             ([?\s-g] . keyboard-quit)))
 
@@ -2757,15 +2859,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (require 'exwm-systemtray)
     (setq exwm-systemtray-height 34)
     (exwm-systemtray-enable)
-
-    ;; startup programs
-    (define-multi-macro startup-programs start-process-shell-command 3)
-
-    (startup-programs
-     "networkmanager applet" nil "nm-applet"
-     "compton" nil "compton --config ~/comptonconfig.txt"
-     "avfs" nil "mountavfs"
-     "restart redshift" nil "systemctl --user restart redshift.service")
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -3113,7 +3206,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
       (message "Total time is %dh:%dm:%ds" total-hour-only total-minutes-only total-seconds-only)))
 
   (leader-key-def normal emms-playlist-mode-map
-    "t" #'my-emms-playlist-total-time-below-point)
+    "i" #'my-emms-playlist-total-time-below-point)
 #+END_SRC
 *** Helm EMMS
 #+BEGIN_SRC emacs-lisp
@@ -3158,6 +3251,13 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
              :tls nil
              :nick ,me/freenode-nick
              :nickserv-password me/nickserv-password))))
+#+END_SRC
+** Weather
+Interface to wttr.in
+#+BEGIN_SRC emacs-lisp
+  (use-package wttrin
+    :config
+    (setq wttrin-default-cities '("Evanston")))
 #+END_SRC
 ** Bitwarden
 el interface to ~bitwarden-cli~ 
@@ -3219,8 +3319,8 @@ Various small functions which are evaluated before anything else in the file.
     (concat me/dotfiles path))
 
   (defun actually-kill-this-buffer ()
-    "Kills the current buffer, unlike ~kill-this-buffer~ which does
-    not always do that."
+    "Kills the current buffer, unlike ~kill-this-buffer~ 
+  which does not always do that."
     (interactive)
     (kill-buffer (current-buffer)))
 
