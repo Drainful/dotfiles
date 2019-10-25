@@ -730,7 +730,7 @@ which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package helm-ag
     :config
-    ;; (setq helm-ag-insert-at-point 'symbol)
+    (setq helm-ag-insert-at-point 'symbol)
     (setq helm-ag-base-command "rg --no-heading"))
 #+END_SRC
 *** Extending helm-highight-buffers
@@ -2667,6 +2667,25 @@ Prodigy mode provides a better interface to emacs child services.
    "restart redshift" nil "systemctl --user restart redshift.service")
 
   (use-package prodigy)
+
+  (use-package openwith
+    :config
+    ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
+    (defvar my-ok-large-file-types
+      "\\.\\(?:mpe?g\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+      "Regexp matching filenames which are definitely ok to visit,
+  even when the file is larger than `large-file-warning-threshold'.")
+
+    (defadvice abort-if-file-too-large (around my-check-ok-large-file-types)
+      "If FILENAME matches `my-ok-large-file-types', do not abort."
+      (unless (string-match-p my-ok-large-file-types (ad-get-arg 2))
+        ad-do-it))
+    (ad-activate 'abort-if-file-too-large)
+
+    (setq openwith-associations
+          '(("\\.\\(?:mpe?g\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+             "mpv" ("--loop" file))))
+    (openwith-mode +1))
 #+END_SRC
 * Emacs does everything
 ** COMMENT Spotify
