@@ -99,6 +99,7 @@ TITLE: Emacs Configuration
   - [[#julia][Julia]]
   - [[#haskell][Haskell]]
   - [[#elm][Elm]]
+  - [[#html][HTML]]
   - [[#org][Org]]
   - [[#nix][Nix]]
   - [[#bash][Bash]]
@@ -558,7 +559,8 @@ Usage:
   (defun bury-evil-buffer ()
     (interactive)
     (bury-buffer)
-    (call-interactively #'evil-buffer))
+    ;; (call-interactively #'evil-buffer)
+    )
 
   (leader-key-def 'normal
                   "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
@@ -1066,7 +1068,11 @@ This allows seamless archive browsing
 *** Dired Ranger
 Multi-stage copy/paste
 #+BEGIN_SRC emacs-lisp
-  (use-package dired-ranger)
+  (use-package dired-ranger
+    :config
+    (general-def normal dired-mode-map
+      "c" #'dired-ranger-copy
+      "p" #'dired-ranger-paste))
 #+END_SRC
 *** Dired Narrow
 Interactively narrow/filter a dired buffer. Usually I just use
@@ -2547,6 +2553,17 @@ Enable ~flycheck~
   (add-hook 'flycheck-mode-hook 'flycheck-elm-setup))
   
 (use-package elm-mode)
+#+END_SRC
+** HTML
+#+BEGIN_SRC emacs-lisp
+  (use-package web-mode
+    :config
+    (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode)))
+
+  (use-package emmet-mode
+    :config
+    (add-to-list 'auto-mode-alist '("\\.html?\\'" . emmet-mode)))
+
 #+END_SRC
 ** Org
 ~org-mode~ is a markup mode with many features, including creating
