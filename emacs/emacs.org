@@ -20,7 +20,6 @@ TITLE: Emacs Configuration
 - [[#keybindings-and-commands][Keybindings and Commands]]
   - [[#generalel][General.el]]
   - [[#hydrael][Hydra.el]]
-  - [[#commands][Commands]]
   - [[#conditional-key-translations][Conditional key translations]]
   - [[#all-modes][All modes]]
   - [[#normal-mode][Normal Mode]]
@@ -67,7 +66,6 @@ TITLE: Emacs Configuration
   - [[#daemon-management][Daemon Management]]
 - [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
   - [[#doom-themes][Doom Themes]]
-  - [[#spacemacs-themes][Spacemacs themes]]
   - [[#theme][Theme]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
@@ -82,7 +80,6 @@ TITLE: Emacs Configuration
   - [[#git-magit][Git (Magit)]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
-  - [[#documentation][Documentation]]
   - [[#direnv-and-lorri][Direnv and Lorri]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
@@ -211,72 +208,8 @@ A functional alternative to package.el which promotes reusablility.
 
   (setq straight-use-package-by-default t)
 #+END_SRC
-** COMMENT package.el
-I have switched to straight.el for my packaging needs.
-*** Package Initialization
-*Before I can install packages I must first initialize package sources
-*and installation tools. Here I source ~elpa~ and ~melpa~.
-*#+BEGIN_SRC emacs-lisp
-*
-*(require 'package)
-*(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
-                    *(not (gnutls-available-p))))
-       *(proto (if no-ssl "http" "https")))
-  *(when no-ssl (warn "\
-*Your version of Emacs does not support SSL connections,
-*which is unsafe because it allows man-in-the-middle attacks.
-*There are two things you can do about this warning:
-*1. Install an Emacs version that does support SSL and be safe.
-*2. Remove this warning from your init file so you won't see it again."))
-  *;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
-  *(add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t)
-  *(add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t)
-  *(when (< emacs-major-version 24)
-    *;; For important compatibility libraries like cl-lib
-    *(add-to-list 'package-archives (cons "gnu" (concat proto "://elpa.gnu.org/packages/")))))
-*
-*(package-initialize)
-**#+END_SRC
-
-*** Use-Package
-*I use the ever-popular package-using facility ~use-package~. It is
-*installed automatically by a nix expression in my dotfiles. This line
-*causes ~use-package~ expressions to be automatically downloaded.
-*
-*#+BEGIN_SRC emacs-lisp
-*(setq use-package-always-ensure t)
-**#+END_SRC
-
-*** Quelpa
-*~quelpa~ is a package installation facility that allows packages to be
-*installed from arbitrary sources. This is convenient for getting
-*bleeding edge versions of packages which have yet to reach ~melpa~.
-*#+BEGIN_SRC emacs-lisp
-*(use-package quelpa)
-*
-*(setq quelpa-upgrade-p nil)
-*
-*(use-package quelpa-use-package)
-*
-*(quelpa-use-package-activate-advice)
-**#+END_SRC
-
-*** COMMET Automatic Upgrades
-*This code enables automatic package upgrades.
-*#+BEGIN_SRC emacs-lisp
-*(setq quelpa-upgrade-p t)
-*
-*(package-refresh-contents)
-*
-*(use-package auto-package-update
-  *:config
-  *(setq auto-package-update-delete-old-versions t)
-  *(setq auto-package-update-hide-results t)
-  *(auto-package-update-maybe))
-*#+END_SRC
 * Evil
-These are settings for the emulation of Vim in Emacs. I would not be
-using emacs today if it were not for ~evil-mode~.
+These are my settings for the Evil, the Vim emulator for Emacs.
 #+BEGIN_SRC emacs-lisp
   ;; settings for evil-collection integration
   (setq evil-want-keybinding nil)
@@ -394,13 +327,6 @@ It integrates well with ~evil~.
 #+BEGIN_SRC emacs-lisp
 (use-package hydra)
 #+END_SRC
-** Commands
-I don't have too much use for ~evil~ commands, but early on I created a
-couple.
-#+BEGIN_SRC emacs-lisp
-(evil-ex-define-cmd "Src" 'reload-init-file)
-(evil-ex-define-cmd "Restart" 'restart-emacs)
-#+END_SRC
 ** Conditional key translations
 The equivalent of Vim noremaps are Emacs key translations. They apply
 globally, so here are some macros to create key translations which apply
@@ -456,21 +382,22 @@ These are normal mode mappings not specific to any major mode.
     "q" 'evil-avy-goto-subword-1)
 #+END_SRC
 ** Visual Mode
-And these are visual mode mappings not specific to any major mode.
+These are visual mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
 (general-vmap
   ;; Move a visual block of text using ALT+[jk]
   "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
 #+END_SRC
 ** Insert Mode
+These are insert mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
   ;; (inoremap "." "-"
   ;;           "-" ".")
 #+END_SRC
 ** Leader
-The leader key is an old technique common among Vim users. A number of
-sequential key commands are hidden behind a single key. For those who
-are familiar with ~hydra~, this is a similar concept.
+The leader key is an old technique common among Vim users. A tree of
+key commands are hidden behind a single key. For those who are
+familiar with ~hydra~, this is a similar concept.
 *** Definitions
 First ~which-key~ must be loaded early
 #+BEGIN_SRC emacs-lisp :noweb strip-export
@@ -645,7 +572,7 @@ I disable the default startup screen and splash message.
 *** Scratch buffer
 Set the initial mode in the scratch buffer to emacs.
 #+BEGIN_SRC emacs-lisp
-(setq initial-major-mode 'emacs-lisp-mode)(setq initial-major-mode 'emacs-lisp-mode)
+(setq initial-major-mode 'emacs-lisp-mode)
 #+END_SRC
 ** Mode line
 The mode line is the line at the bottom of each buffer. It contains
@@ -678,7 +605,8 @@ blurbs.
                   mode-line-end-spaces))
 #+END_SRC
 *** Shorten mode-line buffer names
-
+This sets a limit of 70 characters for the display of buffern names in
+the mode line.
 #+BEGIN_SRC emacs-lisp
 (setq-default mode-line-buffer-identification (list -70 (propertized-buffer-identification "%12b")))
 #+END_SRC
@@ -768,6 +696,7 @@ which integrates well across Emacs.
 (delight 'hs-minor-mode nil "hideshow")
 #+END_SRC
 ** Prettify Symbols
+This changes the appearance of certain strings in the buffer.
 #+BEGIN_SRC emacs-lisp
   (setq prettify-symbols-alist
         '(("lambda" . 955) ; λ
@@ -775,7 +704,7 @@ which integrates well across Emacs.
   (global-prettify-symbols-mode 1)
 #+END_SRC
 ** Unnecessary UI elements
-Emacs comes with such useless features as a tool bar. Turn them off.
+Emacs comes with such useless features as a tool bar. I like to turn them off.
 #+BEGIN_SRC emacs-lisp
 (tool-bar-mode -1)
 (menu-bar-mode -1)
@@ -798,13 +727,13 @@ of the screen in ~prog-mode~.
 #+BEGIN_SRC emacs-lisp
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 
-  (leader-key-def 'normal
+  (leader-key-def 'normal ; a keybinding to toggle line numbers
     "l" #'display-line-numbers-mode)
 
   (setq column-number-mode t)
 #+END_SRC
 ** Tabs and Indentation
-I use 4 spaces by default.
+I use 4 space indentation by default.
 #+BEGIN_SRC emacs-lisp
 (setq-default tab-width 4
               indent-tabs-mode nil)
@@ -818,13 +747,11 @@ Do not truncate lines.
 #+BEGIN_SRC emacs-lisp
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 #+END_SRC
-
 ** Confirmation
 Type =y= or =n=, not =yes= or =no=.
 #+BEGIN_SRC emacs-lisp
 (fset 'yes-or-no-p 'y-or-n-p)
 #+END_SRC
-
 ** Adaptive Cursor Width
 Makes the cursor the full width of the current character.
 #+BEGIN_SRC emacs-lisp
@@ -836,7 +763,6 @@ than emacs into the "+" register.
 #+BEGIN_SRC emacs-lisp
 (setq select-enable-clipboard nil)
 #+END_SRC
-
 ** Delimiters
 *** Electric pair mode
 Close delimiters automatically as I write.
@@ -860,7 +786,6 @@ Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/q
                (ignore-errors (backward-up-list))
                (funcall fn)))))
 #+END_SRC
-
 ** Ediff
 Don't make a new frame for ediff.
 #+BEGIN_SRC emacs-lisp
@@ -868,7 +793,7 @@ Don't make a new frame for ediff.
 #+END_SRC
 ** Which-key
 This plugin shows the available keys after a partially completed
-key press. ~which-key~ key replacements are generated [[#leader][here]].
+key command. ~which-key~ key replacements are generated [[#leader][here]].
 #+NAME: which-key
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
@@ -945,7 +870,7 @@ prefix-help-command.
 #+END_SRC
 ** Help
 #+BEGIN_SRC emacs-lisp
-  (general-nmap help-mode-map
+  (general-nmap help-mode-map ; keybindings for help mode
     "H" #'help-go-back
     "L" #'help-go-forward)
 #+END_SRC
@@ -959,7 +884,7 @@ Highlight the cursor when switching buffers.
 #+END_SRC
 * Text editing
 ** Iedit
-
+Iedit is a package for interactive refactoring.
 #+BEGIN_SRC emacs-lisp
   (use-package iedit)
 
@@ -975,7 +900,7 @@ Highlight the cursor when switching buffers.
       "C-;" #'me/evil-iedit-toggle))
 #+END_SRC
 * Dired
-Some dired configuration
+Dired is the file manager built into Emacs. here is some configuration.
 #+BEGIN_SRC emacs-lisp
   (add-hook 'dired-mode-hook #'dired-hide-details-mode)
   (setq image-dired-thumb-size 400)
@@ -1374,8 +1299,7 @@ This code is the sum of failed attempts to get the above feature working.
 #+END_SRC
 
 ** Shell
-I prefer ~shell-mode~ to ~ansi-term~ because ~comint-mode~, the mode which
-~shell-mode~ is based on, plays well with ~evil~.
+Shell mode is a comint-based mode for bash and other external shells.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'normal :keymaps 'shell-mode-map
      "C-j" 'evil-window-down
@@ -1387,7 +1311,7 @@ I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
 #+END_SRC
 ** Term mode
 Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~
-to normal mode, and ~<escape>~ to escape in the terminal.
+to evil normal mode, and ~<escape>~ to escape within the terminal.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'insert
     :keymaps 'term-raw-map
@@ -1433,8 +1357,7 @@ This code was the restult of a bad misunderstanding of the function of ~ansi-ter
 #+END_SRC
 
 ** Multi-Term
-If for some reason I need ~ansi-term~ instead of ~shell-mode~, and for some
-reason I need multiple, I have this plugin.
+Allows multiple term buffers to be created.
 #+BEGIN_SRC emacs-lisp
 (use-package multi-term
   :config
@@ -1578,9 +1501,9 @@ Doom Emacs looks good. I want those themes.
   ;; flash mode line when emacs bell rings
   (doom-themes-visual-bell-config))
 #+END_SRC
-** Spacemacs themes
+** COMMENT Spacemacs themes
 #+BEGIN_SRC emacs-lisp
-;; (use-package spacemacs-theme)
+  (use-package spacemacs-theme)
 #+END_SRC
 ** COMMENT Poet Theme
 #+BEGIN_SRC emacs-lisp
@@ -1596,11 +1519,7 @@ Doom Emacs looks good. I want those themes.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-one)
-  ;; (if (display-graphic-p)
-  ;;     (load-theme 'badwolf t)
-  ;;   (disable-all-themes))
-
+  (switch-theme 'doom-one-light)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -1626,7 +1545,7 @@ I abbreviate the command with ~hydra~.
     ("r" winner-redo))
 #+END_SRC
 ** Helm winconf
-A small and simple package for managing named window configurations.
+I wrote a small and simple package for managing named window configurations.
 #+BEGIN_SRC emacs-lisp
   (require 'helm-winconf)
 
@@ -1805,7 +1724,6 @@ I prefer to follow symbolic links under version control.
 #+BEGIN_SRC emacs-lisp
 (setq vc-follow-symlinks t)
 #+END_SRC
-
 *** COMMENT Alt-tab buffer navigation
 While emacs is missing key raised events, alt-tab style behavior can
 still be replicated with a hydra with a timeout
@@ -1907,7 +1825,7 @@ buffers. Faster than ~,-b\r~.
                                  (thing-at-point 'line))))))
 #+END_SRC
 ** Autocompletion
-I, like many others, use ~Company~.
+I use the ~Company~ package for autocompletion.
 #+BEGIN_SRC emacs-lisp
   (use-package company
     :delight
@@ -1941,14 +1859,14 @@ I have ~auto-complete~ installed for cases where a company package does not exis
     :config)
 #+END_SRC
 ** Linting
-I also, like many others, use ~flycheck~.
+I use the ~flycheck~ package for linting.
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck
   :config
   (setq flycheck-global-modes '(not c-mode c++-mode)))
 #+END_SRC
 ** Git (Magit)
-I also also, like many others, use ~magit~, a very nice Git interface.
+I use ~magit~, a very nice Git interface.
 #+BEGIN_SRC emacs-lisp
 (use-package magit
   :config
@@ -2029,11 +1947,6 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
       (with-temp-buffer
         (cd makefile-dir)
         (compile command)))))
-#+END_SRC
-** Documentation
-A keybinding to access documentation.
-#+BEGIN_SRC emacs-lisp
-  (global-set-key [f3] (lambda () (interactive) (manual-entry (current-word))))
 #+END_SRC
 ** Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
@@ -2150,8 +2063,8 @@ through ~lispyville~ minor mode.
 #+END_SRC
 
 *** Lisp keybindings
-Lispy is a de-facto mode for lisp languages, so lisp-specific
-functionality can be appended to it.
+Lispy is my de-facto mode for lisp languages, so lisp-specific
+functionality can be bound to that mode.
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'insert
     :keymaps 'lispyville-mode-map
@@ -2166,7 +2079,8 @@ functionality can be appended to it.
     "M-j" #'lispy-slurp-or-barf-left)
 #+END_SRC
 *** Rainbow delimiters
-While ~rainbow-delimeters-mode~ is active each depth of delimiter is given a different color.
+While ~rainbow-delimeters-mode~ is active each depth of delimiter is
+given a different color. I leave it off by default.
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-delimiters
   :delight)
@@ -2434,8 +2348,6 @@ Python support is built in to ~lsp-mode~.
                       (lua-make-lua-string "coroutine.yield()"))))))
 #+END_SRC
 ** Shen
-An intriguing and small language that runs on Common Lisp and other
-things.
 #+BEGIN_SRC emacs-lisp
 (use-package shen-mode)
 
@@ -2566,7 +2478,7 @@ Enable ~flycheck~
 
 #+END_SRC
 ** Org
-~org-mode~ is a markup mode with many features, including creating
+~org-mode~ is a markup mode with many features which include creating
 literate source files like this one.
 #+BEGIN_SRC emacs-lisp
   (setq header-line-format " ")
@@ -2656,9 +2568,8 @@ Features for dealing with nix-shell in Emacs.
   (use-package helm-nixos-options)
 #+END_SRC
 ** Bash
-Shell mode for shell files sans the dot.
 #+BEGIN_SRC emacs-lisp
-  (auto-mode-add 'sh-mode
+  (auto-mode-add 'sh-mode ; set shell mode for configuration files as they appear in this repository.
                  "\\(/\\|\\`\\)\\(bash_\\(aliases\\|profile\\|history\\|log\\(in\\|out\\)\\)\\|z?log\\(in\\|out\\)\\)\\'"
                  "\\(/\\|\\`\\)\\(shrc\\|zshrc\\|m?kshrc\\|bashrc\\|inputrc\\|t?cshrc\\|esrc\\)\\'"
                  "\\(/\\|\\`\\)\\([kz]shenv\\|xinitrc\\|startxrc\\|xsession\\)\\'")
@@ -2672,7 +2583,6 @@ Enter ~common-lisp-mode~ in the following files
        ".otherlisprc\\'")
 #+END_SRC
 * External tools
-Prodigy mode provides a better interface to emacs child services.
 #+BEGIN_SRC emacs-lisp
   ;; startup programs
   (define-multi-macro startup-programs start-process-shell-command 3)
@@ -3069,7 +2979,6 @@ search for url if a matching tab is not found.
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "qutebrowser")
 #+END_SRC
-
 *** COMMENT EXWM firefox
 #+BEGIN_SRC emacs-lisp
   (use-package exwm-firefox-core)
@@ -3296,7 +3205,7 @@ Interface to wttr.in
     (setq wttrin-default-cities '("Evanston")))
 #+END_SRC
 ** Bitwarden
-el interface to ~bitwarden-cli~ 
+Emacs interface to ~bitwarden-cli~ 
 #+BEGIN_SRC emacs-lisp
   (use-package bitwarden
     :straight (:host github :repo "seanfarley/emacs-bitwarden")
@@ -3398,19 +3307,20 @@ Various small functions which are evaluated before anything else in the file.
     (indent-according-to-mode))
 
   (defun move-line-up ()
-    "Move up the current line."
+    "Move the current line up."
     (interactive)
     (transpose-lines 1)
     (forward-line -2)
     (indent-according-to-mode))
 
   (defun move-line-down ()
-    "Move down the current line."
+    "Move the current line down."
     (interactive)
     (forward-line 1)
     (transpose-lines 1)
     (forward-line -1)
     (indent-according-to-mode))
+
   (defun disable-most-recent-theme ()
     (interactive)
     (disable-theme (car custom-enabled-themes)))
