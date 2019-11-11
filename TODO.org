@@ -1,6 +1,7 @@
 * Emacs
 ** language tools
 - Add Rust editing tools
+- add subleader for inspect (as opposed to eval)
 ** projects
 *** Projectile
 - Add flycheck file and #autosave# or whatever file to projectile

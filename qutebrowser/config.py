@@ -1,3 +1,6 @@
+# blocked hosts
+c.content.host_blocking.lists = ['https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social/hosts']
+
 # smooth scrolling
 c.scrolling.smooth = False
 
@@ -5,7 +8,7 @@ c.scrolling.smooth = False
 c.statusbar.hide = True
 
 c.qt.highdpi = True
-c.zoom.default = 67
+# c.zoom.default = 67
 
 c.tabs.tabs_are_windows = True
 c.tabs.show = "never"
@@ -19,6 +22,7 @@ c.url.start_pages = ["about:blank"]
 config.bind('xM', 'spawn --userscript view_in_mpv')
 config.bind('xm', 'hint links userscript view_in_mpv')
 config.bind('Q', 'config-cycle scrolling.bar always never')
+config.bind(',h', 'config-cycle -t -p content.host_blocking.enabled')
 
 # default page
 c.url.default_page = "about:blank"

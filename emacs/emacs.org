@@ -49,6 +49,7 @@ TITLE: Emacs Configuration
 - [[#text-editing][Text editing]]
   - [[#iedit][Iedit]]
 - [[#dired][Dired]]
+  - [[#image-dired][Image Dired]]
   - [[#keybindings][Keybindings]]
   - [[#dired-fl][Dired FL]]
   - [[#dired-atool][Dired Atool]]
@@ -65,7 +66,6 @@ TITLE: Emacs Configuration
 - [[#emacs-clientserver-settings][Emacs client/server settings]]
   - [[#daemon-management][Daemon Management]]
 - [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
-  - [[#doom-themes][Doom Themes]]
   - [[#theme][Theme]]
 - [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
   - [[#winner-mode][Winner Mode]]
@@ -94,8 +94,11 @@ TITLE: Emacs Configuration
   - [[#cccppcppsepples][C/C++/CPP/Cpp/Sepples]]
   - [[#rust][Rust]]
   - [[#julia][Julia]]
+  - [[#c-sharp][C Sharp]]
   - [[#haskell][Haskell]]
+  - [[#ats][ATS]]
   - [[#elm][Elm]]
+  - [[#javascript][Javascript]]
   - [[#html][HTML]]
   - [[#org][Org]]
   - [[#nix][Nix]]
@@ -104,7 +107,9 @@ TITLE: Emacs Configuration
 - [[#emacs-does-everything][Emacs does everything]]
   - [[#emacs-window-manager-exwm][Emacs window manager (EXWM)]]
   - [[#document-viewer][Document viewer]]
+  - [[#image-viewer][Image viewer]]
   - [[#emms][EMMS]]
+  - [[#system-package-managment][System package managment]]
   - [[#irc][IRC]]
   - [[#weather][Weather]]
   - [[#bitwarden][Bitwarden]]
@@ -328,6 +333,7 @@ It integrates well with ~evil~.
 (use-package hydra)
 #+END_SRC
 ** Conditional key translations
+
 The equivalent of Vim noremaps are Emacs key translations. They apply
 globally, so here are some macros to create key translations which apply
 conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14][this]].
@@ -489,12 +495,16 @@ Usage:
     ;; (call-interactively #'evil-buffer)
     )
 
+  (defun me/helm-buffer ()
+    (interactive)
+    (call-interactively #'helm-mini))
+
   (leader-key-def 'normal
-                  "w" 'actually-kill-this-buffer              ; ",w" to kill buffer not window.
-                  "q" 'evil-delete-buffer              ; ",q" to kill buffer and window. equivalent of :bd<cr>.
+                  "w" 'actually-kill-this-buffer    ; ",w" to kill buffer not window.
+                  "q" 'evil-delete-buffer   ; ",q" to kill buffer and window. equivalent of :bd<cr>.
                   "a" #'bury-evil-buffer
-                  "b" 'helm-mini                     ; ",b" to switch buffers.
-                  "f" 'helm-find-files               ; ",f" to find file (replace :e)
+                  "b" 'me/helm-buffer   ; ",b" to switch buffers.
+                  "f" 'helm-find-files    ; ",f" to find file (replace :e)
                   "d" 'fzf-directory-from-home
                   "h" 'help
                   "O" 'helm-do-ag-this-file 
@@ -537,6 +547,7 @@ M-x commands for common shell commands such as reboot.
     (suspend "systemctl suspend"))
 #+END_SRC
 ** Other Commands
+
 A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
   (defun nixconf ()
@@ -642,7 +653,7 @@ which integrates well across Emacs.
           helm-window-prefer-horizontal-split t
           helm-window-show-buffers-function 'helm-window-mosaic-fn
           helm-split-window-default-side 'same)
-  
+
 
     (defun me/helm-fix-insert-state-keys ()
       (setq evil-insert-state-local-map (make-keymap))
@@ -654,7 +665,42 @@ which integrates well across Emacs.
               #'me/helm-fix-insert-state-keys)
 
     ;; Refresh helm-top
-    (helm-top-poll-mode 1))
+    (helm-top-poll-mode 1)
+
+    ;; redefine helm-persistent-action-display-window to split right by
+    ;; default instead of left. (not configurable, sadly.)
+    (cl-defun helm-persistent-action-display-window (&key split)
+      "Return the window that will be used for persistent action.
+  If SPLIT is `t' window is split in persistent action, if it has the
+  special symbol `never' don't split, if it is `nil' normally don't
+  split but this may happen in case of dedicated-windows or unsuitable
+  window to display persistent action buffer."
+      (with-helm-window
+        (let (prev-win cur-win)
+          (setq helm-persistent-action-display-window
+                (cond ((and (window-live-p helm-persistent-action-display-window)
+                            (not (member helm-persistent-action-display-window
+                                         (get-buffer-window-list helm-buffer))))
+                       helm-persistent-action-display-window)
+                      ((and helm--buffer-in-new-frame-p helm-initial-frame)
+                       (with-selected-frame helm-initial-frame (selected-window)))
+                      ((and split (not (eq split 'never))) (split-window nil nil 'right))
+                      ;; Fix Issue #2050 with dedicated window.
+                      ((and (window-dedicated-p
+                             (setq prev-win (previous-window (selected-window) 1)))
+                            (not (eq split 'never)))
+                       (with-helm-after-update-hook
+                         (and (window-live-p helm-persistent-action-display-window)
+                              (delete-window helm-persistent-action-display-window)))
+                       ;; If next-window is usable use it, otherwise split
+                       ;; the helm window.
+                       (let ((nw (next-window (selected-window) 1)))
+                         (if (eql nw prev-win) (split-window nil nil 'right) nw)))
+                      ((window-dedicated-p
+                        (setq cur-win (get-buffer-window helm-current-buffer)))
+                       (previous-window (selected-window) 1))
+                      (cur-win)
+                      (t prev-win)))))))
 #+END_SRC
 *** Helm ag
 #+BEGIN_SRC emacs-lisp
@@ -864,6 +910,9 @@ prefix-help-command.
   (setq prefix-help-command
         #'which-key-C-h-dispatch)
 
+  (add-to-list 'helm-completing-read-handlers-alist
+               nil)
+
   ;; (setq prefix-help-command #'which-key-M-x-prefix+)
   (general-def which-key-C-h-map
     "C-h" #'which-key-M-x-prefix+)
@@ -902,13 +951,6 @@ Iedit is a package for interactive refactoring.
 * Dired
 Dired is the file manager built into Emacs. here is some configuration.
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'dired-mode-hook #'dired-hide-details-mode)
-  (setq image-dired-thumb-size 400)
-  (setq image-dired-thumb-width 400)
-  (setq image-dired-thumb-height 400)
-  (setq image-dired-thumb-margin 6)
-  (setq image-dired-thumb-relief 6)
-
   (setq dired-listing-switches "-alh")
 
   (defun me/dired-sort ()
@@ -919,6 +961,52 @@ Dired is the file manager built into Emacs. here is some configuration.
                     ("size" . "-Al -S"))))
        (cdr (assoc (ido-completing-read "Sort by:" alist)
                    alist)))))
+#+END_SRC
+** Image Dired
+~image-dired~ is a built-in image thumbnail viewer for dired.
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'dired-mode-hook #'dired-hide-details-mode)
+
+  (setq image-dired-thumb-size 400
+        image-dired-thumb-width 400
+        image-dired-thumb-height 400
+        image-dired-thumb-margin 6
+        image-dired-thumb-relief 6
+        image-dired-show-all-from-dir-max-files 300)
+
+  (defun image-dired-select-advice (arg)
+    (call-interactively #'evil-force-normal-state)
+    (me/image-dired-display-thumbnail-original-image))
+
+  (advice-add 'image-dired-mouse-select-thumbnail
+              :after
+              #'image-dired-select-advice)
+
+  (defvar me/image-dired-display-image-buffer nil)
+
+  (defun me/image-dired-display-thumbnail-original-image (&optional arg)
+    "Display current thumbnail's original image in display buffer.
+  See documentation for `image-dired-display-image' for more information.
+  With prefix argument ARG, display image in its original size."
+    (interactive "P")
+    (let ((file (image-dired-original-file-name)))
+      (if (not (string-equal major-mode "image-dired-thumbnail-mode"))
+          (message "Not in image-dired-thumbnail-mode")
+        (if (not (image-dired-image-at-point-p))
+            (message "No thumbnail at point")
+          (if (not file)
+              (message "No original file name found")
+            (save-selected-window
+              (when (and me/image-dired-display-image-buffer
+                         (get-buffer me/image-dired-display-image-buffer))
+                (kill-buffer me/image-dired-display-image-buffer))
+              (find-file-other-window file)
+              (setq me/image-dired-display-image-buffer (current-buffer))
+              (rename-buffer (concat "*image-dired: " (buffer-name) "*"))))))))
+
+  (general-def normal image-dired-thumbnail-mode-map
+    "=" #'image-increase-size
+    "RET" #'me/image-dired-display-thumbnail-original-image)
 #+END_SRC
 ** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -997,7 +1085,9 @@ Multi-stage copy/paste
     :config
     (general-def normal dired-mode-map
       "c" #'dired-ranger-copy
-      "p" #'dired-ranger-paste))
+      "p" #'dired-ranger-paste)
+    (leader-key-def normal dired-mode-map
+                    "v" #'dired-ranger-move))
 #+END_SRC
 *** Dired Narrow
 Interactively narrow/filter a dired buffer. Usually I just use
@@ -1008,14 +1098,6 @@ selection.
     :config
     (leader-key-def normal dired-mode-map
                     "n" #'dired-narrow))
-#+END_SRC
-** COMMENT image-dired
-#+BEGIN_SRC emacs-lisp
-  (use-package image-dired+
-    :config
-    (setq image-dired-thumb-width 300)
-    (setq image-dired-thumb-height 300)
-    (setq image-dired-thumb-size 300))
 #+END_SRC
 * Shell
 ** Fish/Bash Completion
@@ -1107,63 +1189,23 @@ primary shell.
 *** Commands
 ~eshell~ commands
 #+BEGIN_SRC emacs-lisp
-    (defun eshell/e (&rest args)
-      "Open the given files"
-      (dolist (file args) (if (listp file)
-                              (dolist (file file)
-                                (find-file file t))                          
-                            (find-file file t))))
+  (defun eshell/e (&rest args)
+    "Open the given files"
+    (dolist (file args) (if (listp file)
+                            (dolist (file file)
+                              (find-file file t))                          
+                          (find-file file t))))
 
-      (defun eshell/fd (&optional from-directory)
-        "Run fzf to open a directory in dired"
-        (fzf-directory-from (or from-directory
-                                default-directory)))
+  (defun eshell/fd (&optional from-directory)
+    "Run fzf to open a directory in dired"
+    (fzf-directory-from (or from-directory
+                            default-directory)))
 
-      (defun eshell/fh ()
-        (eshell/fd "~"))
+  (defun eshell/fh ()
+    (eshell/fd "~"))
 
-      (defun eshell/econf () (econf))
-      (defun eshell/nixconf () (nixconf))
-
-  (defun eshell/sudo (&rest args)
-    "Alias \"sudo\" to call Tramp. Without help flag (gets in the
-    way of other -h flags, like du -h)
-
-  Uses the system sudo through TRAMP's sudo method."
-    (setq args (eshell-stringify-list (eshell-flatten-list args)))
-    (let ((orig-args (copy-tree args)))
-      (eshell-eval-using-options
-       "sudo" args
-       '(;(?h "help" nil nil "show this usage screen")
-         (?u "user" t user "execute a command as another USER")
-         :show-usage
-         :usage "[(-u | --user) USER] COMMAND
-  Execute a COMMAND as the superuser or another USER.")
-       (throw 'eshell-external
-              (let ((user (or user "root"))
-                    (host (or (file-remote-p default-directory 'host)
-                              "localhost"))
-                    (dir (file-local-name (expand-file-name default-directory)))
-                    (prefix (file-remote-p default-directory)))
-                ;; `eshell-eval-using-options' reads options of COMMAND.
-                (while (and (stringp (car orig-args))
-                            (member (car orig-args) '("-u" "--user")))
-                  (setq orig-args (cddr orig-args)))
-                (let ((default-directory
-                        (if (and prefix
-                                 (or
-                                  (not
-                                   (string-equal
-                                    "sudo"
-                                    (file-remote-p default-directory 'method)))
-                                  (not
-                                   (string-equal
-                                    user
-                                    (file-remote-p default-directory 'user)))))
-                            (format "%s|sudo:%s@%s:%s"
-                                    (substring prefix 0 -1) user host dir)
-                          (format "/sudo:%s@%s:%s" user host dir))))
-                  (eshell-named-command (car orig-args) (cdr orig-args))))))))
+  (defun eshell/econf () (econf))
+  (defun eshell/nixconf () (nixconf))
 
   (if (executable-find "du")
       (fmakunbound 'eshell/du)) ; for speed
@@ -1493,28 +1535,21 @@ given Nix environment.
 #+END_SRC
 
 * Colors, Themes, Fonts, and other aesthetic settings
-** Doom Themes
-Doom Emacs looks good. I want those themes.
-#+BEGIN_SRC emacs-lisp
-(use-package doom-themes
-  :config
-  ;; flash mode line when emacs bell rings
-  (doom-themes-visual-bell-config))
-#+END_SRC
-** COMMENT Spacemacs themes
-#+BEGIN_SRC emacs-lisp
-  (use-package spacemacs-theme)
-#+END_SRC
-** COMMENT Poet Theme
-#+BEGIN_SRC emacs-lisp
-  (use-package poet-theme)
-#+END_SRC
-** COMMENT Chocolate theme
-#+BEGIN_SRC emacs-lisp
-  (use-package chocolate-theme)
-#+END_SRC
 ** Theme
 #+BEGIN_SRC emacs-lisp
+  (use-package doom-themes
+    :config
+    ;; flash mode line when emacs bell rings
+    (doom-themes-visual-bell-config))
+
+  ;; (use-package poet-theme)
+
+  ;; (use-package chocolate-theme)
+
+  ;; (use-package spacemacs-theme)
+
+  ;; (use-package cyberpunk-theme)
+
   (defun disable-all-themes ()
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
@@ -2447,6 +2482,22 @@ Enable ~flycheck~
   :config
   (add-hook 'julia-mode-hook 'julia-repl-mode))
 #+END_SRC
+** C Sharp
+#+BEGIN_SRC emacs-lisp
+  (use-package omnisharp
+    :after company
+    :config
+    (add-hook 'csharp-mode-hook 'omnisharp-mode)
+    (add-to-list 'company-backends 'company-omnisharp)
+    (add-hook 'csharp-mode-hook #'flycheck-mode)
+
+    (defun omnisharp--resolve-omnisharp-server-executable-path ()
+      (executable-find "omnisharp"))
+  
+    (leader-key-def :states 'normal :keymaps 'omnisharp-mode-map
+                    "e" #'recompile
+                    "r" #'omnisharp-run-code-action-refactoring))
+#+END_SRC
 ** Haskell
 #+BEGIN_SRC emacs-lisp
 (use-package haskell-mode
@@ -2458,6 +2509,13 @@ Enable ~flycheck~
                    (append '((company-capf company-dabbrev-code))
                            company-backends)))))
 #+END_SRC
+** ATS
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'load-path  "/home/adrian/code/ats/ATS-Postiats/utils/emacs")
+  (require 'ats-mode "ats2-mode")
+  (require 'ats2-flymake "flymake-ats2")
+  ;; (setenv "ATSHOME" "/home/adrian/code/ats/ATS-Postiats/")
+#+END_SRC
 ** Elm
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck-elm
@@ -2465,6 +2523,54 @@ Enable ~flycheck~
   (add-hook 'flycheck-mode-hook 'flycheck-elm-setup))
   
 (use-package elm-mode)
+#+END_SRC
+** Javascript
+#+BEGIN_SRC emacs-lisp
+  (use-package indium
+    :config
+    (defun me/indium-local-advice (old-fun &rest args)
+      (let ((indium-client-executable (aif (projectile-project-root)
+                                           (concat it "node_modules/.bin/indium")
+                                           indium-client-executable)))
+        (apply old-fun args)))
+    (advice-add 'indium-client-start :around
+                #'me/indium-local-advice)
+
+    (defun me/region-for-defun-at-point (&optional pos)
+      "Return a list (START END) for the positions of defun at POS.
+  POS defaults to point"
+      (save-excursion
+        (save-match-data
+          (goto-char (or pos (point)))
+          (end-of-defun)
+          (let ((end (point)))
+            (beginning-of-defun)
+            (list (point) end)))))
+
+    (defun me/indium-eval-toplevel-form ()
+      (interactive)
+      (indium-eval (save-excursion
+                     (save-match-data
+                       (apply #'buffer-substring-no-properties
+                              (me/region-for-defun-at-point))))
+                   (lambda (value)
+                     (indium-interaction--handle-eval-result value))))
+
+    (eval-key-def 'normal 'js-mode-map
+                  "b" #'indium-eval-buffer
+                  "f" #'me/indium-eval-toplevel-form
+                  "i" #'indium-eval-defun)
+
+    (eval-key-def 'visual 'js-mode-map
+                  "r" #'indium-eval-region)
+
+    (add-hook 'js-mode-hook
+              #'indium-interaction-mode))
+
+  (use-package js2-mode
+    :config
+    (add-to-list 'auto-mode-alist
+                 '("\\.jsm?\\'" . js2-mode)))
 #+END_SRC
 ** HTML
 #+BEGIN_SRC emacs-lisp
@@ -2474,7 +2580,8 @@ Enable ~flycheck~
 
   (use-package emmet-mode
     :config
-    (add-to-list 'auto-mode-alist '("\\.html?\\'" . emmet-mode)))
+    ;; (add-to-list 'auto-mode-alist '("\\.html?\\'" . emmet-mode))
+    (add-hook 'web-mode #'emmet-mode))
 
 #+END_SRC
 ** Org
@@ -2504,8 +2611,10 @@ literate source files like this one.
     "C-`" 'org-edit-special)
   (org-babel-do-load-languages
    'org-babel-load-languages
-   '((lisp . t)))
+   '((lisp . t)
+     (python . t)))
   (setq org-babel-lisp-eval-fn #'sly-eval)
+  (setq org-babel-python-eval-fn #'python-send-string)
 
   (add-hook 'org-mode-hook #'auto-fill-mode)
   (require 'delight)
@@ -2653,10 +2762,10 @@ Control spotify running on any device from Emacs.
 *** Main Package
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
-  (setq mouse-autoselect-window t
-        focus-follows-mouse t)
+  (setq mouse-autoselect-window nil
+        focus-follows-mouse nil)
   (use-package exwm
-    :straight (:host github :repo "ch11g/exwm")
+    ;; :straight (:host github :repo "ch11g/exwm")
     :delight
     :config
 
@@ -2787,7 +2896,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-;" to ex mode
             ([?\s-\;] . evil-ex)
             ;; bind "s-b" to buffer switching
-            ([?\s-b] . helm-mini)
+            ([?\s-b] . me/helm-buffer)
             ;; bind "s-f" to file switching
             ([?\s-f] . helm-find-files)
             ;; bind "s-q" to kill this buffer, closing the current
@@ -2963,16 +3072,51 @@ search for url if a matching tab is not found.
       "<C-XF86MonBrightnessUp>" #'desktop-environment-brightness-increment-very-slowly
       "<C-XF86MonBrightnessDown>" #'desktop-environment-brightness-decrement-very-slowly)
 
+
+    ;; run brightness and volume changes in home directory
+    (defun desktop-environment-brightness-get ()
+      "Return a string representing current brightness level."
+      (let ((default-directory "~/")
+            (output (shell-command-to-string desktop-environment-brightness-get-command)))
+        (save-match-data
+          (string-match desktop-environment-brightness-get-regexp output)
+          (match-string 1 output))))
+
+    (defun desktop-environment-brightness-set (value)
+      "Set brightness to VALUE."
+      (let ((default-directory "~/"))
+        (shell-command-to-string (format desktop-environment-brightness-set-command value))
+        (message "New brightness value: %s" (desktop-environment-brightness-get))))
+
+  
+  ;;; Helper functions - volume
+
+    (defun desktop-environment-volume-get ()
+      "Return a string representing current volume level."
+      (let ((default-directory "~/")
+            (output (shell-command-to-string desktop-environment-volume-get-command)))
+        (save-match-data
+          (string-match desktop-environment-volume-get-regexp output)
+          (match-string 1 output))))
+
+    (defun desktop-environment-volume-set (value)
+      "Set volume to VALUE."
+      (let ((default-directory "~/"))
+        (shell-command-to-string (format desktop-environment-volume-set-command value))
+        (message "New volume value: %s" (desktop-environment-volume-get))))
+
+
     ;; better mute function (single line output)
     (defun desktop-environment-toggle-mute ()
       "Toggle between muted and un-muted."
       (interactive)
-      (message "%s"
-               (if (find "off" (split-string (shell-command-to-string desktop-environment-volume-toggle-command)
-                                             (rx (or "[" "]")))
-                         :test #'string=)
-                   "Sound Off"
-                 "Sound On"))))
+      (let ((default-directory "~/"))
+        (message "%s"
+                 (if (find "off" (split-string (shell-command-to-string desktop-environment-volume-toggle-command)
+                                               (rx (or "[" "]")))
+                           :test #'string=)
+                     "Sound Off"
+                   "Sound On")))))
 #+END_SRC
 *** Qutebrowser
 #+BEGIN_SRC emacs-lisp
@@ -3057,11 +3201,97 @@ search for url if a matching tab is not found.
             #'enforce-floating-toggle-list)
 #+END_SRC
 ** Document viewer
+
 ~pdf-tools~ is a document viewer for emacs
 #+BEGIN_SRC emacs-lisp
   (use-package pdf-tools
     :config
     (pdf-loader-install))
+#+END_SRC
+** Image viewer
+Emacs has an inbuilt image viewer ~image-mode~.
+#+BEGIN_SRC emacs-lisp
+  (require 'image-dimensions-minor-mode)
+
+  (setq imagemagick-render-type 1 ; increase image scaling speed
+        ;; exclude .gif files because I prefer to handle them with external programs
+        image-file-name-extensions '("webp" "png" "jpeg" "jpg" "tiff" "tif" "xbm" "xpm" "pbm" "pgm" "ppm" "pnm" "svg"))
+
+  (setq image-transform-resize nil)
+
+  (defun image-transform-fit-to-width-or-height (&rest _)
+    "Fit the current image to the shortest of width or height of
+  the current window. This command has no effect unless Emacs is
+  compiled with ImageMagick support."
+    (interactive)
+    (let ((image-transform-resize
+           (let* ((size (image-size (image-get-display-property))))
+             (if (> (/ (car size) (cdr size))
+                    (/ (* 1.0 (window-width))
+                       (* 1.0 (window-height))))
+                 'fit-width
+               'fit-height))))
+      (image-toggle-display-image)))
+
+  (defun me/image-transform-fit-to-height ()
+    "Fit the current image to the height of the current window.
+  This command has no effect unless Emacs is compiled with
+  ImageMagick support."
+    (interactive)
+    (let ((image-transform-resize 'fit-height))
+      (image-toggle-display-image)))
+
+  (defun me/image-transform-fit-to-width ()
+    "Fit the current image to the width of the current window.
+  This command has no effect unless Emacs is compiled with
+  ImageMagick support."
+    (interactive)
+    (let ((image-transform-resize 'fit-width))
+      (image-toggle-display-image)))
+
+
+  (general-def normal image-mode-map
+
+    "R" #'image-transform-reset
+
+    "W" #'me/image-transform-fit-to-height
+    "w" #'me/image-transform-fit-to-width
+    "o" #'image-transform-fit-to-width-or-height
+
+    "p" #'image-previous-file
+    "N" #'image-previous-file
+    "n" #'image-next-file)
+
+  (general-def normal '(image-mode-map image-dired-display-image-mode-map)
+    "-" #'image-decrease-size
+    "+" #'image-increase-size
+    "=" #'image-increase-size
+
+    "C-j" (lambda nil (interactive)
+            (image-next-line 1))
+    "C-k" (lambda nil (interactive)
+            (image-previous-line 1))
+    "j" (lambda nil (interactive)
+          (image-next-line 10))
+    "k" (lambda nil (interactive)
+          (image-previous-line 10))
+    "J" (lambda nil (interactive)
+          (image-next-line 50))
+    "K" (lambda nil (interactive)
+          (image-previous-line 50))
+
+    "C-h" (lambda nil (interactive)
+            (image-backward-hscroll 1))
+    "C-l" (lambda nil (interactive)
+            (image-forward-hscroll 1))
+    "h" (lambda nil (interactive)
+          (image-backward-hscroll 20))
+    "l" (lambda nil (interactive)
+          (image-forward-hscroll 20))
+    "H" (lambda nil (interactive)
+          (image-backward-hscroll 100))
+    "L" (lambda nil (interactive)
+          (image-forward-hscroll 100)))
 #+END_SRC
 ** EMMS
 #+BEGIN_SRC emacs-lisp
@@ -3073,6 +3303,8 @@ search for url if a matching tab is not found.
     ;; (emms-default-players)
     (require 'emms-player-mpd)
     (require 'emms-volume)
+    (require 'emms-streams)
+    (require 'emms-stream-info)
     (setq emms-player-seek-seconds 5
           emms-source-file-default-directory "~/Music/"
           emms-player-list '(emms-player-mpd
@@ -3084,7 +3316,8 @@ search for url if a matching tab is not found.
           emms-volume-change-function #'emms-volume-mpd-change
           emms-volume-change-amount 5
           emms-mode-line-format " | %s"
-          emms-mode-line-mode-line-function #'emms-mode-line-playlist-current)
+          emms-mode-line-mode-line-function #'emms-mode-line-playlist-current
+          emms-stream-info-backend 'mplayer)
 
     (general-create-definer emms-key-def
       :prefix "s-m")
@@ -3156,6 +3389,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 *** Helm EMMS
 #+BEGIN_SRC emacs-lisp
   (use-package helm-emms
+    :straight (:host github :repo "drainful/helm-emms")
     :config
     ;; (setq helm-emms-dired-directories `(,me/music-directory))
     ;; (setq helm-emms-dired-directories nil)
@@ -3168,7 +3402,36 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     (emms-key-def 'normal
       "," 'helm-emms))
 #+END_SRC
+** System package managment
+#+BEGIN_SRC emacs-lisp
+  (use-package system-packages
+    :config
+    (setq system-packages-use-sudo t))
+
+  (use-package helm-system-packages) ;; can manage packages across tramp
+#+END_SRC
 ** IRC
+*** ERC
+#+BEGIN_SRC emacs-lisp
+  (setq erc-track-position-in-mode-line 'after-modes
+        ;;erc-mode-line-format "%S %a"
+        )
+
+  (general-def
+    :states 'normal
+    :keymaps 'erc-mode-map
+    ;; go to prompt before append or insert line in comint mode
+    "RET" #'erc-send-current-line
+    "I" #'comint-style-insert-line
+    "A" #'comint-style-append-line)
+
+  ;; Bouncer
+  (use-package znc
+    :config
+    (setq znc-servers `(("znc.fullmer.info" 5000 t
+                         ((irc\.freenode\.net ,me/freenode-nick ,(me/znc-password)))))))
+#+END_SRC
+*** COMMENT Circe
 #+BEGIN_SRC emacs-lisp
   (use-package circe
     :config
@@ -3392,6 +3655,12 @@ Various small functions which are evaluated before anything else in the file.
                  ";"))
 
   ;;;; Macrology
+
+  (defmacro aif (cond then &rest else)
+    `(let ((it ,cond))
+       (if it
+           ,then
+         ,@else)))
 
   (defmacro dobody (spec &rest body)
     "A tool for creating domain specific languages.
