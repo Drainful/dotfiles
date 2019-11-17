@@ -96,7 +96,6 @@ TITLE: Emacs Configuration
   - [[#julia][Julia]]
   - [[#c-sharp][C Sharp]]
   - [[#haskell][Haskell]]
-  - [[#ats][ATS]]
   - [[#elm][Elm]]
   - [[#javascript][Javascript]]
   - [[#html][HTML]]
@@ -1106,7 +1105,7 @@ Get completion hints from bash and fish.
   (use-package bash-completion
     :config
     (add-hook 'shell-dynamic-complete-functions
-              'bash-completion-dynamic-complete))
+              #'bash-completion-dynamic-complete))
 
   (use-package fish-completion
     :after bash-completion
@@ -1127,6 +1126,8 @@ primary shell.
   (setq eshell-review-quick-commands nil)
   (setq eshell-smart-space-goes-to-end t)
   ;;(add-to-list 'eshell-visual-commands "rlwrap")
+
+  ;; (fmakunbound 'eshell/cp)
 
   ;; Eshell modules
   (require 'esh-module)
@@ -1567,6 +1568,7 @@ The theme loaded depends upon time of day. Causes slight face issues.
     (setq calendar-longitude me/calendar-longitude)
     (change-theme 'doom-one-light 'doom-one))
 #+END_SRC
+
 * Moving around, buffers, windows and splits
 ** Winner Mode
 ~winner-mode~ lets me switch between window configurations with emacs-like undo capabilities.
@@ -1916,7 +1918,7 @@ and a leader shortcut.
 (leader-key-def 'normal
   "m" 'magit)
 #+END_SRC
-*** Magit Forge
+*** COMMENT Magit Forge
 A package to interact with Git forges like Gitlab.
 #+BEGIN_SRC emacs-lisp
   (use-package forge)
@@ -1969,6 +1971,9 @@ languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~f
   (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
   ;; optionally if you want to use debugger
   (use-package dap-mode)
+
+  (leader-key-def 'normal 'lsp-mode-map
+                  "e" #'lsp-execute-code-action)
 #+END_SRC
 ** Compilation
 I wrote this function to run ~make~ on a recursive upward
@@ -2169,7 +2174,6 @@ This uses font-lock to hide namespace prefixes automatically.
 
     (setq inferior-lisp-program "sbcl")
     ;; Open sly debug buffers in emacs state, rather than evil state.
-    (add-to-list 'evil-emacs-state-modes 'sly-db-mode)
     (add-to-list 'helm-completing-read-handlers-alist
                  '(sly-read-symbol-name . nil))
     ;; Avoid using helm when bugget at sly-read-symbol-name functions
@@ -2509,7 +2513,7 @@ Enable ~flycheck~
                    (append '((company-capf company-dabbrev-code))
                            company-backends)))))
 #+END_SRC
-** ATS
+** COMMENT ATS
 #+BEGIN_SRC emacs-lisp
   (add-to-list 'load-path  "/home/adrian/code/ats/ATS-Postiats/utils/emacs")
   (require 'ats-mode "ats2-mode")
@@ -2655,8 +2659,8 @@ Features for dealing with nix-shell in Emacs.
 #+END_SRC
 *** Nix language support
 #+BEGIN_SRC emacs-lisp
-  (use-package company-nixos-options
-    :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
+  ;; (use-package company-nixos-options
+  ;;   :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
 
   (use-package nix-mode
     :config
@@ -2667,11 +2671,11 @@ Features for dealing with nix-shell in Emacs.
                 (setq indent-tabs-mode t))))
 
 #+END_SRC
-*** Updating Nix hashes
+*** COMMENT Updating Nix hashes
 #+BEGIN_SRC emacs-lisp
   (use-package nix-update)
 #+END_SRC
-*** Nixos options search
+*** COMMENT Nixos options search
 #+BEGIN_SRC emacs-lisp
   (use-package nixos-options)
   (use-package helm-nixos-options)
@@ -2691,6 +2695,7 @@ Enter ~common-lisp-mode~ in the following files
        ".lisprc\\'"
        ".otherlisprc\\'")
 #+END_SRC
+
 * External tools
 #+BEGIN_SRC emacs-lisp
   ;; startup programs
@@ -2708,19 +2713,29 @@ Enter ~common-lisp-mode~ in the following files
     :config
     ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
     (defvar my-ok-large-file-types
-      "\\.\\(?:mpe?g\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+      "\\.\\(?:mpe?g\\|mkv\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
       "Regexp matching filenames which are definitely ok to visit,
   even when the file is larger than `large-file-warning-threshold'.")
 
-    (defadvice abort-if-file-too-large (around my-check-ok-large-file-types)
-      "If FILENAME matches `my-ok-large-file-types', do not abort."
-      (unless (string-match-p my-ok-large-file-types (ad-get-arg 2))
-        ad-do-it))
-    (ad-activate 'abort-if-file-too-large)
+    (defun abort-if-file-too-large-whitelist (old-fun &rest args)
+      (unless (string-match-p my-ok-large-file-types (third args))
+        (apply old-fun args)))
+  
+    (advice-add #'abort-if-file-too-large
+                :around
+                'abort-if-file-too-large-whitelist)
+
+    ;; (defadvice abort-if-file-too-large (around my-check-ok-large-file-types)
+    ;;   "If FILENAME matches `my-ok-large-file-types', do not abort."
+    ;;   (unless (string-match-p my-ok-large-file-types (ad-get-arg 2))
+    ;;     ad-do-it))
+    ;; (ad-deactivate 'abort-if-file-too-large)
 
     (setq openwith-associations
           '(("\\.\\(?:mpe?g\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
-             "mpv" ("--loop" file))))
+             "mpv" ("--loop" file))
+            ("\\.\\(?:mkv\\)$"
+             "mpv" (file))))
     (openwith-mode +1))
 #+END_SRC
 * Emacs does everything
@@ -2764,6 +2779,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
   (setq mouse-autoselect-window nil
         focus-follows-mouse nil)
+
   (use-package exwm
     ;; :straight (:host github :repo "ch11g/exwm")
     :delight
@@ -3389,7 +3405,6 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 *** Helm EMMS
 #+BEGIN_SRC emacs-lisp
   (use-package helm-emms
-    :straight (:host github :repo "drainful/helm-emms")
     :config
     ;; (setq helm-emms-dired-directories `(,me/music-directory))
     ;; (setq helm-emms-dired-directories nil)
@@ -3415,7 +3430,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 #+BEGIN_SRC emacs-lisp
   (setq erc-track-position-in-mode-line 'after-modes
         ;;erc-mode-line-format "%S %a"
-        )
+        erc-hide-list '("JOIN" "PART" "QUIT"))
 
   (general-def
     :states 'normal

@@ -109,7 +109,10 @@ exist."
        (add-to-list 'exlaunch-shortcut-functions ',function-symbol))))
 
 (defun read-exlaunch ()
-  (completing-read "Launch: " exlaunch-shortcut-functions))
+  (concat exlaunch-prefix
+          (completing-read "Launch: " (mapcar
+                                       (lambda (f) (cadr (split-string (symbol-name f) "/")))
+                                       exlaunch-shortcut-functions))))
 
 (defun exlaunch ()
   (interactive)
