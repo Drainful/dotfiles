@@ -1,5 +1,0 @@
-card qutebrowser {
-     into ~/.config
-
-     qutebrowser
-}

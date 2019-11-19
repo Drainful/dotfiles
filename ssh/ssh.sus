@@ -1,4 +1,0 @@
-card ssh {
-    into ~/.ssh
-    .config
-}

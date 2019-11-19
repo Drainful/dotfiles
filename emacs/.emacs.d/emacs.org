@@ -6,13 +6,12 @@ TITLE: Emacs Configuration
   - [[#lexical-scope][Lexical Scope]]
   - [[#garbage-collector-threshold][Garbage Collector Threshold]]
   - [[#filename-handlers][Filename Handlers]]
-  - [[#load-helper-functions][Load helper functions]]
   - [[#load-secrets][Load secrets]]
   - [[#load-non-secret-environment-variables][Load non-secret environment variables]]
   - [[#constants][Constants]]
   - [[#load-path][Load Path]]
-- [[#packages][Packages]]
   - [[#straightel][Straight.el]]
+- [[#load-helper-functions][Load helper functions]]
 - [[#evil][Evil]]
   - [[#evil-collection][Evil collection]]
   - [[#evil-surround][Evil surround]]
@@ -71,7 +70,6 @@ TITLE: Emacs Configuration
   - [[#winner-mode][Winner Mode]]
   - [[#helm-winconf][Helm winconf]]
   - [[#projects][Projects]]
-  - [[#fzf][FZF]]
   - [[#file-navigation][File navigation]]
 - [[#programming-tools-and-settings][Programming tools and settings]]
   - [[#agressive-indent][Agressive Indent]]
@@ -96,11 +94,10 @@ TITLE: Emacs Configuration
   - [[#julia][Julia]]
   - [[#c-sharp][C Sharp]]
   - [[#haskell][Haskell]]
-  - [[#elm][Elm]]
   - [[#javascript][Javascript]]
   - [[#html][HTML]]
   - [[#org][Org]]
-  - [[#nix][Nix]]
+  - [[#guix][Guix]]
   - [[#bash][Bash]]
 - [[#external-tools][External tools]]
 - [[#emacs-does-everything][Emacs does everything]]
@@ -111,7 +108,6 @@ TITLE: Emacs Configuration
   - [[#system-package-managment][System package managment]]
   - [[#irc][IRC]]
   - [[#weather][Weather]]
-  - [[#bitwarden][Bitwarden]]
 - [[#helper-functions][Helper functions]]
 
 * Startup
@@ -159,10 +155,6 @@ startup. This trick also comes from [[https://github.com/hlissner/doom-emacs/wik
   (setq file-name-handler-alist temp-file-name-handler-alist))
 #+END_SRC
 
-** Load helper functions
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<helper-functions>>
-#+END_SRC
 ** Load secrets
 Secrets are stored in ~~/.emacs.d/.secrets.el~.
 #+BEGIN_SRC emacs-lisp
@@ -178,9 +170,7 @@ Secrets are stored in ~~/.emacs.d/.secrets.el~.
 I create a few constants for later use
 #+BEGIN_SRC emacs-lisp
   ;; Directory containing my dotfiles.
-  (defconst me/dotfiles "~/.dotfiles/")
-  ;; directory containing my nixos configutation
-  (defconst me/nixos-directory "/sudo::/etc/nixos/") 
+  (defconst me/dotfiles "~/dotfiles/")
 
   (defconst me/music-directory "~/Music/")
 #+END_SRC
@@ -189,9 +179,8 @@ I create a few constants for later use
 I extend the load path from my dotfiles directory for tentative
 packages.
 #+BEGIN_SRC emacs-lisp
-  (push (concat me/dotfiles "emacs/packages/")load-path)
+  (push "~/.emacs.d/my-packages/" load-path)
 #+END_SRC
-* Packages
 ** Straight.el
 A functional alternative to package.el which promotes reusablility.
 #+BEGIN_SRC emacs-lisp
@@ -210,7 +199,11 @@ A functional alternative to package.el which promotes reusablility.
 
   (straight-use-package 'use-package)
 
-  (setq straight-use-package-by-default t)
+  (setq straight-use-package-by-default nil)
+#+END_SRC
+* Load helper functions
+#+BEGIN_SRC emacs-lisp :noweb strip-export
+<<helper-functions>>
 #+END_SRC
 * Evil
 These are my settings for the Evil, the Vim emulator for Emacs.
@@ -255,6 +248,7 @@ repeat an ~evil~ motion by providing a tag at the location of
 each possible motion result.
 #+BEGIN_SRC emacs-lisp
   (use-package evil-easymotion
+    :straight t
     :config
     (evilem-default-keybindings "C-M-S-~"))
 #+END_SRC
@@ -549,16 +543,16 @@ M-x commands for common shell commands such as reboot.
 
 A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
-  (defun nixconf ()
+  (defun gconf ()
     (interactive)
-    (or (find-file "~/nixos-config/parts/core.nix")
-        (find-file (concat me/nixos-directory
-                           "configuration.nix"))))
+    (or (find-file "~/.config/guix/system")
+        (find-file "/sudo::/etc/config.scm")
+        (error "guix config not found")))
 #+END_SRC
 
 A command to configure emacs
 #+BEGIN_SRC emacs-lisp
-  (defun econf () (interactive) (find-file (dotfiles "emacs/emacs.org")))
+  (defun econf () (interactive) (find-file "~/.emacs.d/emacs.org"))
 #+END_SRC
 
 A command to create a new scratch buffer
@@ -569,7 +563,7 @@ A command to create a new scratch buffer
                       (generate-new-buffer "*scratch*"))))
       (set-window-buffer nil buffer)
       (with-current-buffer buffer
-        (funcall (default-value 'major-mode)))))
+        (funcall initial-major-mode))))
 #+END_SRC
 * User Interface
 These are settings related to the user interface of Emacs.
@@ -582,7 +576,7 @@ I disable the default startup screen and splash message.
 *** Scratch buffer
 Set the initial mode in the scratch buffer to emacs.
 #+BEGIN_SRC emacs-lisp
-(setq initial-major-mode 'emacs-lisp-mode)
+  (setq initial-major-mode #'lisp-interaction-mode)
 #+END_SRC
 ** Mode line
 The mode line is the line at the bottom of each buffer. It contains
@@ -592,11 +586,12 @@ Delight is a package which is used to hide unnecessary mode-line
 blurbs.
 #+BEGIN_SRC emacs-lisp
   (use-package delight 
+    :straight t
     :config
     (delight '((eldoc-mode nil "eldoc")
-	       (auto-revert-mode nil "autorevert")
-	       (org-src-mode nil "org-src")
-	       (org-indent-mode nil "org"))))
+               (auto-revert-mode nil "autorevert")
+               (org-src-mode nil "org-src")
+               (org-indent-mode nil "org"))))
 #+END_SRC
 *** Format
 #+BEGIN_SRC emacs-lisp
@@ -706,7 +701,7 @@ which integrates well across Emacs.
   (use-package helm-ag
     :config
     (setq helm-ag-insert-at-point 'symbol)
-    (setq helm-ag-base-command "rg --no-heading"))
+    (setq helm-ag-base-command "ag --nocolor --nogroup"))
 #+END_SRC
 *** Extending helm-highight-buffers
 *** COMMENT Helper functions
@@ -1020,6 +1015,7 @@ Dired is the file manager built into Emacs. here is some configuration.
 Add additional font lock rules for dired
 #+BEGIN_SRC emacs-lisp
   (use-package diredfl
+    :straight t
     :config
     (diredfl-global-mode 1))
 #+END_SRC
@@ -1027,6 +1023,7 @@ Add additional font lock rules for dired
 Use atool for compression and extraction
 #+BEGIN_SRC emacs-lisp
 (use-package dired-atool
+  :straight t
   :config
   (leader-key-def normal dired-mode-map
                   "z" #'dired-atool-do-unpack
@@ -1049,7 +1046,7 @@ This allows seamless archive browsing
   (use-package dired-avfs)
 #+END_SRC
 
-*** Dired Subtree
+*** COMMENT Dired Subtree
 
 #+BEGIN_SRC emacs-lisp
   (use-package dired-subtree
@@ -1234,11 +1231,76 @@ primary shell.
     (evil-goto-line)
     (eshell-send-input))
 
+  (defun me/eshell-prev ()
+    (interactive)
+    (evil-append 0)
+    (call-interactively
+     #'eshell-previous-matching-input-from-input)
+    ;; (evil-force-normal-state)
+    )
+
+  (defun me/eshell-next ()
+    (interactive)
+    (evil-append 0)
+    (call-interactively
+     #'eshell-next-matching-input-from-input)
+    ;; (evil-force-normal-state)
+    )
+
+  (defun eshell-previous-matching-input-from-input (arg)
+    "Search backwards through input history for match for current input.
+  \(Previous history elements are earlier commands.)
+  With prefix argument N, search for Nth previous match.
+  If N is negative, search forwards for the -Nth following match."
+    (interactive "p")
+    (if (not (memq last-command '(eshell-previous-matching-input-from-input
+                                  eshell-next-matching-input-from-input)))
+        ;; Starting a new search
+        (setq eshell-matching-input-from-input-string
+              (buffer-substring (save-excursion (eshell-bol) (point))
+                                (save-excursion (end-of-line) (point)))
+              eshell-history-index nil))
+    (eshell-previous-matching-input
+     (concat "^" (regexp-quote eshell-matching-input-from-input-string))
+     arg))
+
+  (defun eshell-previous-matching-input (regexp arg)
+    "Search backwards through input history for match for REGEXP.
+  \(Previous history elements are earlier commands.)
+  With prefix argument N, search for Nth previous match.
+  If N is negative, find the next or Nth next match."
+    (interactive (eshell-regexp-arg "Previous input matching (regexp): "))
+    (setq arg (eshell-search-arg arg))
+    (if (> eshell-last-output-end (point))
+        (error "Point not located after prompt"))
+    (let ((pos (eshell-previous-matching-input-string-position regexp arg)))
+      ;; Has a match been found?
+      (if (null pos)
+          (error "Not found")
+        (setq eshell-history-index pos)
+        (unless (minibuffer-window-active-p (selected-window))
+          (message "History item: %d" (- (ring-length eshell-history-ring) pos)))
+        ;; Can't use kill-region as it sets this-command
+        (delete-region eshell-last-output-end (save-excursion (end-of-line)
+                                                              (point)))
+        (insert-and-inherit (eshell-get-history pos)))))
+
+  (defun eshell-next-matching-input-from-input (arg)
+    "Search forwards through input history for match for current input.
+  \(Following history elements are more recent commands.)
+  With prefix argument N, search for Nth following match.
+  If N is negative, search backwards for the -Nth previous match."
+    (interactive "p")
+    (eshell-previous-matching-input-from-input (- arg)))
+
   (defun set-eshell-keybinds ()
     (general-def :states 'normal :keymaps 'eshell-mode-map
       ;; Let me use C-j/k
       "C-j" #'evil-window-down
       "C-k" #'evil-window-up
+
+      "M-p" #'eshell-previous-matching-input-from-input
+      "M-n" #'eshell-next-matching-input-from-input
 
       "I" #'comint-style-insert-line
       "A" #'comint-style-append-line
@@ -1555,7 +1617,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-one-light)
+  ;; (switch-theme 'doom-one-light)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -1681,7 +1743,7 @@ project.
     (setq skeletor-project-directory "~/code/") ; by default, put the
                                           ; project in the ~/code
                                           ; directory.
-    (setq skeletor-user-directory (dotfiles "emacs/skeletor/"))
+    (setq skeletor-user-directory (dotfiles "emacs/.emacs.d/skeletor/"))
 
     (defun skeletor-create-project-here ()
       "Create a skeletor project in the current directory."
@@ -1741,7 +1803,7 @@ project.
     (project-key-def 'normal
       "s" 'skeletor-create-project-here))
 #+END_SRC
-** FZF
+** COMMENT FZF
 As powerful as ~projectile~ is, ~fzf~ still takes the cake on
 speed of recursive search.
 #+BEGIN_SRC emacs-lisp
@@ -1868,6 +1930,7 @@ I use the ~Company~ package for autocompletion.
     :delight
     :config
     (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
+    (add-to-list 'company-backends 'company-files) ; test this vs evil collection
     (add-to-list 'completion-styles 'initials t)
     ;;(add-to-list 'completion-styles 'substring t)
     (define-key company-active-map (kbd "M-.") 'company-show-location)
@@ -1932,7 +1995,7 @@ A package to interact with Git forges like Gitlab.
     (yas-global-mode t)
     ;; (setq yas/root-directory
     ;;       nil
-    ;;       ;; (list (dotfiles "emacs/snippets")
+    ;;       ;; (list (dotfiles "emacs/.emacs.d/snippets")
     ;;       ;;       yas/root-directory)
     ;;       )
     ;; (ys-reload-all)
@@ -1968,9 +2031,8 @@ languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~f
   (use-package lsp-ui :commands lsp-ui-mode) ; adds flycheck support
   (use-package company-lsp :commands company-lsp) ; links with company
   (use-package helm-lsp :commands helm-lsp-workspace-symbol)
-  (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
   ;; optionally if you want to use debugger
-  (use-package dap-mode)
+  ;; (use-package dap-mode)
 
   (leader-key-def 'normal 'lsp-mode-map
                   "e" #'lsp-execute-code-action)
@@ -2077,7 +2139,8 @@ files.
 ** Lisps
 #+BEGIN_SRC emacs-lisp
   (defvar me/lisp-modes
-    '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map))
+    '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map
+                      scheme-mode))
 
   (cl-defun me/lisp-mode-p (&optional (mode major-mode))
     (find mode me/lisp-modes))
@@ -2086,20 +2149,20 @@ files.
 ~lispy~ is my S-expr editing tool of choice. It integrates with ~evil~
 through ~lispyville~ minor mode.
 #+BEGIN_SRC emacs-lisp
-(use-package lispyville
-  :delight
-  :hook ((emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode) . lispyville-mode)
-  :config
-   (lispyville-set-key-theme
-    '(operators
-      ;; atom-motions
-      prettify
-      wrap
-      slurp-cp
-      barf-cp
-      c-w
-      (escape insert)
-      (additional-movement normal visual motion))))
+  (use-package lispyville
+    :delight
+    :hook ((scheme-mode emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode) . lispyville-mode)
+    :config
+    (lispyville-set-key-theme
+     '(operators
+       ;; atom-motions
+       prettify
+       wrap
+       slurp-cp
+       barf-cp
+       c-w
+       (escape insert)
+       (additional-movement normal visual motion))))
 #+END_SRC
 
 *** Lisp keybindings
@@ -2130,6 +2193,7 @@ given a different color. I leave it off by default.
 This uses font-lock to hide namespace prefixes automatically.
 #+BEGIN_SRC emacs-lisp
   (use-package nameless
+    :straight t
     :delight
     :config
     (add-hook 'emacs-lisp-mode-hook #'nameless-mode)
@@ -2145,11 +2209,21 @@ This uses font-lock to hide namespace prefixes automatically.
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
-(eval-key-def 'normal emacs-lisp-mode-map
-  "b" 'eval-buffer
-  "f" 'eval-defun)
-(eval-key-def 'visual emacs-lisp-mode-map
-  "r" 'eval-region)
+  (eval-key-def 'normal emacs-lisp-mode-map
+    "b" 'eval-buffer
+    "f" 'eval-defun)
+  (eval-key-def 'visual emacs-lisp-mode-map
+                "r" 'eval-region)
+
+
+  (eval-key-def 'normal lisp-interaction-mode-map
+                "b" 'eval-buffer
+                "f" 'eval-defun)
+  (eval-key-def 'visual lisp-interaction-mode-map
+                "r" 'eval-region)
+
+  (general-def 'normal lisp-interaction-mode-map
+    "C-j" 'eval-print-last-sexp)
 #+END_SRC
 ** Common Lisp
 *** Sly
@@ -2168,7 +2242,7 @@ This uses font-lock to hide namespace prefixes automatically.
 
     ;;(define-sly-lisp-defun sbcl (lambda () (nix-executable-find (nix-current-sandbox) "sbcl")))
     (define-sly-lisp sbcl "sbcl")
-    (define-sly-lisp ecl "ecl --load /home/adrian/quicklisp/setup.lisp")
+    (define-sly-lisp ecl "ecl --load ~/quicklisp/setup.lisp")
     (define-sly-lisp ccl "ccl")
     (define-sly-lisp clisp "clisp")
 
@@ -2242,30 +2316,47 @@ It's like ~slime~ for Clojure! Kinda.
 *** Geiser
 It's like ~slime~ for Scheme. Kinda.
 #+BEGIN_SRC emacs-lisp
-(use-package geiser
-  :config
-  (setq geiser-active-implementations '(chez))
-  ;; geiser keybindings
-  (leader-key-def 'normal geiser-mode-map
-    "z" 'geiser-mode-switch-to-repl
-    "c" 'geiser-compile-file
-    "l" 'geiser-load-file)
-  
-  (start-key-def 'normal geiser-mode-map
-    "s" 'geiser
-    "c" 'geiser-connect)
-  
-  (eval-key-def 'normal geiser-mode-map
-    "b" 'geiser-eval-buffer
-    "f" 'geiser-eval-definition)
-  (eval-key-def 'visual 'geiser-mode-map
-    "r" 'geiser-eval-region)
-  (general-def
-   :states 'normal
-   :keymaps 'geiser-repl-mode-map
-   ;; was overridden
-   "C-j" 'evil-window-down
-   "C-k" 'evil-window-up))
+  (use-package geiser
+    :config
+
+    (setq geiser-active-implementations '(guile))
+
+    (with-eval-after-load 'geiser-guile
+      (add-to-list 'geiser-guile-load-path "~/Code/guix"))
+
+    (defun geiser-add-company-file-backend ()
+      (setq company-backends
+            (remove-if (lambda (backend) (eq backend 'company-files))
+                       company-backends))
+      (add-to-list 'company-backends 'company-files))
+
+    (add-hook 'geiser-mode-hook
+              #'geiser-add-company-file-backend)
+
+    (add-hook 'geiser-repl-mode-hook
+              #'geiser-add-company-file-backend)
+
+    ;; geiser keybindings
+    (leader-key-def 'normal geiser-mode-map
+                    "z" 'geiser-mode-switch-to-repl
+                    "c" 'geiser-compile-file
+                    "l" 'geiser-load-file)
+
+    (start-key-def 'normal geiser-mode-map
+                   "s" 'geiser
+                   "c" 'geiser-connect)
+
+    (eval-key-def 'normal geiser-mode-map
+                  "b" 'geiser-eval-buffer
+                  "f" 'geiser-eval-definition)
+    (eval-key-def 'visual 'geiser-mode-map
+                  "r" 'geiser-eval-region)
+    (general-def
+      :states 'normal
+      :keymaps 'geiser-repl-mode-map
+      ;; was overridden
+      "C-j" 'evil-window-down
+      "C-k" 'evil-window-up))
 #+END_SRC
 ** Python
 *** COMMENT Linting
@@ -2319,7 +2410,7 @@ Python support is built in to ~lsp-mode~.
   (eval-key-def 'visual lua-mode-map
     "r" 'lua-send-region)
 #+END_SRC
-*** Love
+*** COMMENT Love
 #+BEGIN_SRC emacs-lisp
   (use-package love-minor-mode
     :config
@@ -2329,7 +2420,7 @@ Python support is built in to ~lsp-mode~.
 *** COMMENT Autocomplete
 #+BEGIN_SRC emacs-lisp
   (use-package auto-complete-lua
-    :straight (:host github :repo "rolpereira/auto-complete-lua")
+    :straight t (:host github :repo "rolpereira/auto-complete-lua")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-lua))
@@ -2337,7 +2428,7 @@ Python support is built in to ~lsp-mode~.
 
   (use-package auto-complete-love
     :after auto-complete-lua
-    :straight (:host github :repo "rolpereira/auto-complete-love")
+    :straight t (:host github :repo "rolpereira/auto-complete-love")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-love))
@@ -2388,7 +2479,7 @@ Python support is built in to ~lsp-mode~.
 #+END_SRC
 ** Shen
 #+BEGIN_SRC emacs-lisp
-(use-package shen-mode)
+(use-package shen-mode :straight t)
 
 (leader-key-def 'normal shen-mode-map
   "z" 'switch-to-shen
@@ -2451,7 +2542,7 @@ A language server back end for C/++
                   ".cquery")
                 projectile-project-root-files-top-down-recurring)))
 #+END_SRC
-*** Font lock
+*** COMMENT Font lock
 Corrects font lock for modern C++.
 #+BEGIN_SRC emacs-lisp
   (use-package modern-cpp-font-lock
@@ -2483,12 +2574,14 @@ Enable ~flycheck~
 ** Julia
 #+BEGIN_SRC emacs-lisp
 (use-package julia-repl
+  :straight t
   :config
   (add-hook 'julia-mode-hook 'julia-repl-mode))
 #+END_SRC
 ** C Sharp
 #+BEGIN_SRC emacs-lisp
   (use-package omnisharp
+    :straight t
     :after company
     :config
     (add-hook 'csharp-mode-hook 'omnisharp-mode)
@@ -2515,12 +2608,12 @@ Enable ~flycheck~
 #+END_SRC
 ** COMMENT ATS
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'load-path  "/home/adrian/code/ats/ATS-Postiats/utils/emacs")
+  (add-to-list 'load-path  "~/code/ats/ATS-Postiats/utils/emacs")
   (require 'ats-mode "ats2-mode")
   (require 'ats2-flymake "flymake-ats2")
-  ;; (setenv "ATSHOME" "/home/adrian/code/ats/ATS-Postiats/")
+  ;; (setenv "ATSHOME" "~/code/ats/ATS-Postiats/")
 #+END_SRC
-** Elm
+** COMMENT Elm
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck-elm
   :config
@@ -2531,6 +2624,7 @@ Enable ~flycheck~
 ** Javascript
 #+BEGIN_SRC emacs-lisp
   (use-package indium
+    :straight t
     :config
     (defun me/indium-local-advice (old-fun &rest args)
       (let ((indium-client-executable (aif (projectile-project-root)
@@ -2650,8 +2744,17 @@ Create a table of contents without exporting.
   :config
   (add-hook 'org-mode-hook 'toc-org-mode))
 #+END_SRC
-** Nix
-These are tools for dealing with the package manager Nix, and NixOS, my operating system.
+** Guix
+Tools for Guix, a package manager and operating system.
+#+BEGIN_SRC emacs-lisp
+  (use-package guix
+    :config
+    ;; (setq guix-guile-program
+    ;;       '("/run/current-system/profile/bin/guile" "--no-auto-compile --listen=1661"))
+    )
+#+END_SRC
+** COMMENT Nix
+Tools for Nix, a package manager and operating system.
 *** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
@@ -2701,15 +2804,17 @@ Enter ~common-lisp-mode~ in the following files
   ;; startup programs
   (define-multi-macro startup-programs start-process-shell-command 3)
 
-  (startup-programs
-   "networkmanager applet" nil "nm-applet"
-   "compton" nil "compton --config ~/comptonconfig.txt"
-   "avfs" nil "mountavfs"
-   "restart redshift" nil "systemctl --user restart redshift.service")
+  ;; (when (featurep 'exwm)
+  ;;     (startup-programs
+  ;;      "networkmanager applet" nil "nm-applet"
+  ;;      "compton" nil "compton --config ~/comptonconfig.txt"
+  ;;      "avfs" nil "mountavfs"
+  ;;      "restart redshift" nil "systemctl --user restart redshift.service"))
 
-  (use-package prodigy)
+  ;; (use-package prodigy)
 
   (use-package openwith
+    :straight t
     :config
     ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
     (defvar my-ok-large-file-types
@@ -2720,7 +2825,7 @@ Enter ~common-lisp-mode~ in the following files
     (defun abort-if-file-too-large-whitelist (old-fun &rest args)
       (unless (string-match-p my-ok-large-file-types (third args))
         (apply old-fun args)))
-  
+
     (advice-add #'abort-if-file-too-large
                 :around
                 'abort-if-file-too-large-whitelist)
@@ -2781,7 +2886,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
         focus-follows-mouse nil)
 
   (use-package exwm
-    ;; :straight (:host github :repo "ch11g/exwm")
     :delight
     :config
 
@@ -2907,6 +3011,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
+            ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
+            ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
+            ;; ([?\s-c ?\l] . exwm-floating-toggle-floating)
             ;; bind "s-z" to M-x
             ([?\s-z] . helm-M-x)
             ;; bind "s-;" to ex mode
@@ -2924,7 +3031,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-g] . keyboard-quit)))
 
     ;; do not start in char mode by default
-    ;; (setq exwm-manage-configurations '((t char-mode t)))
+    (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
     (require 'exwm-systemtray)
@@ -3327,7 +3434,7 @@ Emacs has an inbuilt image viewer ~image-mode~.
                              ;; emms-player-vlc
                              ;; emms-player-vlc-playlist
                              )
-          emms-player-mpd-music-directory "/home/adrian/Music"
+          emms-player-mpd-music-directory "~/Music"
           emms-info-functions '(emms-info-mpd)
           emms-volume-change-function #'emms-volume-mpd-change
           emms-volume-change-amount 5
@@ -3419,9 +3526,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 #+END_SRC
 ** System package managment
 #+BEGIN_SRC emacs-lisp
-  (use-package system-packages
-    :config
-    (setq system-packages-use-sudo t))
+  (use-package system-packages :straight t)
 
   (use-package helm-system-packages) ;; can manage packages across tramp
 #+END_SRC
@@ -3482,11 +3587,11 @@ Interface to wttr.in
     :config
     (setq wttrin-default-cities '("Evanston")))
 #+END_SRC
-** Bitwarden
+** COMMENT Bitwarden
 Emacs interface to ~bitwarden-cli~ 
 #+BEGIN_SRC emacs-lisp
   (use-package bitwarden
-    :straight (:host github :repo "seanfarley/emacs-bitwarden")
+    :straight t (:host github :repo "seanfarley/emacs-bitwarden")
     :config
     (setq bitwarden-automatic-unlock (lambda ()
                                        (read-passwd "Password: "))))
@@ -3495,6 +3600,8 @@ Emacs interface to ~bitwarden-cli~
 Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
 #+BEGIN_SRC emacs-lisp
+  (require 'seq)
+
   (defvar buffer-number-regex (rx "<" (* (not (any "<"))) ">" string-end)
     "A regex to match that angle-bracketed number at the end of a
     buffer name that represents that it is a duplicate of another

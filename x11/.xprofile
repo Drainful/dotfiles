@@ -1,0 +1,13 @@
+#!/bin/sh
+
+export BROWSER=qutebrowser
+
+## X resources for xterm.
+## Some DM merge this automatically; we merge it for TTY logins.
+[ -f "$HOME/.Xresources" ] && xrdb -merge "$HOME/.Xresources"
+
+## Turn off the bell.
+xset -b
+
+## Lock screen on sleep.
+xss-lock slock &

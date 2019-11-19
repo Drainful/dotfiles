@@ -1,3 +1,4 @@
+alias bgx="guile -L $GUILE_LOAD_PATH -L ~/.config/guix/system/ --no-auto-compile --listen=37146"
 alias e="emacsclient"
 alias edw="emacs-daemon-workspace"
 alias nixconf="emacsclient --create-frame -e '(find-file \"/sudo::/etc/nixos/configuration.nix\")'"

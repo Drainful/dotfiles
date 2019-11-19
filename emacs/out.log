@@ -1,4 +1,0 @@
-/run/current-system/sw/bin/spotify: /nix/store/i0fic1xv0p06z7iddzgxlfq5fcx0xbar-curl-7.64.0/lib/libcurl-gnutls.so.4: no version information available (required by /run/current-system/sw/bin/spotify)
-/nix/store/ylk4m3cvj154fkhpzni57sdxc5lmxg74-spotify-1.0.83.316.ge96b6e67-5/share/spotify/.spotify-wrapped: /nix/store/i0fic1xv0p06z7iddzgxlfq5fcx0xbar-curl-7.64.0/lib/libcurl-gnutls.so.4: no version information available (required by /nix/store/ylk4m3cvj154fkhpzni57sdxc5lmxg74-spotify-1.0.83.316.ge96b6e67-5/share/spotify/.spotify-wrapped)
-/proc/self/exe: /nix/store/i0fic1xv0p06z7iddzgxlfq5fcx0xbar-curl-7.64.0/lib/libcurl-gnutls.so.4: no version information available (required by /proc/self/exe)
-[0606/174235.119554:ERROR:sandbox_linux.cc(379)] InitializeSandbox() called with multiple threads in process gpu-process.

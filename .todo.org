@@ -65,11 +65,11 @@ helm-qutebrowser for inspiration.
 I want to use a heavily customizable mode line like spaceline in order
 to maximize information and space. For example, only display battery
 and time in the bottom right most mode line
+** Contribute
+Make that eshell patch that makes next/prev more bearable with evil
 ** Other 
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.
-
-
 
 * Other
 ⠀⠀⠀⣴⣴⡤

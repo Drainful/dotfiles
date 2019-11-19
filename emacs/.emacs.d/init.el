@@ -1,6 +1,6 @@
 (require 'org)
 (setq vc-follow-symlinks t) ;; follow the symlink without asking
-(org-babel-load-file "~/emacs.org")
+(org-babel-load-file "~/.emacs.d/emacs.org")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
