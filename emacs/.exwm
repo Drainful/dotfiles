@@ -1,0 +1,9 @@
+;;; -*- mode: emacs-lisp; -*-
+
+(require 'exwm)
+(exwm-init)
+(setenv "BROWSER" "qutebrowser")
+(start-process-shell-command "networkmanager-applet" nil "nm-applet")
+
+;; (server-start)
+;; (start-process-shell-command "Xresources" nil " [ -f \"$HOME/.Xresources\" ] && xrdb -merge \"$HOME/.Xresources\" ")

@@ -78,7 +78,6 @@ TITLE: Emacs Configuration
   - [[#git-magit][Git (Magit)]]
   - [[#language-client-features][Language client features]]
   - [[#compilation][Compilation]]
-  - [[#direnv-and-lorri][Direnv and Lorri]]
 - [[#language-specific-tools-and-settings][Language specific tools and settings]]
   - [[#lisps][Lisps]]
   - [[#emacs-lisp][Emacs lisp]]
@@ -102,12 +101,12 @@ TITLE: Emacs Configuration
 - [[#external-tools][External tools]]
 - [[#emacs-does-everything][Emacs does everything]]
   - [[#emacs-window-manager-exwm][Emacs window manager (EXWM)]]
-  - [[#document-viewer][Document viewer]]
   - [[#image-viewer][Image viewer]]
   - [[#emms][EMMS]]
   - [[#system-package-managment][System package managment]]
   - [[#irc][IRC]]
   - [[#weather][Weather]]
+  - [[#bluetooth-interface][Bluetooth interface]]
 - [[#helper-functions][Helper functions]]
 
 * Startup
@@ -173,6 +172,8 @@ I create a few constants for later use
   (defconst me/dotfiles "~/dotfiles/")
 
   (defconst me/music-directory "~/Music/")
+
+  (defconst me/guix-config-dir "~/.config/guix/system")
 #+END_SRC
 
 ** Load Path
@@ -199,7 +200,7 @@ A functional alternative to package.el which promotes reusablility.
 
   (straight-use-package 'use-package)
 
-  (setq straight-use-package-by-default nil)
+  (setq straight-use-package-by-default t)
 #+END_SRC
 * Load helper functions
 #+BEGIN_SRC emacs-lisp :noweb strip-export
@@ -214,6 +215,7 @@ These are my settings for the Evil, the Vim emulator for Emacs.
   (setq evil-want-minibuffer t)
 
   (use-package evil
+    :straight t
     :config
     (evil-mode 1)
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
@@ -545,9 +547,15 @@ A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
   (defun gconf ()
     (interactive)
-    (or (find-file "~/.config/guix/system")
+    (or (find-file me/guix-config-dir)
         (find-file "/sudo::/etc/config.scm")
         (error "guix config not found")))
+
+  ;; (defun guix-reconfigure ()
+  ;;   (interactive)
+  ;;   (start-process-shell-command "Guix Reconfigure"
+  ;;                                (earmuffs "Guix Reconfigure")
+  ;;                                "sudo guix system -L ~/.config/guix/system reconfigure ~/.config/guix/system/yoga.scm"))
 #+END_SRC
 
 A command to configure emacs
@@ -635,6 +643,7 @@ Package to use the minibuffer in the manner of the mode line.
 which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package helm
+    ;; :straight t
     :delight
     :bind (("M-x" . helm-M-x))
     :config
@@ -904,8 +913,8 @@ prefix-help-command.
   (setq prefix-help-command
         #'which-key-C-h-dispatch)
 
-  (add-to-list 'helm-completing-read-handlers-alist
-               nil)
+  ;; (add-to-list 'helm-completing-read-handlers-alist
+  ;;              nil)
 
   ;; (setq prefix-help-command #'which-key-M-x-prefix+)
   (general-def which-key-C-h-map
@@ -932,6 +941,7 @@ Iedit is a package for interactive refactoring.
   (use-package iedit)
 
   (use-package evil-iedit-state
+    :straight t
     :config
     (defun me/evil-iedit-toggle ()
       (interactive)
@@ -1107,7 +1117,7 @@ Get completion hints from bash and fish.
   (use-package fish-completion
     :after bash-completion
     :config
-    (global-fish-completion-mode 1)
+    (global-fish-completion-mode 0)
     (setq fish-completion-fallback-on-bash-p t))
 #+END_SRC
 ** Eshell
@@ -1140,6 +1150,9 @@ primary shell.
                                     (window-width))) "
   ")
                     " " (if (= (user-uid) 0) "Λ" "λ") " "))))
+
+  (setq eshell-prompt-regexp  "^[^#$\n]* [Λλ] ")
+
   (defun eshell-buffer-name-function (&optional directory)
     (concat "*eshell at "
             (abbreviate-file-name (or directory
@@ -1170,6 +1183,12 @@ primary shell.
       (if buffer
           (switch-to-buffer buffer)
         (eshell-at directory))))
+
+  (defun eshell-here ()
+    (interactive)
+    (if eshell-mode
+        (eshell-at default-directory)
+      (eshell-at-or-switch default-directory)))
 
   (defun eshell-rename-buffer ()
     (let ((name (eshell-buffer-name-function)))
@@ -1203,7 +1222,7 @@ primary shell.
     (eshell/fd "~"))
 
   (defun eshell/econf () (econf))
-  (defun eshell/nixconf () (nixconf))
+  (defun eshell/gconf () (gconf))
 
   (if (executable-find "du")
       (fmakunbound 'eshell/du)) ; for speed
@@ -1500,7 +1519,7 @@ Emacs.
   (server-start)
 
   ;; easily restart emacs daemon
-  (use-package restart-emacs)
+  (use-package restart-emacs :straight t)
 
   ;; focus any new frames
   (add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
@@ -1617,7 +1636,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  ;; (switch-theme 'doom-one-light)
+  (switch-theme 'doom-molokai)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -2050,7 +2069,7 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** Direnv and Lorri
+** COMMENT Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
 per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 #+BEGIN_SRC emacs-lisp
@@ -2247,13 +2266,13 @@ This uses font-lock to hide namespace prefixes automatically.
     (define-sly-lisp clisp "clisp")
 
     (setq inferior-lisp-program "sbcl")
-    ;; Open sly debug buffers in emacs state, rather than evil state.
-    (add-to-list 'helm-completing-read-handlers-alist
-                 '(sly-read-symbol-name . nil))
-    ;; Avoid using helm when bugget at sly-read-symbol-name functions
-    (add-to-list 'helm-completing-read-handlers-alist
-                 '(sly-describe-symbol . nil)
-                 '(sly-describe-function . nil))
+    ;; ;; Open sly debug buffers in emacs state, rather than evil state.
+    ;; (add-to-list 'helm-completing-read-handlers-alist
+    ;;              '(sly-read-symbol-name . nil))
+    ;; ;; Avoid using helm when bugget at sly-read-symbol-name functions
+    ;; (add-to-list 'helm-completing-read-handlers-alist
+    ;;              '(sly-describe-symbol . nil)
+    ;;              '(sly-describe-function . nil))
     (general-def
       :states 'normal
       :keymaps 'sly-mrepl-mode-map
@@ -2321,8 +2340,15 @@ It's like ~slime~ for Scheme. Kinda.
 
     (setq geiser-active-implementations '(guile))
 
+    ;; (with-eval-after-load 'geiser-guile
+    ;;   (add-to-list 'geiser-guile-load-path "~/Code/guix"))
+
+    (setq geiser-guile-load-path nil)
     (with-eval-after-load 'geiser-guile
-      (add-to-list 'geiser-guile-load-path "~/Code/guix"))
+      (aif (guix-eval "%load-path")
+           (mapcar (lambda (path)
+                     (add-to-list 'geiser-guile-load-path path))
+                   (read (car it)))))
 
     (defun geiser-add-company-file-backend ()
       (setq company-backends
@@ -2336,15 +2362,31 @@ It's like ~slime~ for Scheme. Kinda.
     (add-hook 'geiser-repl-mode-hook
               #'geiser-add-company-file-backend)
 
+    ;; (defun geiser-repl--connection* ()
+    ;;   (let ((buffer (if guix-devel-mode
+    ;;                     (guix-get-repl-buffer t)
+    ;;                   (geiser-repl--set-up-repl geiser-impl--implementation))))
+    ;;     (and (buffer-live-p buffer)
+    ;;          (get-buffer-process buffer)
+    ;;          (with-current-buffer buffer geiser-repl--connection))))
+
     ;; geiser keybindings
     (leader-key-def 'normal geiser-mode-map
                     "z" 'geiser-mode-switch-to-repl
                     "c" 'geiser-compile-file
                     "l" 'geiser-load-file)
 
+    ;; (defun geiser-connect-guix ()
+    ;;   (interactive)
+    ;;   (aif (guix-repl-socket-file-name)
+    ;;        (geiser-connect-local 'guile (concat it
+    ;;                                             "/repl-socket"))
+    ;;        (error "Guix repl not active.")))
+
     (start-key-def 'normal geiser-mode-map
                    "s" 'geiser
-                   "c" 'geiser-connect)
+                   "c" 'geiser-connect
+                   )
 
     (eval-key-def 'normal geiser-mode-map
                   "b" 'geiser-eval-buffer
@@ -2741,6 +2783,7 @@ A hydra to jump between org-babel source blocks:
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
 (use-package toc-org
+  :straight t
   :config
   (add-hook 'org-mode-hook 'toc-org-mode))
 #+END_SRC
@@ -2748,10 +2791,31 @@ Create a table of contents without exporting.
 Tools for Guix, a package manager and operating system.
 #+BEGIN_SRC emacs-lisp
   (use-package guix
+    :straight t (:host github :repo "alezost/guix.el")
     :config
+
+    (setq guix-load-path me/guix-config-dir)
     ;; (setq guix-guile-program
     ;;       '("/run/current-system/profile/bin/guile" "--no-auto-compile --listen=1661"))
-    )
+
+    ;; avoid error when deleting and re-starting guix repl
+    (defun geiser-repl--narrow-to-prompt ()
+      "Narrow to active prompt region and return t, otherwise returns nil."
+      (let* ((proc (get-buffer-process (current-buffer)))
+             (pmark (and proc (process-mark proc)))
+             (intxt (and pmark
+                         (when (>= (point) (marker-position pmark))
+                           (save-excursion
+                             (if comint-eol-on-send
+                                 (if comint-use-prompt-regexp
+                                     (end-of-line)
+                                   (goto-char (field-end))))
+                             (buffer-substring pmark (point))))))
+             (prompt-beg (and pmark (marker-position pmark)))
+             (prompt-end (and prompt-beg (+ prompt-beg (length intxt)))))
+        (when (> (length intxt) 0)
+          (and prompt-end (narrow-to-region prompt-beg prompt-end))
+          t))))
 #+END_SRC
 ** COMMENT Nix
 Tools for Nix, a package manager and operating system.
@@ -2954,9 +3018,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (start-process-shell-command command nil command)))
 
             ([?\s-`] . helm-qutebrowser)
-            ([?\s-1] . (lambda ()
-                         (interactive)
-                         (eshell-at-or-switch default-directory)))
+            ([?\s-1] . eshell-here)
             ([?\s-2] . helm-find-files)
             ([?\s-3] . multi-term)
 
@@ -3006,7 +3068,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-0] . (lambda ()
                          (interactive)
                          (helm-winconf-switch "scratch")
-                         (switch-to-buffer "*scratch*")))
+                         (scratch)))
 
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
@@ -3027,8 +3089,14 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-w] . actually-kill-this-buffer)
             ([?\s-q] . evil-delete-buffer)
             ([?\s-a] . bury-evil-buffer)
+            ([?\s-a] . bury-evil-buffer)
+            ([?\s-A] . (lambda ()
+                         (interactive)
+                         (bury-evil-buffer)
+                         (evil-quit)))
+            ([?\s-g] . guix)
             ;; bind "s-g" to keyboard-quit
-            ([?\s-g] . keyboard-quit)))
+            ([?\s-G] . keyboard-quit)))
 
     ;; do not start in char mode by default
     (setq exwm-manage-configurations '((t char-mode t)))
@@ -3323,7 +3391,7 @@ search for url if a matching tab is not found.
   (add-hook 'exwm-manage-finish-hook
             #'enforce-floating-toggle-list)
 #+END_SRC
-** Document viewer
+** COMMENT Document viewer
 
 ~pdf-tools~ is a document viewer for emacs
 #+BEGIN_SRC emacs-lisp
@@ -3526,7 +3594,16 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 #+END_SRC
 ** System package managment
 #+BEGIN_SRC emacs-lisp
-  (use-package system-packages :straight t)
+  (use-package system-packages
+    :straight t
+    :config
+    (setf (cdr
+           (assoc
+            'search
+            (cdr
+             (assoc
+              'guix system-packages-supported-package-managers))))
+          "~/.emacs.d/guix-search-full.sh"))
 
   (use-package helm-system-packages) ;; can manage packages across tramp
 #+END_SRC
@@ -3586,6 +3663,10 @@ Interface to wttr.in
   (use-package wttrin
     :config
     (setq wttrin-default-cities '("Evanston")))
+#+END_SRC
+** Bluetooth interface
+#+BEGIN_SRC emacs-lisp
+  (use-package bluetooth)
 #+END_SRC
 ** COMMENT Bitwarden
 Emacs interface to ~bitwarden-cli~ 

@@ -1,5 +1,8 @@
 (define-module (lib))
 
+
+;; include udev rules merging
+
 ;; make functions to merge package and service lists and throw error
 ;; when have 2 of same name.
 

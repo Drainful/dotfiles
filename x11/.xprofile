@@ -7,7 +7,7 @@ export BROWSER=qutebrowser
 [ -f "$HOME/.Xresources" ] && xrdb -merge "$HOME/.Xresources"
 
 ## Turn off the bell.
-xset -b
+# xset -b
 
 ## Lock screen on sleep.
-xss-lock slock &
+# xss-lock slock &

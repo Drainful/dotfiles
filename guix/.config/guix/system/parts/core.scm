@@ -4,14 +4,16 @@
              (gnu packages curl)
              (gnu packages wget)
              (gnu packages video)
-             (gnu packages compression)
-             (gnu packages shells)
              (gnu packages admin)
+             (gnu packages code)
              (gnu packages file)
              (gnu packages linux)
              (gnu packages readline)
+             (gnu packages package-management)
              (gnu packages mpd)
-             (nongnu packages compression)
+             (gnu packages compression)
+             (gnu packages base)
+             ;; (nongnu packages compression)
              (lib))
 
 (os-part '()
@@ -24,14 +26,20 @@
                neofetch
                file
                usbutils
-               ;; udisks
                rlwrap
-               aumix
                mpd
+               stow
+
+               tree
+               the-silver-searcher
 
                ;; archives
                atool
-               unrar
+               ;; unrar
                unzip
-               zip) 
-         '())
+               zip
+               tar) 
+         ;; (list (udisks-service)
+         ;;       (bluetooth-service))
+         '()
+         )
