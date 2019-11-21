@@ -3075,7 +3075,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
           (setq timer
                 (run-with-timer clear-minibuffer-delay nil
                                 #'clear-minibuffer)) )))
-  
+
 
     (defun set-clear-minibuffer-delayed ()
       (interactive)
@@ -3115,9 +3115,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                           (string-prefix-p "sun-awt-X11-" exwm-instance-name)
                           (string= "gimp" exwm-instance-name))
                   (exwm-workspace-rename-buffer exwm-title))))
-    (general-def :keymaps 'exwm-mode-map
-      "C-c C-f" 'exwm-layout-toggle-fullscreen
-      "C-c C-l" 'exwm-floating-toggle-floating)
+
+    ;; (general-def :keymaps 'exwm-mode-map
+    ;;   "C-c C-f" 'exwm-layout-toggle-fullscreen
+    ;;   "C-c C-l" 'exwm-floating-toggle-floating)
 
     (setq exwm-input-global-keys
           `(;; Bind "s-r" to exit char-mode and fullscreen mode.
@@ -3226,7 +3227,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([?\s-G] . keyboard-quit)))
 
     ;; do not start in char mode by default
-    (setq exwm-manage-configurations '((t char-mode t)))
+    ;; (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
     (require 'exwm-systemtray)
@@ -3238,6 +3239,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                                   ?\s-,
                                   ?\s-m
                                   (elt (kbd "M-<tab>") 0)
+                                  (elt (kbd "<XF86AudioPause>") 0)
                                   (elt (kbd "<M-iso-lefttab>") 0)
                                   (elt (kbd "s-<tab>") 0)
                                   (elt (kbd "<s-iso-lefttab>") 0)))
@@ -3345,7 +3347,9 @@ search for url if a matching tab is not found.
 #+END_SRC
 *** Desktop Environment
 #+BEGIN_SRC emacs-lisp
-  (use-package pulseaudio-control)
+  (use-package pulseaudio-control
+    :config
+    (setq pulseaudio-control-use-default-sink t))
 
   (defmacro define-increment-functions (type
                                         get-command
@@ -3888,7 +3892,19 @@ Interface to wttr.in
 #+END_SRC
 ** Bluetooth interface
 #+BEGIN_SRC emacs-lisp
-  (use-package bluetooth)
+  (use-package bluetooth
+    :config
+    (leader-key-def normal
+                    "1" #'bluetooth-list-devices)
+    (general-def normal bluetooth-mode-map
+      "s" #'bluetooth-show-device-info
+      "d" #'bluetooth-start-discovery
+      "D" #'bluetooth-stop-discovery
+      "R" #'bluetooth-remove-device
+      "t" #'bluetooth-toggle-trusted
+      "p" #'bluetooth-pair
+      "c" #'bluetooth-connect
+      "x" #'bluetooth-disconnect))
 #+END_SRC
 ** COMMENT Bitwarden
 Emacs interface to ~bitwarden-cli~ 
