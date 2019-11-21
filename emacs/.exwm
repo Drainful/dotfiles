@@ -2,7 +2,7 @@
 
 (require 'exwm)
 (exwm-init)
-(setenv "BROWSER" "qutebrowser")
+(setenv "BROWSER" "next")
 (start-process-shell-command "networkmanager-applet" nil "nm-applet")
 
 ;; (server-start)

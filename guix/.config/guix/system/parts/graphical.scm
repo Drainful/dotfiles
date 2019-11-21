@@ -1,5 +1,4 @@
 (use-modules (gnu)
-             (gnu packages web-browsers)
              (gnu packages xorg)
              (gnu packages bittorrent)
              (gnu packages pulseaudio)
@@ -18,33 +17,29 @@
              (gnu packages imagemagick)
              (my-packages)
              (lib))
-(os-part '()
-         (list ;; for user mounts
-          ;; qutebrowser-new
-          ;; next
-          xcape
-          xrdb
-          mpv
-          qbittorrent
-          pavucontrol
-          wine
-          winetricks
-          slock
+(os-part (list (load "./next.scm"))
+         (list xcape
+               xrdb
+               mpv
+               qbittorrent
+               pavucontrol
+               wine
+               winetricks
+               slock
 
-          gparted
+               gparted
 
-          gnome-icon-theme
+               gnome-icon-theme
 
-          font-gnu-freefont-ttf
-          font-tex-gyre
-          font-ubuntu
-          font-dejavu
-          font-terminus
-          font-liberation
-          fontconfig
-          xfontsel
+               font-gnu-freefont-ttf
+               font-tex-gyre
+               font-ubuntu
+               font-dejavu
+               font-terminus
+               font-liberation
+               fontconfig
+               xfontsel
 
-          imagemagick
-          xdpyinfo
-          )
-         '())
+               imagemagick
+               xdpyinfo)
+         (list))

@@ -13,6 +13,7 @@
              (gnu packages mpd)
              (gnu packages compression)
              (gnu packages base)
+             (gnu packages ssh)
              ;; (nongnu packages compression)
              (lib))
 
@@ -29,6 +30,7 @@
                rlwrap
                mpd
                stow
+               openssh
 
                tree
                the-silver-searcher
@@ -37,8 +39,7 @@
                atool
                ;; unrar
                unzip
-               zip
-               tar) 
+               zip) 
          ;; (list (udisks-service)
          ;;       (bluetooth-service))
          '()

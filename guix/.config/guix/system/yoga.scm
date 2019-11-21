@@ -22,11 +22,13 @@
                   (list
                    nss-certs
                    font-inconsolata
-                   brightnessctl)
-
+                   brightnessctl
+                   pulseaudio
+                   bluez)
+                  
                   (list
                    (bluetooth-service #:auto-enable? #t)
-                   (service alsa-service-type)
+                   ;; (service alsa-service-type)
                    (set-xorg-configuration
                     (xorg-configuration
                      (keyboard-layout keyboard-layout)))))))
@@ -73,7 +75,7 @@
     (users (cons (user-account
                   (name "adrian")
                   (group "users")
-                  (supplementary-groups '("wheel" "netdev"
+                  (supplementary-groups '("lp" "wheel" "netdev"
                                           "audio" "video"))
                   (home-directory "/home/guix/adrian"))
                  %base-user-accounts))

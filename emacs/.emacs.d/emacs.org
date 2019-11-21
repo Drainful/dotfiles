@@ -817,6 +817,9 @@ than emacs into the "+" register.
 Close delimiters automatically as I write.
 #+BEGIN_SRC emacs-lisp
   (electric-pair-mode t) 
+
+  (defun local-disable-electric-pair-mode ()
+    (electric-pair-local-mode -1))
 #+END_SRC
 *** Matching parens
 Highlight the parentheis whose pair is under the point.
@@ -1056,8 +1059,7 @@ This allows seamless archive browsing
   (use-package dired-avfs)
 #+END_SRC
 
-*** COMMENT Dired Subtree
-
+*** Dired Subtree
 #+BEGIN_SRC emacs-lisp
   (use-package dired-subtree
     :config
@@ -1083,7 +1085,6 @@ This allows seamless archive browsing
     (general-def 'normal dired-mode-map
       "z a" #'dired-subtree-toggle))
 #+END_SRC
-
 *** Dired Ranger
 Multi-stage copy/paste
 #+BEGIN_SRC emacs-lisp
@@ -1505,6 +1506,8 @@ Allows multiple term buffers to be created.
 access remote files as if they were part of my filesystem within
 Emacs.
 #+BEGIN_SRC emacs-lisp
+  (require 'tramp)
+
   ;; try ftp passive mode
   (setq ange-ftp-try-passive-mode t)
 
@@ -1516,7 +1519,7 @@ Emacs.
 * Emacs client/server settings
 #+BEGIN_SRC emacs-lisp
   ;; run emacs server
-  (server-start)
+  ;; (server-start)
 
   ;; easily restart emacs daemon
   (use-package restart-emacs :straight t)
@@ -1963,6 +1966,10 @@ I use the ~Company~ package for autocompletion.
 
     (global-company-mode nil))
 #+END_SRC
+*** Smart Tab
+#+BEGIN_SRC emacs-lisp
+  (use-package smart-tab)
+#+END_SRC
 *** COMMENT Company Box
 #+BEGIN_SRC emacs-lisp
   (use-package company-box
@@ -2139,6 +2146,7 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 
     (add-direnv-non-file-modes
      'sly-mode
+     'slime-mode
      'eshell-mode
      'comint-mode
      'term-mode
@@ -2158,7 +2166,7 @@ files.
 ** Lisps
 #+BEGIN_SRC emacs-lisp
   (defvar me/lisp-modes
-    '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode sly-mode-map
+    '(emacs-lisp-mode lisp-mode lispy-mode clojure-mode shen-mode slime-mode-map sly-mode-map
                       scheme-mode))
 
   (cl-defun me/lisp-mode-p (&optional (mode major-mode))
@@ -2198,7 +2206,9 @@ functionality can be bound to that mode.
   (general-def :states 'normal
     :keymaps 'lispyville-mode-map
     "M-k" #'lispy-slurp-or-barf-right
-    "M-j" #'lispy-slurp-or-barf-left)
+    "M-j" #'lispy-slurp-or-barf-left
+    "[" #'lispyville-beginning-of-defun
+    "]" #'lispyville-beginning-of-next-defun)
 #+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is
@@ -2228,29 +2238,123 @@ This uses font-lock to hide namespace prefixes automatically.
 #+END_SRC
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
+  (general-def 'normal 'emacs-lisp-mode-map
+    "M-." #'find-function-or-variable-at-point)
+
   (eval-key-def 'normal emacs-lisp-mode-map
-    "b" 'eval-buffer
-    "f" 'eval-defun)
+                "b" #'eval-buffer
+                "f" #'eval-defun)
   (eval-key-def 'visual emacs-lisp-mode-map
-                "r" 'eval-region)
+                "r" #'eval-region)
 
-
+  (general-def 'normal 'lisp-interaction-mode-map
+    "M-." #'find-function-or-variable-at-point)
   (eval-key-def 'normal lisp-interaction-mode-map
-                "b" 'eval-buffer
-                "f" 'eval-defun)
+                "b" #'eval-buffer
+                "f" #'eval-defun)
   (eval-key-def 'visual lisp-interaction-mode-map
-                "r" 'eval-region)
+                "r" #'eval-region)
 
   (general-def 'normal lisp-interaction-mode-map
-    "C-j" 'eval-print-last-sexp)
+    "C-j" #'eval-print-last-sexp)
 #+END_SRC
 ** Common Lisp
-*** Sly
-~sly~ is a Common Lisp IDE for Emacs and a featureful fork of ~slime~.
+*** Slime
+~slime~ is a Common Lisp IDE for Emacs.
+#+BEGIN_SRC emacs-lisp
+  (use-package slime
+    :after evil
+    :config
+
+    (setq slime-contribs '(slime-fancy))
+    (add-to-list 'smart-tab-completion-functions-alist
+                 '(lisp-mode . helm-slime-complete))
+    (add-to-list 'smart-tab-completion-functions-alist
+                 '(slime-repl-mode . helm-slime-complete))
+
+    (defmacro define-slime-lisp (name command)
+      `(defun ,name () (interactive) (slime ,command)))
+
+    (defmacro define-slime-lisp-defun (name fn)
+      `(defun ,name () (interactive) (slime (funcall ,fn))))
+
+    ;;(define-slime-lisp-defun sbcl (lambda () (nix-executable-find (nix-current-sandbox) "sbcl")))
+    (define-slime-lisp sbcl "sbcl")
+    (define-slime-lisp ecl "ecl --load ~/quicklisp/setup.lisp")
+    (define-slime-lisp ccl "ccl")
+    (define-slime-lisp clisp "clisp")
+
+    (setq inferior-lisp-program "sbcl")
+    ;; ;; Open slime debug buffers in emacs state, rather than evil state.
+    ;; (add-to-list 'helm-completing-read-handlers-alist
+    ;;              '(slime-read-symbol-name . nil))
+    ;; ;; Avoid using helm when bugget at slime-read-symbol-name functions
+    ;; (add-to-list 'helm-completing-read-handlers-alist
+    ;;              '(slime-describe-symbol . nil)
+    ;;              '(slime-describe-function . nil))
+
+    ;; (defun helm-slime-completion-at-point-function ()
+    ;;   #'helm-slime-complete)
+
+    (defun slime-mode-hook-fn ()
+      (company-mode -1)
+      (smart-tab-mode 1))
+
+    (add-hook 'slime-mode-hook #'slime-mode-hook-fn)
+
+    (add-hook 'slime-repl-mode-hook
+              #'slime-mode-hook-fn)
+
+    (add-hook 'slime-repl-mode-hook
+              #'local-disable-electric-pair-mode))
+
+
+  ;; (use-package slime-company)
+
+  (use-package helm-slime
+    :config
+    (setq helm-slime-complete-sources
+          ;; '(helm-slime-fuzzy-complete-source)
+          '(helm-slime-simple-complete-source helm-slime-fuzzy-complete-source helm-slime-compound-complete-source))
+    (global-helm-slime-mode 1))
+#+END_SRC
+**** Keybindings
+#+BEGIN_SRC emacs-lisp
+  (general-def :states 'normal :keymaps 'slime-mode-map
+    "K" 'slime-describe-symbol
+    "M-." #'slime-edit-definition)
+
+  (general-def :states 'normal :keymaps 'slime-repl-mode-map
+    "<return>" #'slime-repl-return
+
+    "I" #'comint-style-insert-line
+    "A" #'comint-style-append-line
+    "M-." #'slime-edit-definition)
+
+  (leader-key-def 'normal slime-mode-map
+                  "z" 'slime-switch-to-output-buffer
+                  "c" 'slime-compile-file
+                  "l" 'slime-load-file)
+
+  (start-key-def 'normal slime-mode-map
+                 "s" 'slime
+                 "c" 'slime-connect)
+
+  (eval-key-def 'normal slime-mode-map
+    "b" 'slime-eval-buffer
+    "f" 'slime-eval-defun)
+  (eval-key-def 'visual 'slime-mode-map
+                "r" 'slime-eval-region)
+#+END_SRC
+
+*** COMMENT Sly
+~sly~ is a fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
   (use-package sly
     :after evil
     :config
+
+    (add-to-list 'sly-contribs 'slynk-retro)
 
     ;; make functions for using specific lisp implementations.
     (defmacro define-sly-lisp (name command)
@@ -2282,7 +2386,7 @@ This uses font-lock to hide namespace prefixes automatically.
       "A" #'comint-style-append-line))
 #+END_SRC
 
-*** Keybindings
+**** Keybindings
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'normal :keymaps 'sly-mode-map
     "K" 'sly-describe-symbol
@@ -2345,10 +2449,10 @@ It's like ~slime~ for Scheme. Kinda.
 
     (setq geiser-guile-load-path nil)
     (with-eval-after-load 'geiser-guile
-      (aif (guix-eval "%load-path")
-           (mapcar (lambda (path)
-                     (add-to-list 'geiser-guile-load-path path))
-                   (read (car it)))))
+      (if (symbol-function 'guix-eval) 
+          (mapcar (lambda (path)
+                    (add-to-list 'geiser-guile-load-path path))
+                  (read (car (guix-eval "%load-path"))))))
 
     (defun geiser-add-company-file-backend ()
       (setq company-backends
@@ -2361,6 +2465,9 @@ It's like ~slime~ for Scheme. Kinda.
 
     (add-hook 'geiser-repl-mode-hook
               #'geiser-add-company-file-backend)
+
+    (add-hook 'geiser-repl-mode-hook
+              #'local-disable-electric-pair-mode)
 
     ;; (defun geiser-repl--connection* ()
     ;;   (let ((buffer (if guix-devel-mode
@@ -2791,12 +2898,13 @@ Create a table of contents without exporting.
 Tools for Guix, a package manager and operating system.
 #+BEGIN_SRC emacs-lisp
   (use-package guix
-    :straight t (:host github :repo "alezost/guix.el")
     :config
+    (add-to-path "~/.guix-profile/bin/")
 
     (setq guix-load-path me/guix-config-dir)
-    ;; (setq guix-guile-program
-    ;;       '("/run/current-system/profile/bin/guile" "--no-auto-compile --listen=1661"))
+
+    (setq guix-guile-program
+          '("/run/current-system/profile/bin/guile" "--no-auto-compile" "--listen=37146"))
 
     ;; avoid error when deleting and re-starting guix repl
     (defun geiser-repl--narrow-to-prompt ()
@@ -2946,6 +3054,7 @@ Control spotify running on any device from Emacs.
 *** Main Package
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
   (setq mouse-autoselect-window nil
         focus-follows-mouse nil)
 
@@ -2955,13 +3064,18 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     (defvar clear-minibuffer-delay "2 sec")
 
-    (defun clear-minibuffer ()
-      (message nil))
+    (let (timer)
+      (defun clear-minibuffer ()
+        (message nil))
 
-    (defun clear-minibuffer-delayed ()
-      (if (current-message)
-          (run-at-time clear-minibuffer-delay
-                       nil #'clear-minibuffer)))
+      (defun clear-minibuffer-delayed ()
+        (when (current-message)
+          (when (find timer timer-list)
+            (cancel-timer timer))
+          (setq timer
+                (run-with-timer clear-minibuffer-delay nil
+                                #'clear-minibuffer)) )))
+  
 
     (defun set-clear-minibuffer-delayed ()
       (interactive)
@@ -3017,7 +3131,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-`] . helm-qutebrowser)
+            ([?\s-`] . helm-next)
             ([?\s-1] . eshell-here)
             ([?\s-2] . helm-find-files)
             ([?\s-3] . multi-term)
@@ -3028,6 +3142,22 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;;                 (interactive)
             ;;                 (eshell ,n))))
             ;;           (number-sequence 1 3))
+
+
+            (,(kbd "<XF86MonBrightnessUp>"). desktop-brightness-increment-large)
+            (,(kbd "<XF86MonBrightnessDown>" ). desktop-brightness-decrement-large)
+            (,(kbd "<S-XF86MonBrightnessUp>" ). desktop-brightness-increment-normal)
+            (,(kbd "<S-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-normal)
+            (,(kbd "<C-XF86MonBrightnessUp>" ). desktop-brightness-increment-small)
+            (,(kbd "<C-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-small)
+
+            (,(kbd "<XF86AudioRaiseVolume>") . desktop-volume-increment-large)
+            (,(kbd "<XF86AudioLowerVolume>") . desktop-volume-decrement-large)
+            (,(kbd "S-<XF86AudioRaiseVolume>") . desktop-volume-increment-normal)
+            (,(kbd "S-<XF86AudioLowerVolume>") . desktop-volume-decrement-normal)
+            (,(kbd "C-<XF86AudioRaiseVolume>") . desktop-volume-increment-small)
+            (,(kbd "C-<XF86AudioLowerVolume>") . desktop-volume-decrement-small)
+            (,(kbd "<XF86AudioMute>") . pulseaudio-control-toggle-current-sink-mute)
 
 
             ;; Bind "s- " to launch external commands through my launcher.
@@ -3047,10 +3177,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([s-down] . evil-quit)
             ([s-up] . delete-other-windows)
             ([s-left] . windows-left)
-
-            ;; Brightness
-            ([C-XF86MonBrightnessUp] . desktop-environment-brightness-increment-very-slowly)
-            ([C-XF86MonBrightnessDown] . desktop-environment-brightness-decrement-very-slowly)
 
             ;; lock screen
             ([?\s-o] . desktop-environment-lock-screen)
@@ -3073,6 +3199,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
+            ([?\s-c] . hydra-winner/body)
             ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
             ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
             ;; ([?\s-c ?\l] . exwm-floating-toggle-floating)
@@ -3174,22 +3301,10 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     "Define functions to launch programs. ")
 
   (exlaunch-shortcuts
-   (alacritty :switch-to nil)
    multimc
-   firefox
-   (qutebrowser :switch-to nil)
-   steam
+   (next :switch-to nil)
    krita
-   gimp
-   (spotify :args "--force-device-scale-factor=2"
-            :shell-command "spotify"
-            :other-window t)
-   (nmtui :shell-command "alacritty"
-          :args "-e nmtui")
-   (alsamixer :shell-command "alacritty"
-              :args "-e alsamixer")
-   (bluetooth :shell-command "blueman-manager"
-              :other-window t))
+   gimp)
 #+END_SRC
 *** Symon system monitor
 #+BEGIN_SRC emacs-lisp
@@ -3206,18 +3321,17 @@ I wrote a package to launch programs which integrates with ~exwm~ and
     (add-to-list 'helm-source-names-using-follow "EXWM buffers")
 
     (general-def :keymaps 'helm-exwm-map
-                        "M-d" #'helm-buffer-run-kill-persistent
-                        "S-<return>" #'helm-buffer-switch-buffers-other-window)
+      "M-d" #'helm-buffer-run-kill-persistent
+      "S-<return>" #'helm-buffer-switch-buffers-other-window)
 
-
-    (require 'helm-qutebrowser)
+    (require 'helm-next)
 
     ;; ;; Separate EXWM and qutebrowser buffers in helm-mini
     ;; (setq helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
-    ;; (setq helm-exwm-source (helm-qutebrowser-build-exwm-source))
+    ;; (setq helm-exwm-source (helm-next-build-exwm-source))
     ;; (setq helm-mini-default-sources `(helm-exwm-emacs-buffers-source
     ;;                                   helm-exwm-source
-    ;;                                   helm-qutebrowser--buffers-source
+    ;;                                   helm-next--buffers-source
     ;;                                   helm-source-recentf))
     (setq helm-mini-default-sources `(helm-source-buffers-list
                                       helm-source-recentf
@@ -3227,15 +3341,99 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 A helm source to switch between qutebrowser tabs (as windows) or to
 search for url if a matching tab is not found.
 #+BEGIN_SRC emacs-lisp
-  (require 'helm-qutebrowser)
+  (require 'helm-next)
 #+END_SRC
 *** Desktop Environment
+#+BEGIN_SRC emacs-lisp
+  (use-package pulseaudio-control)
+
+  (defmacro define-increment-functions (type
+                                        get-command
+                                        get-regex
+                                        set-command
+                                        argument-large-increment
+                                        argument-normal-increment
+                                        argument-small-increment
+                                        argument-large-decrement
+                                        argument-normal-decrement
+                                        argument-small-decrement)
+    (let ((getter-fn-name (intern (concat "desktop-" type "-get"))))
+      `(progn
+         ,(when get-command
+            `(defun ,getter-fn-name ()
+               (let ((output ,(if (stringp get-command)
+                                  `(shell-command-to-string ,get-command)
+                                `(funcall ,get-command))))
+                 (save-match-data
+                   (string-match ,get-regex output)
+                   (match-string 1 output)))))
+         ,@(mapcar
+            (lambda (l)
+              `(defun ,(intern (concat "desktop-" type (car l))) ()
+                 (interactive)
+                 ,(if (stringp set-command)
+                      `(shell-command-to-string ,(format set-command (cadr l)))
+                    `(funcall ,set-command ,(cadr l)))
+                 ,(when get-command `(message ,(concat type ": %s") (,getter-fn-name)))))
+            `(("-increment-large" ,argument-large-increment)
+              ("-increment-normal" ,argument-normal-increment)
+              ("-increment-small" ,argument-small-increment)
+              ("-decrement-large" ,argument-large-decrement)
+              ("-decrement-normal" ,argument-normal-decrement)
+              ("-decrement-small" ,argument-small-decrement))))))
+
+  (define-increment-functions
+    "brightness"
+    "brightnessctl" "\\([0-9]+%\\)"
+    "brightnessctl set %s"
+    "10%+" "5%+" "1%+" "10%-" "5%-" "1%-")
+
+  (defun pulseaudio-set-volume (percent)
+    (let ((pulseaudio-control-volume-step (format "%d%%" (abs percent))))
+      (if (minusp percent)
+          (pulseaudio-control-decrease-volume)
+        (pulseaudio-control-increase-volume))))
+
+  (define-increment-functions
+    "volume"
+    nil nil
+    #'pulseaudio-set-volume
+    10 5 1 -10 -5 -1)
+
+  (general-def
+    "<XF86MonBrightnessUp>" #'desktop-brightness-increment-large
+    "<XF86MonBrightnessDown>" #'desktop-brightness-decrement-large
+    "<S-XF86MonBrightnessUp>" #'desktop-brightness-increment-normal
+    "<S-XF86MonBrightnessDown>" #'desktop-brightness-decrement-normal
+    "<C-XF86MonBrightnessUp>" #'desktop-brightness-increment-small
+    "<C-XF86MonBrightnessDown>" #'desktop-brightness-decrement-small)
+
+  (general-def
+    "<XF86AudioRaiseVolume>" #'desktop-volume-increment-large
+    "<XF86AudioLowerVolume>" #'desktop-volume-decrement-large
+    "S-<XF86AudioRaiseVolume>" #'desktop-volume-increment-normal
+    "S-<XF86AudioLowerVolume>" #'desktop-volume-decrement-normal
+    "C-<XF86AudioRaiseVolume>" #'desktop-volume-increment-small
+    "C-<XF86AudioLowerVolume>" #'desktop-volume-decrement-small
+    "<XF86AudioMute>" #'pulseaudio-control-toggle-current-sink-mute)
+#+END_SRC
+*** COMMENT Desktop Environment
 ~desktop-environment~ is a package which provides keybindings for tasks such as changing volume.
 #+BEGIN_SRC emacs-lisp
   (use-package desktop-environment
     :delight
     :config
+
+    (general-def 'desktop-environment-mode-map
+      "s-l" #'windmove-right)
+
     (desktop-environment-mode 1)
+
+    (defun desktop-environment-volume-set (value)
+      (error value)
+      (error "test")
+      (pulseaudio-control-set-volume value))
+
     (defun desktop-environment-lock-screen ()
       "Lock the screen, preventing anyone without a password from using the system."
       (interactive)
@@ -3279,7 +3477,7 @@ search for url if a matching tab is not found.
         (shell-command-to-string (format desktop-environment-brightness-set-command value))
         (message "New brightness value: %s" (desktop-environment-brightness-get))))
 
-  
+    
   ;;; Helper functions - volume
 
     (defun desktop-environment-volume-get ()
@@ -3309,7 +3507,31 @@ search for url if a matching tab is not found.
                      "Sound Off"
                    "Sound On")))))
 #+END_SRC
-*** Qutebrowser
+*** Next Browser
+#+BEGIN_SRC emacs-lisp
+  (setq browse-url-browser-function #'browse-url-generic)
+  (setq browse-url-generic-program "next")
+
+  (require 'slime)
+
+  (defvar next-browser-connection nil)
+
+  (defun get-next-browser-connection ()
+    (if (and next-browser-connection
+             (find next-browser-connection slime-net-processes))
+        next-browser-connection
+      (aif (ignore-errors
+             (slime-net-connect "localhost"
+                                "4006"))
+           (setq next-browser-connection it))))
+
+  (defun next-browser-eval (sexp)
+    (aif (get-next-browser-connection)
+         (let ((slime-dispatching-connection it))
+           (slime-eval sexp))
+         (error "Next browser has not been started.")))
+#+END_SRC
+*** COMMENT Qutebrowser
 #+BEGIN_SRC emacs-lisp
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "qutebrowser")
@@ -3489,22 +3711,22 @@ Emacs has an inbuilt image viewer ~image-mode~.
   (use-package emms
     :config
     (require 'emms-setup)
-    (require 'emms-player-mpd)
-    (emms-all)
+    ;; (require 'emms-player-mpd)
+    (require 'emms-player-mpv)
+
     ;; (emms-default-players)
-    (require 'emms-player-mpd)
+    (emms-all)
     (require 'emms-volume)
     (require 'emms-streams)
     (require 'emms-stream-info)
     (setq emms-player-seek-seconds 5
           emms-source-file-default-directory "~/Music/"
-          emms-player-list '(emms-player-mpd
-                             ;; emms-player-vlc
-                             ;; emms-player-vlc-playlist
-                             )
-          emms-player-mpd-music-directory "~/Music"
-          emms-info-functions '(emms-info-mpd)
-          emms-volume-change-function #'emms-volume-mpd-change
+          emms-player-list '(emms-player-mpv)
+          ;; emms-player-mpd-music-directory "~/Music"
+          emms-info-functions '(emms-info-mp3info
+                                emms-info-cueinfo
+                                emms-info-opusinfo)
+          emms-volume-change-function #'emms-volume-pulse-change
           emms-volume-change-amount 5
           emms-mode-line-format " | %s"
           emms-mode-line-mode-line-function #'emms-mode-line-playlist-current
@@ -3682,6 +3904,13 @@ Various small functions which are evaluated before anything else in the file.
 #+NAME: helper-functions
 #+BEGIN_SRC emacs-lisp
   (require 'seq)
+
+  (defun find-function-or-variable-at-point ()
+    (interactive)
+    (let ((sym (symbol-at-point)))
+      (if (fboundp sym)
+          (find-function-at-point)
+        (find-variable-at-point))))
 
   (defvar buffer-number-regex (rx "<" (* (not (any "<"))) ">" string-end)
     "A regex to match that angle-bracketed number at the end of a
