@@ -24,10 +24,12 @@
                    font-inconsolata
                    brightnessctl
                    pulseaudio
-                   bluez)
+                   bluez
+                   )
                   
                   (list
                    (bluetooth-service #:auto-enable? #t)
+                   ;; (service (nix-service-type))
                    ;; (service alsa-service-type)
                    (set-xorg-configuration
                     (xorg-configuration

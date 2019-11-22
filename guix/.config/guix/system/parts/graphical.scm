@@ -18,28 +18,30 @@
              (my-packages)
              (lib))
 (os-part (list (load "./next.scm"))
-         (list xcape
-               xrdb
-               mpv
-               qbittorrent
-               pavucontrol
-               wine
-               winetricks
-               slock
+         (list
+          my-qutebrowser
+          xcape
+          xrdb
+          mpv
+          qbittorrent
+          pavucontrol
+          wine
+          winetricks
+          slock
 
-               gparted
+          gparted
 
-               gnome-icon-theme
+          gnome-icon-theme
 
-               font-gnu-freefont-ttf
-               font-tex-gyre
-               font-ubuntu
-               font-dejavu
-               font-terminus
-               font-liberation
-               fontconfig
-               xfontsel
+          font-gnu-freefont-ttf
+          font-tex-gyre
+          font-ubuntu
+          font-dejavu
+          font-terminus
+          font-liberation
+          fontconfig
+          xfontsel
 
-               imagemagick
-               xdpyinfo)
+          imagemagick
+          xdpyinfo)
          (list))

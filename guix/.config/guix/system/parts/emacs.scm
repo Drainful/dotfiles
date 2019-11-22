@@ -7,6 +7,7 @@
              (gnu packages audio)
              (gnu packages xiph)
              (gnu packages mp3)
+             (gnu packages rsync)
              (lib))
 
 ;; (use-service-modules audio)
@@ -19,6 +20,9 @@
           opus-tools
           mp3info
           cuetools
+
+          rsync
+
           emacs
           )
          (list ;; (service mpd-service-type

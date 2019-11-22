@@ -1,113 +1,5 @@
-TITLE: Emacs Configuration
+#+TITLE: Emacs Configuration
 #+CREATOR: Adrian Fullmer
-
-* Table of contents                                                     :TOC:
-- [[#startup][Startup]]
-  - [[#lexical-scope][Lexical Scope]]
-  - [[#garbage-collector-threshold][Garbage Collector Threshold]]
-  - [[#filename-handlers][Filename Handlers]]
-  - [[#load-secrets][Load secrets]]
-  - [[#load-non-secret-environment-variables][Load non-secret environment variables]]
-  - [[#constants][Constants]]
-  - [[#load-path][Load Path]]
-  - [[#straightel][Straight.el]]
-- [[#load-helper-functions][Load helper functions]]
-- [[#evil][Evil]]
-  - [[#evil-collection][Evil collection]]
-  - [[#evil-surround][Evil surround]]
-  - [[#the-creation-of-text-objects][The creation of text objects]]
-- [[#keybindings-and-commands][Keybindings and Commands]]
-  - [[#generalel][General.el]]
-  - [[#hydrael][Hydra.el]]
-  - [[#conditional-key-translations][Conditional key translations]]
-  - [[#all-modes][All modes]]
-  - [[#normal-mode][Normal Mode]]
-  - [[#visual-mode][Visual Mode]]
-  - [[#insert-mode][Insert Mode]]
-  - [[#leader][Leader]]
-  - [[#shell-commands][Shell Commands]]
-  - [[#other-commands][Other Commands]]
-- [[#user-interface][User Interface]]
-  - [[#startup-screen][Startup screen]]
-  - [[#mode-line][Mode line]]
-  - [[#helm][Helm]]
-  - [[#hideshow][Hideshow]]
-  - [[#prettify-symbols][Prettify Symbols]]
-  - [[#unnecessary-ui-elements][Unnecessary UI elements]]
-  - [[#files-and-backups][Files and backups]]
-  - [[#line-and-column-numbers][Line and Column numbers]]
-  - [[#tabs-and-indentation][Tabs and Indentation]]
-  - [[#line-wrap][Line wrap]]
-  - [[#start-frame-maximized][Start frame maximized]]
-  - [[#confirmation][Confirmation]]
-  - [[#adaptive-cursor-width][Adaptive Cursor Width]]
-  - [[#delimiters][Delimiters]]
-  - [[#ediff][Ediff]]
-  - [[#which-key][Which-key]]
-  - [[#help][Help]]
-- [[#text-editing][Text editing]]
-  - [[#iedit][Iedit]]
-- [[#dired][Dired]]
-  - [[#image-dired][Image Dired]]
-  - [[#keybindings][Keybindings]]
-  - [[#dired-fl][Dired FL]]
-  - [[#dired-atool][Dired Atool]]
-  - [[#dired-du][Dired Du]]
-  - [[#dired-hacks][Dired Hacks]]
-- [[#shell][Shell]]
-  - [[#fishbash-completion][Fish/Bash Completion]]
-  - [[#eshell][Eshell]]
-  - [[#comint-mode][Comint Mode]]
-  - [[#shell-1][Shell]]
-  - [[#term-mode][Term mode]]
-  - [[#multi-term][Multi-Term]]
-- [[#tramp][Tramp]]
-- [[#emacs-clientserver-settings][Emacs client/server settings]]
-  - [[#daemon-management][Daemon Management]]
-- [[#colors-themes-fonts-and-other-aesthetic-settings][Colors, Themes, Fonts, and other aesthetic settings]]
-  - [[#theme][Theme]]
-- [[#moving-around-buffers-windows-and-splits][Moving around, buffers, windows and splits]]
-  - [[#winner-mode][Winner Mode]]
-  - [[#helm-winconf][Helm winconf]]
-  - [[#projects][Projects]]
-  - [[#file-navigation][File navigation]]
-- [[#programming-tools-and-settings][Programming tools and settings]]
-  - [[#agressive-indent][Agressive Indent]]
-  - [[#autocompletion][Autocompletion]]
-  - [[#linting][Linting]]
-  - [[#git-magit][Git (Magit)]]
-  - [[#language-client-features][Language client features]]
-  - [[#compilation][Compilation]]
-- [[#language-specific-tools-and-settings][Language specific tools and settings]]
-  - [[#lisps][Lisps]]
-  - [[#emacs-lisp][Emacs lisp]]
-  - [[#common-lisp][Common Lisp]]
-  - [[#clojure][Clojure]]
-  - [[#scheme][Scheme]]
-  - [[#python][Python]]
-  - [[#lua][Lua]]
-  - [[#shen][Shen]]
-  - [[#prolog][Prolog]]
-  - [[#cccppcppsepples][C/C++/CPP/Cpp/Sepples]]
-  - [[#rust][Rust]]
-  - [[#julia][Julia]]
-  - [[#c-sharp][C Sharp]]
-  - [[#haskell][Haskell]]
-  - [[#javascript][Javascript]]
-  - [[#html][HTML]]
-  - [[#org][Org]]
-  - [[#guix][Guix]]
-  - [[#bash][Bash]]
-- [[#external-tools][External tools]]
-- [[#emacs-does-everything][Emacs does everything]]
-  - [[#emacs-window-manager-exwm][Emacs window manager (EXWM)]]
-  - [[#image-viewer][Image viewer]]
-  - [[#emms][EMMS]]
-  - [[#system-package-managment][System package managment]]
-  - [[#irc][IRC]]
-  - [[#weather][Weather]]
-  - [[#bluetooth-interface][Bluetooth interface]]
-- [[#helper-functions][Helper functions]]
 
 * Startup
 ** Lexical Scope
@@ -202,9 +94,9 @@ A functional alternative to package.el which promotes reusablility.
 
   (setq straight-use-package-by-default t)
 #+END_SRC
-* Load helper functions
-#+BEGIN_SRC emacs-lisp :noweb strip-export
-<<helper-functions>>
+* Load Utilities
+#+BEGIN_SRC emacs-lisp :noweb tangle
+<<utilities>>
 #+END_SRC
 * Evil
 These are my settings for the Evil, the Vim emulator for Emacs.
@@ -314,7 +206,6 @@ More complex text objects are defined manually:
 ** General.el
 I mainly use the the package ~general~ to define keybindings and
 commands. 
-#+NAME: use-package-general
 #+BEGIN_SRC emacs-lisp
 (use-package general)
 #+END_SRC
@@ -401,7 +292,7 @@ key commands are hidden behind a single key. For those who are
 familiar with ~hydra~, this is a similar concept.
 *** Definitions
 First ~which-key~ must be loaded early
-#+BEGIN_SRC emacs-lisp :noweb strip-export
+#+BEGIN_SRC emacs-lisp :noweb tangle
 <<which-key>>
 #+END_SRC
 
@@ -847,7 +738,7 @@ Don't make a new frame for ediff.
 This plugin shows the available keys after a partially completed
 key command. ~which-key~ key replacements are generated [[#leader][here]].
 #+NAME: which-key
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp :tangle no
   (use-package which-key
     :delight
     :config
@@ -938,6 +829,10 @@ Highlight the cursor when switching buffers.
     (beacon-mode 1))
 #+END_SRC
 * Text editing
+** Spell Check
+#+BEGIN_SRC emacs-lisp
+  (setq ispell-program-name "aspell")
+#+END_SRC
 ** Iedit
 Iedit is a package for interactive refactoring.
 #+BEGIN_SRC emacs-lisp
@@ -1023,6 +918,21 @@ Dired is the file manager built into Emacs. here is some configuration.
 
   (general-def normal dired-mode-map
     "s" #'me/dired-sort)
+#+END_SRC
+** COMMENT Async
+#+BEGIN_SRC emacs-lisp
+  (use-package async
+    :config
+    (add-hook 'dired-mode-hook
+              #'dired-async-mode))
+#+END_SRC
+** Dired Rsync
+Asynchronously copy files with Rsync
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-rsync
+    :config
+    (leader-key-def normal dired-mode-map
+                    "r" #'dired-rsync))
 #+END_SRC
 ** Dired FL
 Add additional font lock rules for dired
@@ -1314,6 +1224,8 @@ primary shell.
     (eshell-previous-matching-input-from-input (- arg)))
 
   (defun set-eshell-keybinds ()
+    (leader-key-def normal eshell-mode-map
+                    "c" #'fish-completion-mode)
     (general-def :states 'normal :keymaps 'eshell-mode-map
       ;; Let me use C-j/k
       "C-j" #'evil-window-down
@@ -2444,9 +2356,6 @@ It's like ~slime~ for Scheme. Kinda.
 
     (setq geiser-active-implementations '(guile))
 
-    ;; (with-eval-after-load 'geiser-guile
-    ;;   (add-to-list 'geiser-guile-load-path "~/Code/guix"))
-
     (setq geiser-guile-load-path nil)
     (with-eval-after-load 'geiser-guile
       (if (symbol-function 'guix-eval) 
@@ -2906,6 +2815,19 @@ Tools for Guix, a package manager and operating system.
     (setq guix-guile-program
           '("/run/current-system/profile/bin/guile" "--no-auto-compile" "--listen=37146"))
 
+    ;; shut up error
+    (defun guix-repl-autoload-emacs-packages-maybe ()
+      "Load autoloads for Emacs packages if needed.
+  See `guix-emacs-activate-after-operation' for details."
+      (and guix-emacs-activate-after-operation
+           (require 'guix-emacs nil t)
+           ;; FIXME Since a user can work with a non-current profile (using
+           ;; C-u before `guix-search-by-name' and other commands), emacs
+           ;; packages can be installed to another profile, and the
+           ;; following code will not work (i.e., the autoloads for this
+           ;; profile will not be loaded).
+           (guix-emacs-autoload-packages)))
+
     ;; avoid error when deleting and re-starting guix repl
     (defun geiser-repl--narrow-to-prompt ()
       "Narrow to active prompt region and return t, otherwise returns nil."
@@ -3064,7 +2986,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     (defvar clear-minibuffer-delay "2 sec")
 
-    (let (timer)
+    (let ((timer nil))
       (defun clear-minibuffer ()
         (message nil))
 
@@ -3226,7 +3148,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-g" to keyboard-quit
             ([?\s-G] . keyboard-quit)))
 
-    ;; do not start in char mode by default
+    ;; ;; start in char mode by default
     ;; (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
@@ -3513,6 +3435,8 @@ search for url if a matching tab is not found.
 #+END_SRC
 *** Next Browser
 #+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
+
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "next")
 
@@ -3534,6 +3458,19 @@ search for url if a matching tab is not found.
          (let ((slime-dispatching-connection it))
            (slime-eval sexp))
          (error "Next browser has not been started.")))
+
+  (defun next-edit (id)
+    (let ((buffer (generate-new-buffer (generate-new-buffer-name "*Next edit*"))))
+      (switch-to-buffer buffer)
+      (with-current-buffer buffer
+        (add-hook 'kill-buffer-hook
+                  (lambda ()
+                    (ignore-errors
+                      (next-browser-eval
+                       `(next-user::emacs-edit-recieve-string
+                         ,id ,(with-current-buffer buffer
+                                (buffer-string))))))
+                  nil t))))
 #+END_SRC
 *** COMMENT Qutebrowser
 #+BEGIN_SRC emacs-lisp
@@ -3715,7 +3652,7 @@ Emacs has an inbuilt image viewer ~image-mode~.
   (use-package emms
     :config
     (require 'emms-setup)
-    ;; (require 'emms-player-mpd)
+    (require 'emms-player-mpd)
     (require 'emms-player-mpv)
 
     ;; (emms-default-players)
@@ -3725,16 +3662,21 @@ Emacs has an inbuilt image viewer ~image-mode~.
     (require 'emms-stream-info)
     (setq emms-player-seek-seconds 5
           emms-source-file-default-directory "~/Music/"
-          emms-player-list '(emms-player-mpv)
+          emms-player-list '(emms-player-mpd emms-player-mpv)
           ;; emms-player-mpd-music-directory "~/Music"
           emms-info-functions '(emms-info-mp3info
                                 emms-info-cueinfo
-                                emms-info-opusinfo)
+                                emms-info-opusinfo
+                                emms-info-mpd)
           emms-volume-change-function #'emms-volume-pulse-change
           emms-volume-change-amount 5
           emms-mode-line-format " | %s"
           emms-mode-line-mode-line-function #'emms-mode-line-playlist-current
           emms-stream-info-backend 'mplayer)
+
+
+    (general-def normal emms-playlist-mode-map
+      "<return>" #'emms-playlist-mode-play-current-track)
 
     (general-create-definer emms-key-def
       :prefix "s-m")
@@ -3915,10 +3857,10 @@ Emacs interface to ~bitwarden-cli~
     (setq bitwarden-automatic-unlock (lambda ()
                                        (read-passwd "Password: "))))
 #+END_SRC
-* Helper functions
-Various small functions which are evaluated before anything else in the file.
-#+NAME: helper-functions
-#+BEGIN_SRC emacs-lisp
+* Utilities
+Various functions and macros which are evaluated before anything else in the file.
+#+NAME: utilities
+#+BEGIN_SRC emacs-lisp :tangle no
   (require 'seq)
 
   (defun find-function-or-variable-at-point ()
