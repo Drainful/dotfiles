@@ -2,19 +2,14 @@
 #+CREATOR: Adrian Fullmer
 
 * Startup
-** Lexical Scope
-I enable lexical scope. This not only improves execution time, but
-also allows lexical techniques such as closures to be used.
-
+** Enable Lexical Scope
 #+PROPERTY: header-args:emacs-lisp :lexical t
-
 #+BEGIN_SRC emacs-lisp
 ;; -*- lexical-binding: t; -*-
 #+END_SRC
 
 ** Garbage Collector Threshold
-In search of faster startup times, I took some advice from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom
-Emacs]].
+I took some advice from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom Emacs]] for faster startup times. 
 #+BEGIN_SRC emacs-lisp
   (setq gc-cons-threshold 402653184
         gc-cons-percentage 0.6)
@@ -35,9 +30,8 @@ Emacs]].
 #+END_SRC
 
 ** Filename Handlers
-Similarly to the garbage collector, startup time can be improved by
-disabling the ~file-name-handler-alist~, as it will not be needed during
-startup. This trick also comes from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom Emacs]].
+Startup time can also be improved by disabling the
+~file-name-handler-alist~, as it will not be needed during startup.
 #+BEGIN_SRC emacs-lisp
 (defvar temp-file-name-handler-alist file-name-handler-alist)
 (setq file-name-handler-alist nil)
@@ -47,18 +41,16 @@ startup. This trick also comes from [[https://github.com/hlissner/doom-emacs/wik
 #+END_SRC
 
 ** Load secrets
-Secrets are stored in ~~/.emacs.d/.secrets.el~.
 #+BEGIN_SRC emacs-lisp
   (let ((secret.el (expand-file-name ".secrets.el" user-emacs-directory)))
     (when (file-exists-p secret.el)
       (load secret.el)))
 #+END_SRC
-** Load non-secret environment variables
+** COMMENT Load non-secret environment variables
 #+BEGIN_SRC emacs-lisp
 ;; (require 'my-env)
 #+END_SRC
 ** Constants
-I create a few constants for later use
 #+BEGIN_SRC emacs-lisp
   ;; Directory containing my dotfiles.
   (defconst me/dotfiles "~/dotfiles/")
@@ -75,7 +67,7 @@ packages.
   (push "~/.emacs.d/my-packages/" load-path)
 #+END_SRC
 ** Straight.el
-A functional alternative to package.el which promotes reusablility.
+Straight.el A functional alternative to package.el.
 #+BEGIN_SRC emacs-lisp
   (defvar bootstrap-version)
   (let ((bootstrap-file
@@ -99,7 +91,7 @@ A functional alternative to package.el which promotes reusablility.
 <<utilities>>
 #+END_SRC
 * Evil
-These are my settings for the Evil, the Vim emulator for Emacs.
+These are my settings for the Evil, the Vim emulator.
 #+BEGIN_SRC emacs-lisp
   ;; settings for evil-collection integration
   (setq evil-want-keybinding nil)
@@ -147,8 +139,7 @@ each possible motion result.
     (evilem-default-keybindings "C-M-S-~"))
 #+END_SRC
 ** Evil surround
-This solves the tricky issue of surrounding a block of text with
-delimiters when they automatically close.
+This provides action to surround a region with delimiters 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-surround
   :config
@@ -214,14 +205,13 @@ It integrates well with ~evil~.
 (general-evil-setup)
 #+END_SRC
 ** Hydra.el
-~hydra~ is useful to reduce repetitive keybindings.
+~hydra~ creates miniature modes to reduce repetitive keybindings.
 #+BEGIN_SRC emacs-lisp
 (use-package hydra)
 #+END_SRC
 ** Conditional key translations
-
 The equivalent of Vim noremaps are Emacs key translations. They apply
-globally, so here are some macros to create key translations which apply
+globally, so I created some macros to make key translations which apply
 conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14][this]].
 #+BEGIN_SRC emacs-lisp
   ;; does not require lexical scope
@@ -244,7 +234,7 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
     `(make-conditional-key-translation ,from ,to (lambda nil t)))
   (define-multi-macro noremap noremap-single 2)
 #+END_SRC
-** All modes
+** COMMENT All modes
 #+BEGIN_SRC emacs-lisp
   ;; (noremap "9" "("
   ;;            "0" ")"
@@ -280,16 +270,15 @@ These are visual mode mappings not specific to any major mode.
   ;; Move a visual block of text using ALT+[jk]
   "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
 #+END_SRC
-** Insert Mode
+** COMMENT Insert Mode
 These are insert mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
   ;; (inoremap "." "-"
   ;;           "-" ".")
 #+END_SRC
 ** Leader
-The leader key is an old technique common among Vim users. A tree of
-key commands are hidden behind a single key. For those who are
-familiar with ~hydra~, this is a similar concept.
+These are functions for defining a tree of keybindings behind a single
+leader key.
 *** Definitions
 First ~which-key~ must be loaded early
 #+BEGIN_SRC emacs-lisp :noweb tangle
@@ -373,7 +362,7 @@ Usage:
     "x" "xpand" xpand-key-def
     "p" "project" project-key-def)
 #+END_SRC
-*** Normal Mode
+*** Normal Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
   (defun bury-evil-buffer ()
     (interactive)
@@ -409,7 +398,7 @@ Usage:
     "j" 'evil-avy-goto-line-below
     "k" 'evil-avy-goto-line-above)
 #+END_SRC
-*** Visual Mode
+*** Visual Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
 (leader-key-def 'visual
   "c" 'comment-or-uncomment-region
@@ -417,7 +406,7 @@ Usage:
   "o" 'helm-occur)
 #+END_SRC
 ** Shell Commands
-M-x commands for common shell commands such as reboot.
+These are M-x commands for common shell commands such as reboot.
 #+BEGIN_SRC emacs-lisp
   (defmacro define-shell-command (function-name &optional command)
     (let ((command (or command (symbol-name function-name))))
@@ -433,28 +422,21 @@ M-x commands for common shell commands such as reboot.
     (suspend "systemctl suspend"))
 #+END_SRC
 ** Other Commands
-
-A command to configure my operating system
+This is A command to configure my operating system
 #+BEGIN_SRC emacs-lisp
   (defun gconf ()
     (interactive)
     (or (find-file me/guix-config-dir)
         (find-file "/sudo::/etc/config.scm")
         (error "guix config not found")))
-
-  ;; (defun guix-reconfigure ()
-  ;;   (interactive)
-  ;;   (start-process-shell-command "Guix Reconfigure"
-  ;;                                (earmuffs "Guix Reconfigure")
-  ;;                                "sudo guix system -L ~/.config/guix/system reconfigure ~/.config/guix/system/yoga.scm"))
 #+END_SRC
 
-A command to configure emacs
+This is a command to configure emacs
 #+BEGIN_SRC emacs-lisp
   (defun econf () (interactive) (find-file "~/.emacs.d/emacs.org"))
 #+END_SRC
 
-A command to create a new scratch buffer
+This is a command to create a new scratch buffer
 #+BEGIN_SRC emacs-lisp
   (defun scratch ()
     (interactive)
@@ -465,7 +447,6 @@ A command to create a new scratch buffer
         (funcall initial-major-mode))))
 #+END_SRC
 * User Interface
-These are settings related to the user interface of Emacs.
 ** Startup screen
 I disable the default startup screen and splash message.
 #+BEGIN_SRC emacs-lisp
@@ -478,8 +459,6 @@ Set the initial mode in the scratch buffer to emacs.
   (setq initial-major-mode #'lisp-interaction-mode)
 #+END_SRC
 ** Mode line
-The mode line is the line at the bottom of each buffer. It contains
-useful information.
 *** Delight
 Delight is a package which is used to hide unnecessary mode-line
 blurbs.
@@ -492,7 +471,7 @@ blurbs.
                (org-src-mode nil "org-src")
                (org-indent-mode nil "org"))))
 #+END_SRC
-*** Format
+*** Mode Line Format
 #+BEGIN_SRC emacs-lisp
   (setq-default mode-line-format
                 '("%e" mode-line-front-space
@@ -603,7 +582,7 @@ which integrates well across Emacs.
     (setq helm-ag-insert-at-point 'symbol)
     (setq helm-ag-base-command "ag --nocolor --nogroup"))
 #+END_SRC
-*** Extending helm-highight-buffers
+*** COMMENT Extending helm-highight-buffers
 *** COMMENT Helper functions
 #+BEGIN_SRC emacs-lisp
   (defun helm-rec-find-directory-old (&optional starting-directory)
@@ -630,7 +609,7 @@ which integrates well across Emacs.
     (helm-find (list "-type d -not -path '*/\.*'")))
 #+END_SRC
 ** Hideshow
-~hideshow~ mode provides vim-like folds (but not as good).
+~hideshow~ mode provides vim-like folds.
 #+BEGIN_SRC emacs-lisp
 (add-hook 'prog-mode-hook #'hs-minor-mode)
 (delight 'hs-minor-mode nil "hideshow")
@@ -639,12 +618,11 @@ which integrates well across Emacs.
 This changes the appearance of certain strings in the buffer.
 #+BEGIN_SRC emacs-lisp
   (setq prettify-symbols-alist
-        '(("lambda" . 955) ; λ
+        '(("lambda" . 955) ; Replace instances of the word lambda with λ
           ))
   (global-prettify-symbols-mode 1)
 #+END_SRC
-** Unnecessary UI elements
-Emacs comes with such useless features as a tool bar. I like to turn them off.
+** Disable Unnecessary UI elements
 #+BEGIN_SRC emacs-lisp
 (tool-bar-mode -1)
 (menu-bar-mode -1)
@@ -745,8 +723,8 @@ key command. ~which-key~ key replacements are generated [[#leader][here]].
     (which-key-mode t))
 #+END_SRC
 *** Prefix command completion
-From [[https://with-emacs.com/posts/prefix-command-completion/][this blog post]], offer compltion of key prefix candidates via the
-prefix-help-command.
+From [[https://with-emacs.com/posts/prefix-command-completion/][this blog post]], offer compltion of key prefix candidates in the
+which-key buffer via the prefix-help-command.
 #+BEGIN_SRC emacs-lisp
   (defun which-key-M-x-prefix+ (&optional _)
     "Completing read and execute command from current prefix map.
@@ -815,8 +793,9 @@ prefix-help-command.
     "C-h" #'which-key-M-x-prefix+)
 #+END_SRC
 ** Help
+Keybindings for help mode
 #+BEGIN_SRC emacs-lisp
-  (general-nmap help-mode-map ; keybindings for help mode
+  (general-nmap help-mode-map 
     "H" #'help-go-back
     "L" #'help-go-forward)
 #+END_SRC
@@ -828,6 +807,97 @@ Highlight the cursor when switching buffers.
     :config
     (beacon-mode 1))
 #+END_SRC
+** File navigation
+I prefer to follow symbolic links under version control.
+#+BEGIN_SRC emacs-lisp
+(setq vc-follow-symlinks t)
+#+END_SRC
+*** COMMENT Alt-tab buffer navigation
+While emacs is missing key raised events, alt-tab style behavior can
+still be replicated with a hydra with a timeout
+(broken)
+#+BEGIN_SRC emacs-lisp
+  (lexical-let (blist length-blist)
+
+    (defun buffer-switchable (buffer)
+      (with-current-buffer buffer
+        (not (or (minibufferp) ; dont switch to minibuffer
+                 (get-buffer-window) ; or a buffer which is already visible
+                 exwm--floating-frame ; or an exwm floating buffer
+                 (and exwm--id ; if this is an exwm buffer
+                      ;; don't switch if we are neither allowed to
+                      ;; switch to exwm buffers in other frames, nor can
+                      ;; see exwm buffers in other frames, unless the
+                      ;; exwm buffer's frame is the current one.
+                      (not (or (and exwm-workspace-show-all-buffers
+                                    exwm-layout-show-all-buffers)
+                               (eq (selected-frame) exwm--frame))))))))
+
+    (defun buffer-history-delta (delta)
+      (assert (or (= delta 1)
+                  (= delta -1)))
+      (setq blist (cd*r (if (minusp delta)
+                            (+ length-blist delta)
+                          delta)
+                        blist))
+      (if (buffer-switchable (car blist))
+          ;(display-buffer-same-window (car blist) (list))
+          (switch-to-buffer (car blist) t t)
+        (buffer-history-delta delta)))
+
+    (defun update-buffer-history ()
+      (switch-to-buffer (current-buffer)))
+
+    (general-def
+     "M-<tab>" (lambda ()
+                 (interactive)
+                 (setq length-blist (length (buffer-list)))
+                 (setq blist (circular (buffer-list)))
+                 (buffer-history-delta 1)
+                 (hydra-buffer-history/body)))
+
+    (defhydra hydra-buffer-history (:timeout 2
+                                             :post (update-buffer-history))
+      "Buffer history: "
+      ("M-<tab>" (buffer-history-delta 1))
+      ("M-<S-iso-lefttab>" (buffer-history-delta -1))))
+#+END_SRC
+
+
+*** COMMENT Helm Alt-tab buffer navigation
+While emacs is missing key raised events, alt-tab style behavior can
+still be replicated with a hydra with a timeout
+(broken)
+#+BEGIN_SRC emacs-lisp
+  (general-def
+   "C-M-`" (lambda ()
+             (interactive)
+             (helm-mini)
+             (hydra-helm-mini/body)))
+
+  (defhydra hydra-helm-mini (:timeout 2
+                                      :post (helm-execute-selection-action))
+    "Buffer history: "
+    ("M-<tab>" (helm-next-line))
+    ("M-<S-iso-lefttab>" (helm-previous-line)))
+#+END_SRC
+*** COMMENT Buffer rotating
+I bind tab and shift-tab to functions which switch to the previous and
+next buffer with content respectively.
+#+BEGIN_SRC emacs-lisp
+  (defun content-buffer-p (buffer))
+(general-def :states 'normal :keymaps 'override
+                    "<tab>" 'previous-buffer
+                    "<backtab>" 'next-buffer)
+#+END_SRC
+*** COMMENT Buffer toggling
+This is a keybinding for toggling between 2
+buffers. Faster than ~,-b\r~.
+#+BEGIN_SRC emacs-lisp
+  (general-def :states 'normal ; :keymaps 'override
+                      "<tab>" 'evil-buffer)
+#+END_SRC
+
 * Text editing
 ** Spell Check
 #+BEGIN_SRC emacs-lisp
@@ -851,7 +921,7 @@ Iedit is a package for interactive refactoring.
       "C-;" #'me/evil-iedit-toggle))
 #+END_SRC
 * Dired
-Dired is the file manager built into Emacs. here is some configuration.
+Dired is the file manager built into Emacs.
 #+BEGIN_SRC emacs-lisp
   (setq dired-listing-switches "-alh")
 
@@ -863,6 +933,15 @@ Dired is the file manager built into Emacs. here is some configuration.
                     ("size" . "-Al -S"))))
        (cdr (assoc (ido-completing-read "Sort by:" alist)
                    alist)))))
+#+END_SRC
+** Dired Keybindings
+#+BEGIN_SRC emacs-lisp
+  (leader-key-def normal dired-mode-map
+                  "i" (lambda nil (interactive)
+                        (image-dired default-directory)))
+
+  (general-def normal dired-mode-map
+    "s" #'me/dired-sort)
 #+END_SRC
 ** Image Dired
 ~image-dired~ is a built-in image thumbnail viewer for dired.
@@ -909,15 +988,6 @@ Dired is the file manager built into Emacs. here is some configuration.
   (general-def normal image-dired-thumbnail-mode-map
     "=" #'image-increase-size
     "RET" #'me/image-dired-display-thumbnail-original-image)
-#+END_SRC
-** Keybindings
-#+BEGIN_SRC emacs-lisp
-  (leader-key-def normal dired-mode-map
-                  "i" (lambda nil (interactive)
-                        (image-dired default-directory)))
-
-  (general-def normal dired-mode-map
-    "s" #'me/dired-sort)
 #+END_SRC
 ** COMMENT Async
 #+BEGIN_SRC emacs-lisp
@@ -1414,9 +1484,8 @@ Allows multiple term buffers to be created.
 #+END_SRC
 
 * Tramp
-~tramp~ is a truly one of the great gems of Emacs. It allows me to
-access remote files as if they were part of my filesystem within
-Emacs.
+~tramp~ allows the access of remote files as if they were part of the
+local filesystem across all of Emacs.
 #+BEGIN_SRC emacs-lisp
   (require 'tramp)
 
@@ -1440,9 +1509,9 @@ Emacs.
   (add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
 #+END_SRC
 ** Daemon Management
-I wrote this code to help manage daemons. It is usually fine to
-operate within a single daemon, but when I need to have more than one
-it's nice to be able to manage them as inferior processes.
+I wrote this code to help manage Emacs daemons. It is usually fine to
+operate within a single Emacs daemon, but when I need to have more
+than one it's nice to be able to manage them as inferior processes.
 #+BEGIN_SRC emacs-lisp
   (cl-defun make-daemon-frame (socket-name &rest args)
     "Make a new emacs frame for the daemon with the given socket name."
@@ -1469,7 +1538,8 @@ it's nice to be able to manage them as inferior processes.
                after))))
 #+END_SRC
 
-I wrote some other ugly but useful functions to spawn daemons within a
+*** Nix
+I wrote some other ugly but useful functions to spawn Emacs daemons within a
 given Nix environment.
 #+BEGIN_SRC emacs-lisp
   (cl-defun nix-daemon-running-p (&optional (socket "server"))
@@ -1530,14 +1600,11 @@ given Nix environment.
                    (concat "\"emacsclient --create-frame --socket-name=" socket-name "\""))))
       (error "No nix environment was found")))
 #+END_SRC
-
-* Colors, Themes, Fonts, and other aesthetic settings
-** Theme
+* Color Theme
 #+BEGIN_SRC emacs-lisp
   (use-package doom-themes
     :config
-    ;; flash mode line when emacs bell rings
-    (doom-themes-visual-bell-config))
+    (doom-themes-visual-bell-config)) ; flash mode line when emacs bell rings
 
   ;; (use-package poet-theme)
 
@@ -1565,7 +1632,7 @@ The theme loaded depends upon time of day. Causes slight face issues.
     (change-theme 'doom-one-light 'doom-one))
 #+END_SRC
 
-* Moving around, buffers, windows and splits
+* Window mangement
 ** Winner Mode
 ~winner-mode~ lets me switch between window configurations with emacs-like undo capabilities.
 I abbreviate the command with ~hydra~.
@@ -1646,6 +1713,22 @@ this to managing frames.
                         "M-<tab>" #'persp-next
                         "<M-iso-lefttab>" #'persp-prev))
 #+END_SRC
+** COMMENT FZF
+As powerful as ~projectile~ is, ~fzf~ still takes the cake on
+speed of recursive search.
+#+BEGIN_SRC emacs-lisp
+  (use-package fzf)
+#+END_SRC
+
+This function opens a directory using ~fzf/start~.
+#+BEGIN_SRC emacs-lisp
+  (defun fzf-directory-from-home () (interactive)
+         (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
+
+  (defun fzf-directory-from (directory) (interactive "D")
+         (fzf/start directory "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
+#+END_SRC
+* Programming tools and settings
 ** Projects
 *** Projectile
 ~projectile~ is a powerful package which facilitates navigation within a
@@ -1737,114 +1820,8 @@ project.
     (project-key-def 'normal
       "s" 'skeletor-create-project-here))
 #+END_SRC
-** COMMENT FZF
-As powerful as ~projectile~ is, ~fzf~ still takes the cake on
-speed of recursive search.
-#+BEGIN_SRC emacs-lisp
-  (use-package fzf)
-#+END_SRC
-
-This function opens a directory using ~fzf/start~.
-#+BEGIN_SRC emacs-lisp
-  (defun fzf-directory-from-home () (interactive)
-         (fzf/start "~/" "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
-
-  (defun fzf-directory-from (directory) (interactive "D")
-         (fzf/start directory "find ${1:-.} -path '*/\\.*' -prune \ -o -type d -print 2> /dev/null"))
-#+END_SRC
-** File navigation
-I prefer to follow symbolic links under version control.
-#+BEGIN_SRC emacs-lisp
-(setq vc-follow-symlinks t)
-#+END_SRC
-*** COMMENT Alt-tab buffer navigation
-While emacs is missing key raised events, alt-tab style behavior can
-still be replicated with a hydra with a timeout
-(broken)
-#+BEGIN_SRC emacs-lisp
-  (lexical-let (blist length-blist)
-
-    (defun buffer-switchable (buffer)
-      (with-current-buffer buffer
-        (not (or (minibufferp) ; dont switch to minibuffer
-                 (get-buffer-window) ; or a buffer which is already visible
-                 exwm--floating-frame ; or an exwm floating buffer
-                 (and exwm--id ; if this is an exwm buffer
-                      ;; don't switch if we are neither allowed to
-                      ;; switch to exwm buffers in other frames, nor can
-                      ;; see exwm buffers in other frames, unless the
-                      ;; exwm buffer's frame is the current one.
-                      (not (or (and exwm-workspace-show-all-buffers
-                                    exwm-layout-show-all-buffers)
-                               (eq (selected-frame) exwm--frame))))))))
-
-    (defun buffer-history-delta (delta)
-      (assert (or (= delta 1)
-                  (= delta -1)))
-      (setq blist (cd*r (if (minusp delta)
-                            (+ length-blist delta)
-                          delta)
-                        blist))
-      (if (buffer-switchable (car blist))
-          ;(display-buffer-same-window (car blist) (list))
-          (switch-to-buffer (car blist) t t)
-        (buffer-history-delta delta)))
-
-    (defun update-buffer-history ()
-      (switch-to-buffer (current-buffer)))
-
-    (general-def
-     "M-<tab>" (lambda ()
-                 (interactive)
-                 (setq length-blist (length (buffer-list)))
-                 (setq blist (circular (buffer-list)))
-                 (buffer-history-delta 1)
-                 (hydra-buffer-history/body)))
-
-    (defhydra hydra-buffer-history (:timeout 2
-                                             :post (update-buffer-history))
-      "Buffer history: "
-      ("M-<tab>" (buffer-history-delta 1))
-      ("M-<S-iso-lefttab>" (buffer-history-delta -1))))
-#+END_SRC
-
-
-*** COMMENT Helm Alt-tab buffer navigation
-While emacs is missing key raised events, alt-tab style behavior can
-still be replicated with a hydra with a timeout
-(broken)
-#+BEGIN_SRC emacs-lisp
-  (general-def
-   "C-M-`" (lambda ()
-             (interactive)
-             (helm-mini)
-             (hydra-helm-mini/body)))
-
-  (defhydra hydra-helm-mini (:timeout 2
-                                      :post (helm-execute-selection-action))
-    "Buffer history: "
-    ("M-<tab>" (helm-next-line))
-    ("M-<S-iso-lefttab>" (helm-previous-line)))
-#+END_SRC
-*** COMMENT Buffer rotating
-I bind tab and shift-tab to functions which switch to the previous and
-next buffer with content respectively.
-#+BEGIN_SRC emacs-lisp
-  (defun content-buffer-p (buffer))
-(general-def :states 'normal :keymaps 'override
-                    "<tab>" 'previous-buffer
-                    "<backtab>" 'next-buffer)
-#+END_SRC
-*** COMMENT Buffer toggling
-This is a keybinding for toggling between 2
-buffers. Faster than ~,-b\r~.
-#+BEGIN_SRC emacs-lisp
-  (general-def :states 'normal ; :keymaps 'override
-                      "<tab>" 'evil-buffer)
-#+END_SRC
-* Programming tools and settings
 ** Agressive Indent
-~agressive-indent-mode~ maintaints indentation as code is reformatted
+~agressive-indent-mode~ enforces indentation as code is being edited.
 #+BEGIN_SRC emacs-lisp
   (use-package aggressive-indent
     :delight
@@ -3261,8 +3238,8 @@ I wrote a package to launch programs which integrates with ~exwm~ and
                                       helm-source-recentf
                                       helm-source-buffer-not-found)))
 #+END_SRC
-**** Helm qutebrowser
-A helm source to switch between qutebrowser tabs (as windows) or to
+**** Helm Next
+A helm source to switch between Next browser window) or to
 search for url if a matching tab is not found.
 #+BEGIN_SRC emacs-lisp
   (require 'helm-next)
@@ -3434,6 +3411,7 @@ search for url if a matching tab is not found.
                    "Sound On")))))
 #+END_SRC
 *** Next Browser
+This allows sending Common Lisp code to a live running Next browser process.
 #+BEGIN_SRC emacs-lisp
   ;; -*- lexical-binding: t; -*-
 
@@ -3648,6 +3626,7 @@ Emacs has an inbuilt image viewer ~image-mode~.
           (image-forward-hscroll 100)))
 #+END_SRC
 ** EMMS
+Emacs media manager
 #+BEGIN_SRC emacs-lisp
   (use-package emms
     :config
