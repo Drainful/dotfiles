@@ -22,33 +22,41 @@
                   (list nss-certs)
                   (list))))
        (services (append (assoc-ref os-part #:services)
-                         (cons (service
-                                slim-service-type
-                                (slim-configuration
-                                 (xorg-configuration
-                                  (xorg-configuration
-                                   (keyboard-layout keyboard-layout)
-                                   (extra-config '("
-                   Section \"Device\"
-                   
-                       Identifier \"Intel Graphics\"
-                   
-                       Driver \"intel\"
-                   
-                       Option \"TearFree\" \"false\"
-                   
-                   EndSection
-                   "))))))
-                               (remove
-                                (lambda (service)
-                                  (eq? (service-kind service) gdm-service-type))
-                                (modify-services %desktop-services
-                                  (udev-service-type
-                                   config =>
-                                   (udev-configuration
-                                    (inherit config)
-                                    (rules (cons brightnessctl
-                                                 (udev-configuration-rules config))))))))))
+                         (cons*
+                          ;; (service console-font-service-type
+                          ;;          `(("tty6" . ,(file-append font-terminus "/share/consolefonts/ter-132n"))))
+                          (service
+                           slim-service-type
+                           (slim-configuration
+                            (xorg-configuration
+                             (xorg-configuration
+                              (keyboard-layout keyboard-layout)
+                              (extra-config '("
+                         Section \"Device\"
+                         
+                             Identifier \"Intel Graphics\"
+                         
+                             Driver \"intel\"
+                         
+                             Option \"TearFree\" \"false\"
+                         
+                         EndSection
+                         "))))))
+                          (remove
+                           (lambda (service)
+                             (eq? (service-kind service) gdm-service-type))
+                           (modify-services %desktop-services
+                             (console-font-service-type
+                              config => (map (lambda (tty)
+                                               (cons (car tty)
+                                                     (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                             config))
+                             (udev-service-type
+                              config =>
+                              (udev-configuration
+                               (inherit config)
+                               (rules (cons brightnessctl
+                                            (udev-configuration-rules config))))))))))
        (packages (append (assoc-ref os-part #:packages)
                          %base-packages)))
   (operating-system

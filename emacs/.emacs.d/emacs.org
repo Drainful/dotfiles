@@ -67,6 +67,7 @@ I extend the load path from my dotfiles directory for tentative
 packages.
 #+BEGIN_SRC emacs-lisp
   (push "~/.emacs.d/my-packages/" load-path)
+  (push "~/.emacs.d/emacs-wiki/" load-path)
 #+END_SRC
 ** Packages
 
@@ -111,7 +112,7 @@ These are my settings for the Evil, the Vim emulator.
     :config
     (evil-mode 1)
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
-    ;; (global-undo-tree-mode -1)
+    (global-undo-tree-mode -1)
 
     ;; highlight all search results
     (setq evil-search-module 'evil-search)
@@ -454,8 +455,10 @@ This is a command to create a new scratch buffer
   (defun scratch ()
     (interactive)
     (let* ((default-directory "~/")
-           (buffer (or (get-buffer "*scratch*")
-                       (generate-new-buffer "*scratch*"))))
+           (buffer (generate-new-buffer "*scratch*")
+                   ;; (or (get-buffer "*scratch*")
+                   ;;     (generate-new-buffer "*scratch*"))
+                   ))
       (set-window-buffer nil buffer)
       (with-current-buffer buffer
         (funcall initial-major-mode))))
@@ -471,6 +474,15 @@ I disable the default startup screen and splash message.
 Set the initial mode in the scratch buffer to emacs.
 #+BEGIN_SRC emacs-lisp
   (setq initial-major-mode #'lisp-interaction-mode)
+#+END_SRC
+** Font
+
+#+BEGIN_SRC emacs-lisp
+  (defvar my-default-font-pixelsize 29)
+  (add-to-list 'default-frame-alist
+               `(font . ,(format
+                          "DejaVu Sans Mono:pixelsize=%d:foundry=PfEd:weight=normal:slant=normal:width=normal:scalable=true"
+                          my-default-font-pixelsize)))
 #+END_SRC
 ** Mode line
 *** Delight
@@ -1644,7 +1656,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-wilmersdorf)
+  (switch-theme 'doom-one-light)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -2804,7 +2816,7 @@ literate source files like this one.
    'org-babel-load-languages
    '((lisp . t)
      (python . t)))
-  (setq org-babel-lisp-eval-fn #'sly-eval)
+  (setq org-babel-lisp-eval-fn #'slime-eval)
   (setq org-babel-python-eval-fn #'python-send-string)
 
   (add-hook 'org-mode-hook #'auto-fill-mode)
@@ -2939,21 +2951,23 @@ Tools for Guix, a package manager and operating system.
     ;; avoid error when deleting and re-starting guix repl
     (defun geiser-repl--narrow-to-prompt ()
       "Narrow to active prompt region and return t, otherwise returns nil."
-      (let* ((proc (get-buffer-process (current-buffer)))
-             (pmark (and proc (process-mark proc)))
-             (intxt (and pmark
-                         (when (>= (point) (marker-position pmark))
-                           (save-excursion
-                             (if comint-eol-on-send
-                                 (if comint-use-prompt-regexp
-                                     (end-of-line)
-                                   (goto-char (field-end))))
-                             (buffer-substring pmark (point))))))
-             (prompt-beg (and pmark (marker-position pmark)))
-             (prompt-end (and prompt-beg (+ prompt-beg (length intxt)))))
-        (when (> (length intxt) 0)
-          (and prompt-end (narrow-to-region prompt-beg prompt-end))
-          t))))
+      (if (get-buffer-process (current-buffer))
+          (let* ((proc (get-buffer-process (current-buffer)))
+                 (pmark (and proc (process-mark proc)))
+                 (intxt (and pmark
+                             (when (>= (point) (marker-position pmark))
+                               (save-excursion
+                                 (if comint-eol-on-send
+                                     (if comint-use-prompt-regexp
+                                         (end-of-line)
+                                       (goto-char (field-end))))
+                                 (buffer-substring pmark (point))))))
+                 (prompt-beg (and pmark (marker-position pmark)))
+                 (prompt-end (and prompt-beg (+ prompt-beg (length intxt)))))
+            (when (> (length intxt) 0)
+              (and prompt-end (narrow-to-region prompt-beg prompt-end))
+              t))
+        nil)))
 #+END_SRC
 ** Nix
 Tools for Nix, a package manager and operating system.
@@ -3156,6 +3170,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
       ;; "C-c C-l" 'exwm-floating-toggle-floating
       )
 
+    (require 'helm-qutebrowser)
     (setq exwm-input-global-keys
           `(;; Bind "s-r" to exit char-mode and fullscreen mode.
             ([?\s-r] . exwm-reset)
@@ -3168,7 +3183,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-`] . helm-exwm)
+            ([?\s-`] . helm-qutebrowser)
             ([?\s-1] . eshell-here)
             ([?\s-2] . helm-find-files)
             ([?\s-3] . multi-term)
@@ -3554,8 +3569,8 @@ This allows sending Common Lisp code to a live running Next browser process.
 #+BEGIN_SRC emacs-lisp
   ;; -*- lexical-binding: t; -*-
 
-  (setq browse-url-browser-function #'browse-url-generic)
-  (setq browse-url-generic-program "firefox")
+  ;; (setq browse-url-browser-function #'browse-url-generic)
+  ;; (setq browse-url-generic-program "firefox")
 
   (require 'slime)
 
@@ -3589,7 +3604,7 @@ This allows sending Common Lisp code to a live running Next browser process.
                                 (buffer-string))))))
                   nil t))))
 #+END_SRC
-*** COMMENT Qutebrowser
+*** Qutebrowser
 #+BEGIN_SRC emacs-lisp
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "qutebrowser")
@@ -3714,6 +3729,50 @@ This allows sending Common Lisp code to a live running Next browser process.
                       "--mode" resolutio("eDP1" "1920x1080")n))))
 #+END_SRC
 
+*** DPI adjustment
+#+BEGIN_SRC emacs-lisp
+  (require 'zoom-frm)
+
+  (defun my-dpi (&optional display)
+    "Get the DPI of DISPLAY.
+  DISPLAY is a display name, frame or terminal, as in
+  `display-monitor-attributes-list'."
+    (cl-flet ((pyth (lambda (w h)
+                      (sqrt (+ (* w w)
+                               (* h h)))))
+              (mm2in (lambda (mm)
+                       (/ mm 25.4))))
+      (let* ((atts (frame-monitor-attributes))
+             (pix-w (cl-fourth (assoc 'geometry atts)))
+             (pix-h (cl-fifth (assoc 'geometry atts)))
+             (pix-d (pyth pix-w pix-h))
+             (mm-w (cl-second (assoc 'mm-size atts)))
+             (mm-h (cl-third (assoc 'mm-size atts)))
+             (mm-d (pyth mm-w mm-h)))
+        (/ pix-d (mm2in mm-d)))))
+
+  (defvar my-zoom-frm-base-dpi 282.7349271323943
+    "The DPI of the screen when at maxiumum resolution.")
+
+  (defun my-zoom-frm-by-dpi (&optional frame)
+    "Zoom FRAME so that the effective font size is equivalent to
+  what is would be at DPI `my-zoom-frm-base-dpi' and font size
+  `my-default-font-pixelsize'."
+    (interactive)
+    (let ((frame (or frame (selected-frame))))
+      (when (frame-parameter frame 'zoomed)
+        (zoom-frm-unzoom frame))
+      (let ((frame-zoom-font-difference (round (* my-default-font-pixelsize
+                                                  (1- (/ (my-dpi frame)
+                                                         my-zoom-frm-base-dpi))))))
+        (when (called-interactively-p 'interactive)
+          (message "Zooming by %S" frame-zoom-font-difference))
+        (zoom-frm-in frame))))
+
+  ;; Apply the scaling I want to each newly created frame:
+  (add-hook 'exwm-randr-refresh-hook #'my-zoom-frm-by-dpi)
+  ;; (add-hook 'after-make-frame-functions #'my-zoom-frm-by-dpi)
+#+END_SRC
 ** COMMENT Document viewer
 
 ~pdf-tools~ is a document viewer for emacs

@@ -6,7 +6,8 @@
 (setenv "EDITOR" "emacsclient")
 (setenv "BROWSER" "firefox")
 (setenv "GDK_SCALE" "1")
-(setenv "XDG_DATA_HOME" "~/.local/share/applications/")
+;; (setenv "XDG_DATA_HOME" "~/.local/share/applications/")
+(add-to-path  "/home/guix/adrian/.local/share/applications/" "XDG_DATA_DIRS")
 (defun sh-cmd (command &optional args buffer)
   (start-process-shell-command command
                                (when buffer (concat "*" command "*"))

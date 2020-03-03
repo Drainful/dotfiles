@@ -15,9 +15,10 @@
              (gnu packages lxqt)
              (my-packages)
              (lib))
+
 (os-part (list (load "./next.scm"))
          (list
-          ;; my-qutebrowser
+          qutebrowser
           xcape
           xrdb
           xrandr
@@ -42,6 +43,7 @@
           font-liberation
           font-inconsolata
           font-gnu-unifont
+          font-adobe-source-han-sans
           
           fontconfig
           xfontsel
