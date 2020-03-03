@@ -23,7 +23,7 @@
   #:use-module (gnu packages python-web)
   #:use-module (gnu packages python-xyz)
   #:use-module (gnu packages qt)
-  #:use-module (nongnu packages qt)
+  ;; #:use-module (nongnu packages qt)
   #:use-module (gnu packages image)
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages tls)
@@ -110,6 +110,7 @@
   #:use-module (gnu packages video)
   #:use-module (gnu packages haskell-xyz)
   #:use-module (gnu packages wordnet)
+  #:use-module (gnu packages libusb)
   #:use-module (guix utils)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match))
@@ -186,3 +187,163 @@
     (description "EXWM is a full-featured tiling X window manager for Emacs
 built on top of XELB.")
     (license license:gpl3+)))
+
+(define-public my-libplist
+  (package
+    (name "libplist")
+    (version "42bb64ba966082b440cb68cbdadf317f44710017")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/libimobiledevice/libplist.git")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "19yw80yblq29i2jx9yb7bx0lfychy9dncri3fk4as35kq5bf26i8"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'bootstrap 'configure-later
+           ;; Don't run ./configure during bootstrap.
+           (lambda _
+             (setenv "NOCONFIGURE" "set")
+             #t)))
+       ;; Tests fail randomly when run in parallel because several of them write
+       ;; and read to/from the same file--e.g., "4.plist" is accessed by
+       ;; 'large.test' and 'largecmp.test'.
+       #:parallel-tests? #f))
+    (inputs
+     `(("python" ,python)))
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("libtool" ,libtool)
+       ("pkg-config" ,pkg-config)
+       ("python-cython" ,python-cython))) ; to build Python bindings
+    (home-page "https://www.libimobiledevice.org/")
+    (synopsis "C library to handle Apple Property List files")
+    (description "This package provides a small portable C library to handle
+Apple Property List files in binary or XML.")
+    (license license:lgpl2.1+)))
+
+(define-public my-libusbmuxd
+  (package
+    (name "libusbmuxd")
+    (version "873252dc8b4e469c7dc692064ac616104fca5f65")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/libimobiledevice/libusbmuxd.git")
+                    (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0qx3q0n1f2ajfm3vnairikayzln6iyb2y0i7sqfl8mj45ahl6wyj"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("libtool" ,libtool)
+       ("automake" ,automake)
+       ("libplist" ,my-libplist)))
+    (home-page "https://www.libimobiledevice.org/")
+    (synopsis "Library to multiplex connections from and to iOS devices")
+    (description "This package provides a client library to multiplex
+connections from and to iOS devices by connecting to a socket provided by a
+@code{usbmuxd} daemon.")
+    (license license:lgpl2.1+)))
+
+(define-public my-libimobiledevice
+  (package
+    (name "libimobiledevice")
+    (version "61babf5f54e7734ebf3044af4c6294524d4b29b5")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/libimobiledevice/libimobiledevice.git")
+                    (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "02dnq6xza72li52kk4p2ak0gq2js3ssfp2fpjlgsv0bbn5mkg2hi"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list (string-append "PYTHON_LDFLAGS=-L"
+                            (assoc-ref %build-inputs "python")
+                            "/lib -lpython"
+                            ,(version-major+minor (package-version python))
+                            "m"))))
+    (propagated-inputs
+     `(("openssl" ,openssl-1.0)
+       ("libplist" ,my-libplist)
+       ("libusbmuxd" ,my-libusbmuxd)))
+    (inputs
+     `(("python" ,python)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("python-cython" ,python-cython)
+       ("libtool" ,libtool)))
+    (home-page "https://www.libimobiledevice.org/")
+    (synopsis "Protocol library and tools to communicate with Apple devices")
+    (description "libimobiledevice is a software library that talks the
+protocols to support Apple devices.  It allows other software to easily access
+the device's file system, retrieve information about the device and its
+internals, backup/restore the device, manage installed applications, retrieve
+address books, calendars, notes, and bookmarks, and (using libgpod) synchronize
+music and video to the device.")
+    (license license:lgpl2.1+)))
+
+(define-public my-ifuse
+  (package
+    (name "ifuse")
+    (version "e75d32c34d0e8b80320f0a007d5ecbb3f55ef7f0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/libimobiledevice/ifuse.git")
+                    (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1b9w2i0sliswlkkb890l9i0rxrf631xywxf8ihygfmjdsfw47h1m"))))
+    (inputs
+     `(("fuse" ,my-fuse)
+       ("libimobiledevice" ,my-libimobiledevice)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (build-system gnu-build-system)
+    (home-page "https://www.libimobiledevice.org/")
+    (synopsis "Mount iOS devices")
+    (description "This package provides @command{ifuse}, a command to mount
+iOS devices and access their contents.")
+    (license license:lgpl2.1+)))
+
+(define-public my-usbmuxd
+  (package
+    (name "usbmuxd")
+    (version "9af2b12552693a47601347e1eafc1e94132d727e")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/libimobiledevice/usbmuxd.git")
+                    (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0m64idbnnl5kklxl1bypf7zmmq9hdrc6lcdwkz482519sgavsdwj"))))
+    (inputs
+     `(("libplist" ,my-libplist)
+       ("libusb" ,libusb)
+       ("libimobiledevice" ,my-libimobiledevice)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (build-system gnu-build-system)
+    (home-page "https://www.libimobiledevice.org/")
+    (synopsis "Multiplex connections over USB to an iOS device")
+    (description "This package provides the @code{usbmuxd} daemon
+which multiplexes connections over USB to an iOS device.  To
+users, it means you can sync your music, contacts, photos, etc.
+over USB.")
+    (license license:gpl2+)))

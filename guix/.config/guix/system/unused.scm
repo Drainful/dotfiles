@@ -3,21 +3,21 @@
            (arguments
             `(#:phases
               (modify-phases %standard-phases
-                (add-before 'configure 'configure-qmake
-                  (lambda* (#:key inputs outputs #:allow-other-keys)
-                    (let* ((out (assoc-ref outputs "out"))
-                           (qtbase (assoc-ref inputs "qtbase"))
-                           (tmpdir (string-append (getenv "TMPDIR")))
-                           (qmake (string-append tmpdir "/qmake"))
-                           (qt.conf (string-append tmpdir "/qt.conf")))
-                      ;; Use qmake with a customized qt.conf to override install
-                      ;; paths to $out.
-                      (symlink (which "qmake") qmake)
-                      (setenv "CC" "gcc")
-                      (setenv "PATH" (string-append tmpdir ":" (getenv "PATH")))
-                      (with-output-to-file qt.conf
-                        (lambda ()
-                          (format #t "[Paths]
+                             (add-before 'configure 'configure-qmake
+                                         (lambda* (#:key inputs outputs #:allow-other-keys)
+                                           (let* ((out (assoc-ref outputs "out"))
+                                                  (qtbase (assoc-ref inputs "qtbase"))
+                                                  (tmpdir (string-append (getenv "TMPDIR")))
+                                                  (qmake (string-append tmpdir "/qmake"))
+                                                  (qt.conf (string-append tmpdir "/qt.conf")))
+                                             ;; Use qmake with a customized qt.conf to override install
+                                             ;; paths to $out.
+                                             (symlink (which "qmake") qmake)
+                                             (setenv "CC" "gcc")
+                                             (setenv "PATH" (string-append tmpdir ":" (getenv "PATH")))
+                                             (with-output-to-file qt.conf
+                                               (lambda ()
+                                                 (format #t "[Paths]
 Prefix=~a
 ArchData=lib/qt5
 Data=share/qt5
@@ -42,30 +42,30 @@ HostLibraries=lib
 HostPrefix=~a
 HostData=lib/qt5
 " out out qtbase)))
-                      #t)))
-                (replace 'configure
-                  (lambda* (#:key inputs outputs #:allow-other-keys)
-                    ;; Valid QT_BUILD_PARTS variables are:
-                    ;; libs tools tests examples demos docs translations
-                    (invoke "qmake" "QT_BUILD_PARTS = libs tools" "--"
-                            ;; "--webengine-printing-and-pdf=no"
-                            "--webengine-ffmpeg=system"
-                            "--webengine-icu=system"
-                            ;; "--webengine-pepper-plugins=no"
-                            )))
-                (add-before 'check 'set-display
-                  (lambda _
-                    ;; make Qt render "offscreen", required for tests
-                    (setenv "QT_QPA_PLATFORM" "offscreen")
-                    #t))
-                (add-after 'install-binaries 'install-qt.conf
-                  (lambda* (#:key inputs outputs #:allow-other-keys)
-                    (let* ((out (assoc-ref outputs "out"))
-                           (tmpdir (string-append (getenv "TMPDIR")))
-                           (in.conf (string-append tmpdir "/qt.conf"))
-                           (out.conf (string-append out "/lib/qt5/libexec/qt.conf")))
-                      (copy-file in.conf out.conf))
-                    #t)))))))
+                                             #t)))
+                             (replace 'configure
+                                      (lambda* (#:key inputs outputs #:allow-other-keys)
+                                        ;; Valid QT_BUILD_PARTS variables are:
+                                        ;; libs tools tests examples demos docs translations
+                                        (invoke "qmake" "QT_BUILD_PARTS = libs tools" "--"
+                                                ;; "--webengine-printing-and-pdf=no"
+                                                "--webengine-ffmpeg=system"
+                                                "--webengine-icu=system"
+                                                ;; "--webengine-pepper-plugins=no"
+                                                )))
+                             (add-before 'check 'set-display
+                                         (lambda _
+                                           ;; make Qt render "offscreen", required for tests
+                                           (setenv "QT_QPA_PLATFORM" "offscreen")
+                                           #t))
+                             (add-after 'install-binaries 'install-qt.conf
+                                        (lambda* (#:key inputs outputs #:allow-other-keys)
+                                          (let* ((out (assoc-ref outputs "out"))
+                                                 (tmpdir (string-append (getenv "TMPDIR")))
+                                                 (in.conf (string-append tmpdir "/qt.conf"))
+                                                 (out.conf (string-append out "/lib/qt5/libexec/qt.conf")))
+                                            (copy-file in.conf out.conf))
+                                          #t)))))))
 
 (define-public my-python-pyqt
   (package

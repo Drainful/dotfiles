@@ -8,16 +8,22 @@
              (gnu packages code)
              (gnu packages file)
              (gnu packages linux)
+             (gnu packages admin)
+             (gnu packages elf)
              (gnu packages readline)
              (gnu packages package-management)
              (gnu packages mpd)
              (gnu packages compression)
              (gnu packages base)
              (gnu packages ssh)
+             (gnu packages busybox)
+             (gnu packages shellutils)
+             (gnu packages java)
+             (gnu packages lisp)
              ;; (nongnu packages compression)
              (lib))
 
-(os-part '()
+(os-part (list)
          (list neovim ; for when emacs is dead
                git
                curl
@@ -27,6 +33,9 @@
                neofetch
                file
                usbutils
+               iptables
+               netcat
+               patchelf
                rlwrap
                mpd
                stow
@@ -39,8 +48,14 @@
                atool
                ;; unrar
                unzip
-               zip) 
-         ;; (list (udisks-service)
-         ;;       (bluetooth-service))
-         '()
-         )
+               zip
+
+               busybox ;; utilities
+
+               direnv ;; directory-specific environment variables
+               
+               ;; used as an application, not for development
+               openjdk12
+               sbcl
+               ) 
+         (list))

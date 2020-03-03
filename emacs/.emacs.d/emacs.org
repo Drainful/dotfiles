@@ -55,6 +55,8 @@ Startup time can also be improved by disabling the
   ;; Directory containing my dotfiles.
   (defconst me/dotfiles "~/dotfiles/")
 
+  (defconst me/project-directory "~/Code/")
+
   (defconst me/music-directory "~/Music/")
 
   (defconst me/guix-config-dir "~/.config/guix/system")
@@ -66,7 +68,14 @@ packages.
 #+BEGIN_SRC emacs-lisp
   (push "~/.emacs.d/my-packages/" load-path)
 #+END_SRC
-** Straight.el
+** Packages
+
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  (package-initialize) ;; to use use-package :ensure in user init file
+  (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))
+#+END_SRC
+** COMMENT Straight.el
 Straight.el A functional alternative to package.el.
 #+BEGIN_SRC emacs-lisp
   (defvar bootstrap-version)
@@ -99,11 +108,10 @@ These are my settings for the Evil, the Vim emulator.
   (setq evil-want-minibuffer t)
 
   (use-package evil
-    :straight t
     :config
     (evil-mode 1)
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
-    (global-undo-tree-mode -1)
+    ;; (global-undo-tree-mode -1)
 
     ;; highlight all search results
     (setq evil-search-module 'evil-search)
@@ -121,6 +129,7 @@ These are my settings for the Evil, the Vim emulator.
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
   (use-package evil-collection
+    :ensure t
     :init
     (setq evil-want-keybinding nil)
     :after evil
@@ -134,7 +143,7 @@ repeat an ~evil~ motion by providing a tag at the location of
 each possible motion result.
 #+BEGIN_SRC emacs-lisp
   (use-package evil-easymotion
-    :straight t
+    :ensure t
     :config
     (evilem-default-keybindings "C-M-S-~"))
 #+END_SRC
@@ -149,6 +158,7 @@ This provides action to surround a region with delimiters
 At one point I used ~evil-snipe~, a tool for jumping to pairs of characters.
 #+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
+  :ensure t
   :after evil-easymotion
   :config
   (evilem-define (kbd "SPC s") 'evil-snipe-s))
@@ -249,6 +259,9 @@ These are normal mode mappings not specific to any major mode.
     "C-j" 'evil-window-down
     "C-k" 'evil-window-up
     "C-l" 'evil-window-right
+
+    "C-u" 'evil-scroll-up
+
     "C--" 'helm-do-ag-project-root
     "C-=" 'helm-do-ag
     ;; Move a line of text using ALT+[jk]
@@ -375,12 +388,12 @@ Usage:
     (call-interactively #'helm-mini))
 
   (leader-key-def 'normal
+                  "u" 'universal-argument
                   "w" 'actually-kill-this-buffer    ; ",w" to kill buffer not window.
                   "q" 'evil-delete-buffer   ; ",q" to kill buffer and window. equivalent of :bd<cr>.
                   "a" #'bury-evil-buffer
                   "b" 'me/helm-buffer   ; ",b" to switch buffers.
                   "f" 'helm-find-files    ; ",f" to find file (replace :e)
-                  "d" 'fzf-directory-from-home
                   "h" 'help
                   "O" 'helm-do-ag-this-file 
                   "o" 'helm-occur 
@@ -440,8 +453,9 @@ This is a command to create a new scratch buffer
 #+BEGIN_SRC emacs-lisp
   (defun scratch ()
     (interactive)
-    (let ((buffer (or (get-buffer "*scratch*")
-                      (generate-new-buffer "*scratch*"))))
+    (let* ((default-directory "~/")
+           (buffer (or (get-buffer "*scratch*")
+                       (generate-new-buffer "*scratch*"))))
       (set-window-buffer nil buffer)
       (with-current-buffer buffer
         (funcall initial-major-mode))))
@@ -464,7 +478,6 @@ Delight is a package which is used to hide unnecessary mode-line
 blurbs.
 #+BEGIN_SRC emacs-lisp
   (use-package delight 
-    :straight t
     :config
     (delight '((eldoc-mode nil "eldoc")
                (auto-revert-mode nil "autorevert")
@@ -486,6 +499,16 @@ blurbs.
                   (vc-mode vc-mode)
                   "  " mode-line-modes
                   mode-line-end-spaces))
+
+  (when (require 'exwm)
+    (defvar me/exwm-mode-line-format nil)
+    (setq me/exwm-mode-line-format 
+          '("%e" mode-line-front-space
+            mode-line-frame-identification
+            mode-line-buffer-identification
+            "  " mode-line-modes mode-line-end-spaces))
+    (setq exwm-mode-hook nil)
+    (add-hook 'exwm-mode-hook (lambda () (setq mode-line-format me/exwm-mode-line-format))))
 #+END_SRC
 *** Shorten mode-line buffer names
 This sets a limit of 70 characters for the display of buffern names in
@@ -513,7 +536,6 @@ Package to use the minibuffer in the manner of the mode line.
 which integrates well across Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package helm
-    ;; :straight t
     :delight
     :bind (("M-x" . helm-M-x))
     :config
@@ -719,7 +741,9 @@ key command. ~which-key~ key replacements are generated [[#leader][here]].
 #+BEGIN_SRC emacs-lisp :tangle no
   (use-package which-key
     :delight
+    :after delight
     :config
+    (delight 'which-key-mode "" t)
     (which-key-mode t))
 #+END_SRC
 *** Prefix command completion
@@ -803,6 +827,7 @@ Keybindings for help mode
 Highlight the cursor when switching buffers.
 #+BEGIN_SRC emacs-lisp
   (use-package beacon
+    :ensure t
     :delight
     :config
     (beacon-mode 1))
@@ -909,7 +934,7 @@ Iedit is a package for interactive refactoring.
   (use-package iedit)
 
   (use-package evil-iedit-state
-    :straight t
+    :ensure t
     :config
     (defun me/evil-iedit-toggle ()
       (interactive)
@@ -1008,7 +1033,7 @@ Asynchronously copy files with Rsync
 Add additional font lock rules for dired
 #+BEGIN_SRC emacs-lisp
   (use-package diredfl
-    :straight t
+    :ensure t
     :config
     (diredfl-global-mode 1))
 #+END_SRC
@@ -1016,7 +1041,7 @@ Add additional font lock rules for dired
 Use atool for compression and extraction
 #+BEGIN_SRC emacs-lisp
 (use-package dired-atool
-  :straight t
+  :ensure t
   :config
   (leader-key-def normal dired-mode-map
                   "z" #'dired-atool-do-unpack
@@ -1028,8 +1053,9 @@ Use du to list folder sizes
   (use-package dired-du
     :config
     (setq dired-du-size-format t)
-    (leader-key-def 'normal dired-mode-map
-                    "d" #'dired-du-mode))
+    ;; (leader-key-def 'normal dired-mode-map
+    ;;                 "d" #'dired-du-mode)
+    )
 #+END_SRC
 ** Dired Hacks
 [[https://github.com/Fuco1/dired-hacks#dired-rainbow][Various packages]] providing dired features
@@ -1503,7 +1529,7 @@ local filesystem across all of Emacs.
   ;; (server-start)
 
   ;; easily restart emacs daemon
-  (use-package restart-emacs :straight t)
+  ;; (use-package restart-emacs :ensure t)
 
   ;; focus any new frames
   (add-to-list 'after-make-frame-functions 'select-frame-set-input-focus)
@@ -1618,7 +1644,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-molokai)
+  (switch-theme 'doom-wilmersdorf)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -1700,8 +1726,6 @@ this to managing frames.
 #+BEGIN_SRC emacs-lisp
   (use-package persp-mode
     :config
-
-
     (persp-mode)
 
     ;; I just want to use `persp-mode' as a layout saver, so I remove
@@ -1734,21 +1758,43 @@ This function opens a directory using ~fzf/start~.
 ~projectile~ is a powerful package which facilitates navigation within a
 project.
 #+BEGIN_SRC emacs-lisp
+  ;; (use-package f)
+
   (use-package projectile
     :delight ""
-    :after general
+    :after (general f)
     :config
+    ;; (projectile-discover-projects-in-search-path)
+    (defun projectile-discover-projects-in-directory-recursive (directory)
+      (unless (projectile-project-p directory)
+        (mapcar (lambda (dir)
+                  (progn (projectile-discover-projects-in-directory dir)
+                         (projectile-discover-projects-in-directory-recursive dir)))
+                (cl-remove-if (lambda (dir) (or (not (f-directory? dir))
+                                           (cl-case (file-name-nondirectory dir)
+                                             (".." t) ("." t))))
+                              (mapcar (lambda (file) (concat directory file))
+                                      (directory-files directory))))))
+
+    (setq projectile-ignored-project-function
+          (lambda (dir) (not (cl-some (lambda (dir-file) (string= dir-file ".git"))
+                                 (directory-files dir)))))
+
+    (projectile-discover-projects-in-directory-recursive "~/Code/")
+
     (general-def
       :states 'normal
       :keymaps 'projectile-mode-map
       "C-p" 'helm-projectile-find-file)
-    (project-key-def 'normal 'projectile-mode-map
+
+    (project-key-def 'normal
                      "p" 'projectile-switch-project
                      "e" 'projectile-run-eshell)
     (projectile-mode +1))
 
   ;; use helm for projectile
   (use-package helm-projectile
+    :after projectile
     :config
     (helm-projectile-on))
 #+END_SRC
@@ -1772,10 +1818,10 @@ project.
     (add-to-list 'skeletor-global-substitutions
                  '("__AUTHOR__" . "Adrian Fullmer"))
 
-    (defun setup--lorri (dir)
-      (let ((default-directory dir))
-        (skeletor-shell-command "direnv allow")
-        (projectile-lorri-watch)))
+    ;; (defun setup--lorri (dir)
+    ;;   (let ((default-directory dir))
+    ;;     (skeletor-shell-command "direnv allow")
+    ;;     (projectile-lorri-watch)))
 
     ;; I don't like the default skeletons.
     (setq skeletor--project-types nil)
@@ -1783,9 +1829,9 @@ project.
     ;; Custom project skeletons
     (skeletor-define-template "generic"
       :title "Generic Project"
-      :substitutions
-      '(("__PACKAGES__" . (lambda () (read-string "Packages to use: "))))
-      :after-creation (lambda (dir) (setup--lorri dir)))
+      ;; :substitutions
+      ;; '(("__PACKAGES__" . (lambda () (read-string "Packages to use: "))))
+      )
                                           ; a lambda is used to avoid a
                                           ; failed assertation where the
                                           ; function itself would
@@ -1794,31 +1840,33 @@ project.
     (skeletor-define-template "common-lisp"
       :title "Common Lisp Project"
       :substitutions
-      '(("__DESCRIPTION__" . (lambda () (read-string "Description: "))))
-      :after-creation (lambda (dir) (setup--lorri dir)))
+      '(("__DESCRIPTION__" . (lambda () (read-string "Description: ")))))
 
     (skeletor-define-template "python"
       :title "Python Project"
-      :substitutions
-      '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
-      :after-creation (lambda (dir) (setup--lorri dir)))
+      ;; :substitutions
+      ;; '(("__PACKAGES__" . (lambda () (read-string "Packages: "))))
+      )
 
     (skeletor-define-template "haskell"
       :title "Haskell Project"
-      :substitutions
-      '(("__HASKELL-PACKAGES__" . (lambda () (read-string "Haskell packages: ")))
-        ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
-      :after-creation (lambda (dir) (setup--lorri dir)))
+      ;; :substitutions
+      ;; '(("__HASKELL-PACKAGES__" . (lambda () (read-string "Haskell packages: ")))
+      ;;   ("__PACKAGES__" . (lambda () (read-string "Other packages: "))))
+      )
 
-    (skeletor-define-template "clojurescript"
-      :title "Clojurescript Project"
-      :after-creation (lambda (dir) (setup--lorri dir)))
+    (skeletor-define-template "clojure"
+      :title "Clojure Project")
 
-    ;; Extending built-in project types seems hard.
+    (skeletor-define-template "gnu"
+      :title "Gnu Build System Project")
+
+    (skeletor-define-template "ats"
+      :title "ATS Project")
 
     ;;keybindings
     (project-key-def 'normal
-      "s" 'skeletor-create-project-here))
+                     "s" 'skeletor-create-project-here))
 #+END_SRC
 ** Agressive Indent
 ~agressive-indent-mode~ enforces indentation as code is being edited.
@@ -1828,6 +1876,8 @@ project.
     :config
     (global-aggressive-indent-mode 1)
     (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
+    (add-to-list 'aggressive-indent-excluded-modes 'helm-mode)
+    (add-to-list 'aggressive-indent-excluded-modes 'ats-mode)
     (add-to-list
      'aggressive-indent-dont-indent-if
      '(and (or (derived-mode-p 'c-mode) (derived-mode-p 'c++-mode))
@@ -1857,21 +1907,9 @@ I use the ~Company~ package for autocompletion.
 #+END_SRC
 *** Smart Tab
 #+BEGIN_SRC emacs-lisp
-  (use-package smart-tab)
-#+END_SRC
-*** COMMENT Company Box
-#+BEGIN_SRC emacs-lisp
-  (use-package company-box
-    :delight
-    :hook (company-mode . company-box-mode))
-#+END_SRC
-*** COMMENT Autocomplete
-I have ~auto-complete~ installed for cases where a company package does not exist.
-#+BEGIN_SRC emacs-lisp
-  (use-package fuzzy)
-  (use-package auto-complete
-    :after fuzzy
-    :config)
+  (use-package smart-tab
+    :ensure t
+    :delight)
 #+END_SRC
 ** Linting
 I use the ~flycheck~ package for linting.
@@ -1965,7 +2003,7 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** COMMENT Direnv and Lorri
+** Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
 per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 #+BEGIN_SRC emacs-lisp
@@ -1973,7 +2011,10 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
     :delight
     :after projectile          ; I integrate projectile with direnv here
     :config
-    (direnv-mode 1)
+    ;; (direnv-mode 1)
+
+    (leader-key-def 'normal
+                    "d" #'direnv-mode)
 
     ;; Keybindings to direnv refresh and lorri watch
 
@@ -1999,11 +2040,12 @@ per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 
     (project-key-def 'normal
                      "d" 'direnv-update-directory-environment
-                     "l" 'projectile-lorri-watch)
+                     ;; "l" 'projectile-lorri-watch
+                     )
 
     ;; Lorri watch the given project when switching to a new project.
-    (add-hook 'projectile-after-switch-project-hook
-              (lambda () (ignore-errors (projectile-lorri-watch))))
+    ;; (add-hook 'projectile-after-switch-project-hook
+    ;;           (lambda () (ignore-errors (projectile-lorri-watch))))
 
     ;; Advice to run emacsHook
     (defun run-emacs-hook ()
@@ -2101,17 +2143,19 @@ functionality can be bound to that mode.
 #+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is
-given a different color. I leave it off by default.
+given a different color.
 #+BEGIN_SRC emacs-lisp
-(use-package rainbow-delimiters
-  :delight)
+  (use-package rainbow-delimiters
+    :delight
+    :config
+    (add-hook 'lispyville-mode-hook #'rainbow-delimiters-mode-enable))
 #+END_SRC
 ** Emacs lisp
 *** Nameless
 This uses font-lock to hide namespace prefixes automatically.
 #+BEGIN_SRC emacs-lisp
   (use-package nameless
-    :straight t
+    :ensure t
     :delight
     :config
     (add-hook 'emacs-lisp-mode-hook #'nameless-mode)
@@ -2154,6 +2198,7 @@ This uses font-lock to hide namespace prefixes automatically.
   (use-package slime
     :after evil
     :config
+    (delight 'slime-autodoc-mode "" t)
 
     (setq slime-contribs '(slime-fancy))
     (add-to-list 'smart-tab-completion-functions-alist
@@ -2455,7 +2500,7 @@ Python support is built in to ~lsp-mode~.
 *** COMMENT Autocomplete
 #+BEGIN_SRC emacs-lisp
   (use-package auto-complete-lua
-    :straight t (:host github :repo "rolpereira/auto-complete-lua")
+    ;; :straight t (:host github :repo "rolpereira/auto-complete-lua")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-lua))
@@ -2463,7 +2508,7 @@ Python support is built in to ~lsp-mode~.
 
   (use-package auto-complete-love
     :after auto-complete-lua
-    :straight t (:host github :repo "rolpereira/auto-complete-love")
+    ;; :straight t (:host github :repo "rolpereira/auto-complete-love")
     :config
     (add-hook 'lua-mode-hook '(lambda ()
                                 (setq ac-sources '(ac-source-love))
@@ -2514,7 +2559,7 @@ Python support is built in to ~lsp-mode~.
 #+END_SRC
 ** Shen
 #+BEGIN_SRC emacs-lisp
-(use-package shen-mode :straight t)
+(use-package shen-mode :ensure t)
 
 (leader-key-def 'normal shen-mode-map
   "z" 'switch-to-shen
@@ -2608,15 +2653,12 @@ Enable ~flycheck~
 #+END_SRC
 ** Julia
 #+BEGIN_SRC emacs-lisp
-(use-package julia-repl
-  :straight t
-  :config
-  (add-hook 'julia-mode-hook 'julia-repl-mode))
+  (use-package julia-mode)
 #+END_SRC
 ** C Sharp
 #+BEGIN_SRC emacs-lisp
   (use-package omnisharp
-    :straight t
+    :ensure t
     :after company
     :config
     (add-hook 'csharp-mode-hook 'omnisharp-mode)
@@ -2641,11 +2683,28 @@ Enable ~flycheck~
                    (append '((company-capf company-dabbrev-code))
                            company-backends)))))
 #+END_SRC
-** COMMENT ATS
+** ATS
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'load-path  "~/code/ats/ATS-Postiats/utils/emacs")
+  (add-to-list 'load-path  "~/Code/ats/ATS-Postiats/utils/emacs")
   (require 'ats-mode "ats2-mode")
   (require 'ats2-flymake "flymake-ats2")
+
+  (defvar-local flymake-do-after-change t)
+
+  (defun flymake-after-change-advice (oldfun &rest args)
+    (when flymake-do-after-change
+      (apply oldfun args)))
+
+  (advice-add 'flymake-after-change-function
+              :around
+              #'flymake-after-change-advice)
+
+  (defun ats-flymake-hook-fn ()
+    (flymake-mode)
+    (setq flymake-do-after-change nil))
+
+  (add-hook 'ats-mode-hook
+            #'ats-flymake-hook-fn)
   ;; (setenv "ATSHOME" "~/code/ats/ATS-Postiats/")
 #+END_SRC
 ** COMMENT Elm
@@ -2659,7 +2718,7 @@ Enable ~flycheck~
 ** Javascript
 #+BEGIN_SRC emacs-lisp
   (use-package indium
-    :straight t
+    :ensure t
     :config
     (defun me/indium-local-advice (old-fun &rest args)
       (let ((indium-client-executable (aif (projectile-project-root)
@@ -2740,8 +2799,7 @@ literate source files like this one.
         org-fontify-quote-and-verse-blocks t
         org-src-ask-before-returning-to-edit-buffer nil
         org-src-window-setup 'current-window)
-  (general-def :states 'normal :keymaps 'org-mode-map
-    "C-`" 'org-edit-special)
+
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((lisp . t)
@@ -2761,11 +2819,83 @@ literate source files like this one.
   (leader-key-def 'normal org-src-mode-map
                   "q" 'org-edit-src-exit)
 
+  (defun me/org-open-at-point (&rest args)
+    "org-open-at-point except it does the jumpy jump"
+    (interactive)
+    (let ((point (point)))
+      (org-open-at-point args)
+      (evil-set-jump point)))
+
   (add-hook 'org-mode-hook (lambda ()
                              (general-def :states 'normal :keymaps 'org-mode-map
                                "C-j" 'evil-window-down
-                               "C-k" 'evil-window-up)))
+                               "C-k" 'evil-window-up
+                               "RET" 'me/org-open-at-point)))
 #+END_SRC
+
+*** Source block generation
+#+BEGIN_SRC emacs-lisp
+  (defun org-in-src-block-p ()
+    (let* ((element (org-element-at-point))
+           (type (org-element-type element)))
+      (if (and (memq type '(example-block src-block))
+               (org-src--on-datum-p element))
+          t nil)))
+
+  (defun org-get-src-language ()
+    (save-excursion
+      (goto-char (point-min))
+      (cl-labels
+          ((rec ()
+                (or (plist-get (second (org-element-at-point))
+                               :language)
+                    (and (forward-line)
+                         (< (line-number-at-pos)
+                            (count-lines (point-min)
+                                         (point-max)))
+                         (rec)))))
+        (rec))))
+
+  (defun org-edit-src-code-or-make-block ()
+    (interactive)
+    (unless (org-in-src-block-p)
+      (let ((language (or (org-get-src-language)
+                          (read-string "Language: "))))
+        (move-end-of-line nil)
+        (insert (format "
+  ,#+BEGIN_SRC %s
+
+  ,#+END_SRC"
+                        language))))
+    (org-edit-src-code))
+
+  (general-def :states 'normal :keymaps 'org-mode-map
+    "C-`" 'org-edit-src-code-or-make-block)
+#+END_SRC
+*** Block splitting
+#+BEGIN_SRC emacs-lisp
+  (defun org-src-split-block ()
+    "Split a source block at point. Not 100% functional."
+    (interactive)
+    (if (not (and (org-in-src-block-p)
+                  (save-excursion
+                    (forward-line)
+                    (org-in-src-block-p))))
+        (user-error "Not in source block")
+      (move-end-of-line nil)
+      (insert   "
+  ,#+END_SRC
+  ")
+      (let ((pos (point)))
+        (insert
+         (format
+          "
+  ,#+BEGIN_SRC %s"
+          (plist-get (second (org-element-at-point))
+                     :language)))
+        (goto-char pos))))
+#+END_SRC
+*** Source block hydra
 A hydra to jump between org-babel source blocks:
 #+BEGIN_SRC emacs-lisp
   (defhydra hydra-org-babel-source-block-jump (org-mode-map "C-c C-v")
@@ -2773,10 +2903,11 @@ A hydra to jump between org-babel source blocks:
       ("n" org-babel-next-src-block)
       ("p" org-babel-previous-src-block))
 #+END_SRC
+*** COMMENT Toc-org
 Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
 (use-package toc-org
-  :straight t
+  :ensure t
   :config
   (add-hook 'org-mode-hook 'toc-org-mode))
 #+END_SRC
@@ -2824,7 +2955,7 @@ Tools for Guix, a package manager and operating system.
           (and prompt-end (narrow-to-region prompt-beg prompt-end))
           t))))
 #+END_SRC
-** COMMENT Nix
+** Nix
 Tools for Nix, a package manager and operating system.
 *** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
@@ -2885,7 +3016,6 @@ Enter ~common-lisp-mode~ in the following files
   ;; (use-package prodigy)
 
   (use-package openwith
-    :straight t
     :config
     ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
     (defvar my-ok-large-file-types
@@ -2913,6 +3043,9 @@ Enter ~common-lisp-mode~ in the following files
             ("\\.\\(?:mkv\\)$"
              "mpv" (file))))
     (openwith-mode +1))
+
+  (general-def process-menu-mode-map
+    "M-D" #'process-menu-delete-process)
 #+END_SRC
 * Emacs does everything
 ** COMMENT Spotify
@@ -2963,6 +3096,15 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     (defvar clear-minibuffer-delay "2 sec")
 
+    (require 'exwm-randr)
+
+    (setq exwm-randr-workspace-output-plist '(0 "VGA1"))
+    (add-hook 'exwm-randr-screen-change-hook
+              (lambda ()
+                (start-process-shell-command
+                 "xrandr" nil "xrandr --output VGA1 --left-of LVDS1 --auto")))
+    (exwm-randr-enable)
+
     (let ((timer nil))
       (defun clear-minibuffer ()
         (message nil))
@@ -2989,15 +3131,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
     (fringe-mode 1)
     (require 'exwm-config)
-    (setq exwm-mode-hook nil)
-    (add-hook 'exwm-mode-hook (lambda ()
-                                (setq mode-line-format
-                                      (list
-                                       ;; buffer
-                                       " " mode-line-buffer-identification " "
-                                       mode-line-modes
-                                       ;; mode-line-misc-info
-                                       ))))
 
     (add-hook 'exwm-mode-hook #'set-clear-minibuffer-delayed)
                                           ; Make sure minibuffer-line is
@@ -3015,9 +3148,13 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                           (string= "gimp" exwm-instance-name))
                   (exwm-workspace-rename-buffer exwm-title))))
 
-    ;; (general-def :keymaps 'exwm-mode-map
-    ;;   "C-c C-f" 'exwm-layout-toggle-fullscreen
-    ;;   "C-c C-l" 'exwm-floating-toggle-floating)
+    (general-def :keymaps 'exwm-mode-map
+      "C-c" nil ; so that C-c can be used for copy in many
+                                          ; applications. I put all emacs bindings for exwm behind
+                                          ; the super key.
+      ;; "C-c C-f" 'exwm-layout-toggle-fullscreen
+      ;; "C-c C-l" 'exwm-floating-toggle-floating
+      )
 
     (setq exwm-input-global-keys
           `(;; Bind "s-r" to exit char-mode and fullscreen mode.
@@ -3031,7 +3168,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                          (interactive (list (read-shell-command "$ ")))
                          (start-process-shell-command command nil command)))
 
-            ([?\s-`] . helm-next)
+            ([?\s-`] . helm-exwm)
             ([?\s-1] . eshell-here)
             ([?\s-2] . helm-find-files)
             ([?\s-3] . multi-term)
@@ -3099,7 +3236,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
             ([?\s-s] . evil-window-split)
-            ([?\s-c] . hydra-winner/body)
+            ([?\s-u] . hydra-winner/winner-undo)
             ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
             ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
             ;; ([?\s-c ?\l] . exwm-floating-toggle-floating)
@@ -3129,9 +3266,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     ;; (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
-    (require 'exwm-systemtray)
-    (setq exwm-systemtray-height 34)
-    (exwm-systemtray-enable)
+    ;; (require 'exwm-systemtray)
+    ;; (setq exwm-systemtray-height 34)
+    ;; (exwm-systemtray-enable)
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -3203,7 +3340,9 @@ I wrote a package to launch programs which integrates with ~exwm~ and
 
   (exlaunch-shortcuts
    multimc
-   (next :switch-to nil)
+   next
+   icecat
+   firefox
    krita
    gimp)
 #+END_SRC
@@ -3416,7 +3555,7 @@ This allows sending Common Lisp code to a live running Next browser process.
   ;; -*- lexical-binding: t; -*-
 
   (setq browse-url-browser-function #'browse-url-generic)
-  (setq browse-url-generic-program "next")
+  (setq browse-url-generic-program "firefox")
 
   (require 'slime)
 
@@ -3532,6 +3671,49 @@ This allows sending Common Lisp code to a live running Next browser process.
   (add-hook 'exwm-manage-finish-hook
             #'enforce-floating-toggle-list)
 #+END_SRC
+*** COMMENT Helm randr
+#+BEGIN_SRC emacs-lisp
+  (defun helm-randr ()
+    (interactive)
+    (let ((xrandr-output (shell-command-to-string "xrandr"))
+          screens
+          resolutions)
+      (with-temp-buffer
+        (insert xrandr-output)
+        (forward-line -1)
+        (while (not (<= (line-number-at-pos) 1))
+          (if (looking-at-p "   .*")
+              (setq resolutions
+                    (cons (progn
+                            (looking-at ".* [0-9]+x[0-9]+")
+                            (string-trim (match-string 0)))
+                          resolutions))
+            (progn
+              (let ((screen (progn
+                              (looking-at "^.*? ")
+                              (string-trim (match-string 0)))))
+                (setf (alist-get screen screens nil nil #'string=)
+                      resolutions))
+              (setq resolutions nil)))
+          (forward-line -1)))
+      (let* ((cr-screens (remove-if #'null
+                                    (mapcar (lambda (screen)
+                                              (when (cdr screen)
+                                                (car screen)))
+                                            screens)))
+             (screen (if (= (length cr-screens) 1)
+                         (car cr-screens)
+                       (completing-read "Screen: " cr-screens)))
+             (resolution (completing-read "Resolution: "
+                                          (alist-get screen
+                                                     screens
+                                                     nil nil #'string=))))
+        (insert (prin1-to-string `(,screen ,resolution)))
+        (call-process "xrandr" nil nil nil
+                      "--screen" screen
+                      "--mode" resolutio("eDP1" "1920x1080")n))))
+#+END_SRC
+
 ** COMMENT Document viewer
 
 ~pdf-tools~ is a document viewer for emacs
@@ -3581,6 +3763,7 @@ Emacs has an inbuilt image viewer ~image-mode~.
     (let ((image-transform-resize 'fit-width))
       (image-toggle-display-image)))
 
+  (add-hook 'image-minor-mode-hook #'image-transform-fit-to-width-or-height)
 
   (general-def normal image-mode-map
 
@@ -3592,7 +3775,8 @@ Emacs has an inbuilt image viewer ~image-mode~.
 
     "p" #'image-previous-file
     "N" #'image-previous-file
-    "n" #'image-next-file)
+    "n" #'image-next-file
+    "," nil)
 
   (general-def normal '(image-mode-map image-dired-display-image-mode-map)
     "-" #'image-decrease-size
@@ -3629,9 +3813,11 @@ Emacs has an inbuilt image viewer ~image-mode~.
 Emacs media manager
 #+BEGIN_SRC emacs-lisp
   (use-package emms
+    :ensure nil
     :config
+
     (require 'emms-setup)
-    (require 'emms-player-mpd)
+    ;; (require 'emms-player-mpd)
     (require 'emms-player-mpv)
 
     ;; (emms-default-players)
@@ -3639,19 +3825,23 @@ Emacs media manager
     (require 'emms-volume)
     (require 'emms-streams)
     (require 'emms-stream-info)
+    (require 'emms-info-libtag)
+    (defun me/emms-playlist-current-nondirectory ()
+      (format emms-mode-line-format (file-name-nondirectory
+                                     (emms-track-description
+                                      (emms-playlist-current-selected-track)))))
     (setq emms-player-seek-seconds 5
-          emms-source-file-default-directory "~/Music/"
-          emms-player-list '(emms-player-mpd emms-player-mpv)
+          emms-source-file-default-directory (expand-file-name "~/Music/")
+          emms-source-file-directory-tree-function 'emms-source-file-directory-tree-find
+          emms-player-list '(emms-player-mpv)
           ;; emms-player-mpd-music-directory "~/Music"
-          emms-info-functions '(emms-info-mp3info
-                                emms-info-cueinfo
-                                emms-info-opusinfo
-                                emms-info-mpd)
+          emms-info-functions '(emms-info-libtag)
           emms-volume-change-function #'emms-volume-pulse-change
           emms-volume-change-amount 5
           emms-mode-line-format " | %s"
-          emms-mode-line-mode-line-function #'emms-mode-line-playlist-current
-          emms-stream-info-backend 'mplayer)
+          emms-mode-line-mode-line-function #'me/emms-playlist-current-nondirectory 
+          ;; emms-stream-info-backend 'mplayer
+          )
 
 
     (general-def normal emms-playlist-mode-map
@@ -3742,7 +3932,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 ** System package managment
 #+BEGIN_SRC emacs-lisp
   (use-package system-packages
-    :straight t
+    :ensure t
     :config
     (setf (cdr
            (assoc
@@ -3770,10 +3960,23 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     "A" #'comint-style-append-line)
 
   ;; Bouncer
-  (use-package znc
+  ;; (use-package znc
+  ;;   :config
+  ;;   (setq znc-servers `(("znc.fullmer.info" 5000 t
+  ;;                        ((irc\.freenode\.net ,(concat me/freenode-nick
+  ;;                                                      "/freenode")
+  ;;                                             ,(me/znc-password))
+  ;;                         (irc\.rizon\.net ,(concat me/freenode-nick
+  ;;                                                   "/rizon")
+  ;;                                          ,(me/znc-password)))))))
+#+END_SRC
+**** COMMENT ERC Image
+#+BEGIN_SRC emacs-lisp
+  (use-package erc-image
     :config
-    (setq znc-servers `(("znc.fullmer.info" 5000 t
-                         ((irc\.freenode\.net ,me/freenode-nick ,(me/znc-password)))))))
+    ;; (add-to-list 'erc-modules 'image)
+    ;; (erc-update-modules)
+    )
 #+END_SRC
 *** COMMENT Circe
 #+BEGIN_SRC emacs-lisp
@@ -3814,6 +4017,7 @@ Interface to wttr.in
 ** Bluetooth interface
 #+BEGIN_SRC emacs-lisp
   (use-package bluetooth
+    :ensure t
     :config
     (leader-key-def normal
                     "1" #'bluetooth-list-devices)
@@ -3831,7 +4035,7 @@ Interface to wttr.in
 Emacs interface to ~bitwarden-cli~ 
 #+BEGIN_SRC emacs-lisp
   (use-package bitwarden
-    :straight t (:host github :repo "seanfarley/emacs-bitwarden")
+    ;; :straight t (:host github :repo "seanfarley/emacs-bitwarden")
     :config
     (setq bitwarden-automatic-unlock (lambda ()
                                        (read-passwd "Password: "))))
@@ -4077,4 +4281,17 @@ Various functions and macros which are evaluated before anything else in the fil
                `(,',macro ,@(if (consp clause)
                                 clause
                               (list clause))))))
+
+  (defmacro dynamic-flet (binding &rest body)
+    "Dynamic (not lexical) flet. Borked if emacs ever gets real
+  concurrency."
+    (declare (indent 1))
+    (let* ((name (car binding))
+           (old (cl-gensym (symbol-name name))))
+      `(let ((,old (symbol-function ',name)))
+         (unwind-protect
+             (progn
+               (fset ',name (lambda ,@(cdr binding)))
+               ,@body)
+           (fset ',name ,old)))))
 #+END_SRC
