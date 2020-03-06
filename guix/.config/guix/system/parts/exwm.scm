@@ -5,7 +5,9 @@
              (my-packages)
              (lib))
 
-(os-part (list (load "./emacs.scm"))
+(os-part (list (load "./emacs.scm")
+               (load "./no-desktop-environment.scm")
+               (load "./graphical.scm"))
          (list my-emacs-exwm ;; emacs-exwm
                emacs-helm-exwm)
          (list))

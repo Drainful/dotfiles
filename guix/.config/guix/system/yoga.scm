@@ -2,6 +2,7 @@
              (gnu)
              (gnu system nss)
              (gnu services base)
+             (gnu services xorg)
              (gnu packages linux)
              (nongnu packages linux)
              (lib))
@@ -10,55 +11,39 @@
 (use-package-modules certs)
 
 (let* ((keyboard-layout (keyboard-layout "us" "altgr-intl"))
-       (os-part ((os-part
-                  (list
-                   (load "./parts/core.scm")
-                   (load "./parts/no-desktop-environment.scm")
-                   (load "./parts/exwm.scm")
-                   (load "./parts/graphical.scm")
-                   (load "./parts/audio.scm")
-                   (load "./parts/bluetooth.scm")
-                   (load "./parts/games.scm"))
-                  (list nss-certs)
-                  (list))))
-       (services (append (assoc-ref os-part #:services)
-                         (cons*
-                          ;; (service console-font-service-type
-                          ;;          `(("tty6" . ,(file-append font-terminus "/share/consolefonts/ter-132n"))))
-                          (service
-                           slim-service-type
-                           (slim-configuration
-                            (xorg-configuration
-                             (xorg-configuration
-                              (keyboard-layout keyboard-layout)
-                              (extra-config '("
-                         Section \"Device\"
-                         
-                             Identifier \"Intel Graphics\"
-                         
-                             Driver \"intel\"
-                         
-                             Option \"TearFree\" \"false\"
-                         
-                         EndSection
-                         "))))))
-                          (remove
-                           (lambda (service)
-                             (eq? (service-kind service) gdm-service-type))
-                           (modify-services %desktop-services
-                             (console-font-service-type
-                              config => (map (lambda (tty)
-                                               (cons (car tty)
-                                                     (file-append font-terminus "/share/consolefonts/ter-132n")))
-                                             config))
-                             (udev-service-type
-                              config =>
-                              (udev-configuration
+       (default-user-name "adrian")
+       (os-part ((os-part (list
+                           (load "./parts/core.scm")
+                           (load "./parts/exwm.scm")
+                           (load "./parts/audio.scm")
+                           (load "./parts/bluetooth.scm")
+                           (load "./parts/games.scm")
+                           (load "./parts/bitlbee.scm"))
+                          (list nss-certs)
+                          (list))))
+       (services (modify-services (assoc-ref os-part #:services)
+                   (gdm-service-type
+                    config => (gdm-configuration
                                (inherit config)
-                               (rules (cons brightnessctl
-                                            (udev-configuration-rules config))))))))))
-       (packages (append (assoc-ref os-part #:packages)
-                         %base-packages)))
+                               (default-user default-user-name)
+                               (xorg-configuration
+                                (xorg-configuration
+                                 (inherit (gdm-configuration-xorg config))
+                                 (keyboard-layout keyboard-layout)))))
+                   (slim-service-type
+                    config => (slim-configuration
+                               (inherit config)
+                               (default-user default-user-name)
+                               (xorg-configuration
+                                (xorg-configuration
+                                 (inherit (slim-configuration-xorg config))
+                                 (keyboard-layout keyboard-layout)))))
+                   (console-font-service-type
+                    config => (map (lambda (tty)
+                                     (cons (car tty)
+                                           (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                   config))))
+       (packages (append (assoc-ref os-part #:packages) %base-packages)))
   (operating-system
     (kernel linux-5.4)
     (firmware (list linux-firmware))
@@ -97,11 +82,11 @@
                               (password #f))
                   %base-groups))
     (users (cons (user-account
-                  (name "adrian")
+                  (name default-user-name)
                   (group "users")
                   (supplementary-groups '("lp" "wheel" "netdev"
                                           "audio" "video" "nonet"))
-                  (home-directory "/home/guix/adrian"))
+                  (home-directory (string-append "/home/guix/" default-user-name)))
                  %base-user-accounts))
     (packages packages)
     (services services)

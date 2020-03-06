@@ -72,6 +72,8 @@
           emacs-guix
           emacs-nix-mode
           emacs-openwith
+          emacs-erc-hl-nicks 
+          ;; emacs-circe ; not used
           emacs-symon
           ;; emacs-helm-exwm ; installed in exwm.scm
           emacs-pulseaudio-control
@@ -81,7 +83,7 @@
           ;; emacs-system-packages
           emacs-helm-system-packages
           emacs-znc
-          emacs-erc-image
+          ;; emacs-erc-image ; bugged build?
           emacs-wttrin
           ;; emacs-bluetooth
           )

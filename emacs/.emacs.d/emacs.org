@@ -1,5 +1,5 @@
-#+TITLE: Emacs Configuration
-#+CREATOR: Adrian Fullmer
+#+TITLE: Adrian's Emacs Configuration
+#+AUTHOR: Adrian Fullmer
 
 * Startup
 ** Enable Lexical Scope
@@ -3119,10 +3119,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                  "xrandr" nil "xrandr --output VGA1 --left-of LVDS1 --auto")))
     (exwm-randr-enable)
 
-    (let ((timer nil))
-      (defun clear-minibuffer ()
-        (message nil))
+    (defun clear-minibuffer ()
+      (message nil))
 
+    (let ((timer nil))
       (defun clear-minibuffer-delayed ()
         (when (current-message)
           (when (find timer timer-list)
@@ -3281,9 +3281,9 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     ;; (setq exwm-manage-configurations '((t char-mode t)))
 
     ;; sys tray
-    ;; (require 'exwm-systemtray)
-    ;; (setq exwm-systemtray-height 34)
-    ;; (exwm-systemtray-enable)
+    (require 'exwm-systemtray)
+    (setq exwm-systemtray-height 34)
+    (exwm-systemtray-enable)
 
     ;; set prefix keys
     (setq exwm-input-prefix-keys (list
@@ -3608,6 +3608,17 @@ This allows sending Common Lisp code to a live running Next browser process.
 #+BEGIN_SRC emacs-lisp
   (setq browse-url-browser-function #'browse-url-generic)
   (setq browse-url-generic-program "qutebrowser")
+
+  (require 'helm-qutebrowser)
+
+  (defun not-qutebrowser-buffer-p ()
+    (not (string= exwm-class-name "qutebrowser")))
+
+  (setq helm-exwm-source (helm-exwm-build-source #'not-qutebrowser-buffer-p))
+  (setq helm-qutebrowser-sources '(helm-qutebrowser--buffers-source
+                                   helm-exwm-source
+                                   helm-qutebrowser-source-not-found
+                                   helm-source-buffer-not-found))
 #+END_SRC
 *** COMMENT EXWM firefox
 #+BEGIN_SRC emacs-lisp
@@ -4003,12 +4014,132 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 
   (use-package helm-system-packages) ;; can manage packages across tramp
 #+END_SRC
-** IRC
-*** ERC
+** IRC (ERC)
 #+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
+  (erc-keep-place-enable)
+
+  (defun me/erc-insert-timestamp-right-margin (string)
+    (unless (and erc-timestamp-only-if-changed-flag
+                 (string-equal string erc-timestamp-last-inserted))
+      (setq erc-timestamp-last-inserted string)
+      (goto-char (point-max))
+      (forward-char -1);; before the last newline
+      (let ((len (1- (length string)))
+            ;; (from (point))
+            )
+        ;; (insert string)
+        ;; (erc-put-text-property 0 len )
+        ;; (erc-put-text-property 0 len )
+        ;; (when erc-timestamp-intangible
+        ;;   (erc-put-text-property 0 len 'cursor-intangible t string))
+        (overlay-put (make-overlay (point) (point))
+                     'before-string
+                     (propertize "."
+                                 'rear-nonsticky t string
+                                 'field 'erc-timestamp string
+                                 'display `((margin right-margin) ,string)
+                                 )))))
+  (defun me/erc-fill-static ()
+    "Fills a text such that messages start at column `erc-fill-static-center'."
+    (save-match-data
+      (goto-char (point-min))
+      (looking-at "^\\(\\S-+\\)")
+      (let ((nick (match-string 1)))
+        (let ((fill-prefix (make-string erc-fill-static-center 32)))
+          (insert (make-string (max 0 (- erc-fill-static-center
+                                         (length nick) 1))
+                               32)))
+        (erc-restore-text-properties))))
+
   (setq erc-track-position-in-mode-line 'after-modes
         ;;erc-mode-line-format "%S %a"
-        erc-hide-list '("JOIN" "PART" "QUIT"))
+        erc-hide-list '("JOIN" "PART" "QUIT")
+        erc-rename-buffers t
+        erc-interpret-mirc-color t
+        erc-fill-function 'me/erc-fill-static
+        erc-fill-static-center 15
+        erc-input-line-position -1
+        erc-timestamp-right-column 90
+        erc-insert-timestamp-function #'me/erc-insert-timestamp-right-margin
+        erc-insert-away-timestamp-function #'me/erc-insert-timestamp-right-margin
+        erc-hide-list '("JOIN" "PART" "QUIT")
+        erc-lurker-hide-list '("JOIN" "PART" "QUIT")
+        erc-lurker-threshold-time 43200
+        erc-server-reconnect-timeout 3
+        erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+                                  "324" "329" "332" "333" "353" "477"))
+
+  (defvar me/erc-margin-adjust-delay "0.5 sec")
+
+  (defun me/erc-margin-adjust (&optional buffer width)
+    (let ((buffer (or buffer (window-buffer))))
+      ;; (with-current-buffer "*scratch*" (insert buffer))
+      (with-current-buffer buffer
+        (when (eq major-mode 'erc-mode)
+          (setq right-margin-width (or width
+                                       (max 10 (- (+ (window-width (get-buffer-window))
+                                                     (cdr (window-margins (get-buffer-window))))
+                                                  102))))
+          (set-window-buffer (get-buffer-window) buffer)))))
+
+  (let ((timer nil))
+    (defun me/erc-margin-adjust-delayed ()
+      (when (find timer timer-list)
+        (cancel-timer timer))
+      (setq timer
+            (run-with-timer me/erc-margin-adjust-delay nil
+                            #'me/erc-margin-adjust
+                            (window-buffer)))))
+
+  ;; (defun me/erc-margin-remove (oldfun window &rest args)
+  ;;   (if (eq major-mode 'erc-mode)
+  ;;       (let ((old-width right-margin-width))
+  ;;         (me/erc-margin-adjust (window-buffer window) 0)
+  ;;         (apply oldfun window args)
+  ;;         (me/erc-margin-adjust (window-buffer window)))
+  ;;     (apply oldfun window args)))
+
+  ;; (advice-add 'split-window
+  ;;             :around
+  ;;             #'me/erc-margin-remove)
+
+  (defun me/erc-setup ()
+    (setq
+     fringes-outside-margins t
+     right-margin-width 10
+     word-wrap t
+     wrap-prefix "               ")
+    ;; (add-hook 'window-configuration-change-hook
+    ;;           #'me/erc-margin-adjust-delayed nil t)
+    )
+
+  (defun bitlbee ()
+    (interactive)
+    (erc :server "localhost"
+         :port 6667
+         :nick "adrian"
+         :password (me/bitlbee-password)))
+
+  (add-hook 'erc-mode-hook #'me/erc-setup)
+
+  ;; (add-to-list 'erc-modules 'notifications)
+  ;; (add-to-list 'erc-modules 'spelling)
+  ;; (erc-services-mode 1)
+  ;; (erc-update-modules)
+
+  (defun me/erc-count-users ()
+    "Displays the number of users connected on the current channel."
+    (interactive)
+    (if-let* ((channel (erc-default-target))
+              (erc-channel-p channel))
+        (message "%d users are online on %s"
+                 (hash-table-count erc-channel-users)
+                 channel)
+      (user-error "The current buffer is not a channel")))
+
+  (use-package erc-hl-nicks
+    :after erc)
 
   (general-def
     :states 'normal
@@ -4018,24 +4149,35 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     "I" #'comint-style-insert-line
     "A" #'comint-style-append-line)
 
+  ;; (defun me/erc-shorten-names (channel-names)
+  ;;   (erc-unique-channel-names
+  ;;    (erc-all-buffer-names)
+  ;;    channel-names
+
+  ;;    erc-track-shorten-start))
+
   ;; Bouncer
-  ;; (use-package znc
-  ;;   :config
-  ;;   (setq znc-servers `(("znc.fullmer.info" 5000 t
-  ;;                        ((irc\.freenode\.net ,(concat me/freenode-nick
-  ;;                                                      "/freenode")
-  ;;                                             ,(me/znc-password))
-  ;;                         (irc\.rizon\.net ,(concat me/freenode-nick
-  ;;                                                   "/rizon")
-  ;;                                          ,(me/znc-password)))))))
+  (use-package znc
+    :config
+    (setq znc-servers `(("znc.fullmer.info" 5000 t
+                         ((irc\.freenode\.net ,(concat me/freenode-nick
+                                                       "/freenode"))
+                          (irc\.rizon\.net ,(concat me/freenode-nick
+                                                    "/rizon"))))))
+    (defun me/znc-self-message ()
+      (erc-server-send "CAP REQ :znc.in/self-message")
+      (erc-server-send "CAP END"))
+    (advice-add 'erc-login
+                :before
+                #'me/znc-self-message))
 #+END_SRC
-**** COMMENT ERC Image
+**** ERC Image
 #+BEGIN_SRC emacs-lisp
   (use-package erc-image
+    :ensure t
     :config
-    ;; (add-to-list 'erc-modules 'image)
-    ;; (erc-update-modules)
-    )
+    (add-to-list 'erc-modules 'image)
+    (erc-update-modules))
 #+END_SRC
 *** COMMENT Circe
 #+BEGIN_SRC emacs-lisp
@@ -4046,25 +4188,26 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     (setq
      lui-time-stamp-position 'right-margin
      lui-time-stamp-format "%H:%M"
-     lui-fill-type nil
+     lui-fill-type 'variable
+     ;; lui-fill-column 70
      lui-track-bar-behavior 'before-switch-to-buffer)
 
-    (enable-lui-track-bar)
+    ;; (enable-lui-track-bar)
 
-    (add-hook 'lui-mode-hook 'my-lui-setup)
     (defun my-lui-setup ()
       (setq
        fringes-outside-margins t
        right-margin-width 5
        word-wrap t
        wrap-prefix "    "))
+    (add-hook 'lui-mode-hook 'my-lui-setup))
 
 
-    (setq circe-network-options
-          `(("Freenode"
-             :tls nil
-             :nick ,me/freenode-nick
-             :nickserv-password me/nickserv-password))))
+    ;; (setq circe-network-options
+    ;;       `(("Freenode"
+    ;;          :tls nil
+    ;;          :nick ,me/freenode-nick
+    ;;          :nickserv-password me/nickserv-password))))
 #+END_SRC
 ** Weather
 Interface to wttr.in

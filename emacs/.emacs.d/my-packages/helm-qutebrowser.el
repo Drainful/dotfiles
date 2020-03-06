@@ -67,11 +67,13 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
                              (funcall helm-fuzzy-matching-highlight-fn name))
                            (get-buffer i)))))
 
+(defvar helm-qutebrowser-truncate-lines t)
+
 (defvar helm-qutebrowser--buffers-source
   (helm-build-sync-source "Qutebrowser tabs"
     :candidates (lambda () (helm-exwm-candidates (lambda ()
-                                                   (string= (downcase (or exwm-class-name ""))
-                                                            (downcase "qutebrowser")))))
+                                              (string= (downcase (or exwm-class-name ""))
+                                                       (downcase "qutebrowser")))))
     :candidate-transformer #'helm-qutebrowser-highlight-buffers
     :action '(("Switch to buffer(s)" . helm-buffer-switch-buffers)
               ("Switch to buffer(s) in other window `C-c o'" . helm-buffer-switch-buffers-other-window)
@@ -92,6 +94,7 @@ Depends upon qutebrowser configuration found within these dotfiles, specifically
 
 (defun helm-qutebrowser ()
   (interactive)
-  (helm :sources helm-qutebrowser-sources))
+  (helm :sources helm-qutebrowser-sources
+        :truncate-lines helm-qutebrowser-truncate-lines))
 
 (provide 'helm-qutebrowser)
