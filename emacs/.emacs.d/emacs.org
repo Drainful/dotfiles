@@ -3498,7 +3498,7 @@ search for url if a matching tab is not found.
                                "[^[:digit:]]+"
                                volumes-re-component))
            (percentage-left (string-to-number (or (match-string 2 volumes-current) "0")))
-           (percentage-right (string-to-number (match-string 6 volumes-current) "0")))
+           (percentage-right (string-to-number (or (match-string 6 volumes-current) "0"))))
       (if (or (> (+ percentage-left
                     volume-step)
                  volume-max)
