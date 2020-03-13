@@ -3477,6 +3477,46 @@ search for url if a matching tab is not found.
     "C-<XF86AudioRaiseVolume>" #'desktop-volume-increment-small
     "C-<XF86AudioLowerVolume>" #'desktop-volume-decrement-small
     "<XF86AudioMute>" #'pulseaudio-control-toggle-current-sink-mute)
+
+  (defun pulseaudio-control-increase-volume ()
+    "Increase volume of currently-selected Pulse sink.
+
+  Amount of increase is specified by `pulseaudio-control-volume-step'."
+    (interactive)
+    (pulseaudio-control--maybe-update-current-sink)
+    (let* ((volume-step (progn
+                          (string-match "\\([[:digit:]]+\\)%" pulseaudio-control-volume-step)
+                          (string-to-number (or (match-string 1 pulseaudio-control-volume-step)
+                                                0))))
+           (volume-max (progn
+                         (string-match "\\([[:digit:]]+\\)%" pulseaudio-control--volume-maximum)
+                         (string-to-number (or (match-string 1 pulseaudio-control--volume-maximum)
+                                               0))))
+           (volumes-current (pulseaudio-control--get-current-volume))
+           (volumes-re-component "\\([[:digit:]]+\\)\\s-+/\\s-+\\([[:digit:]]+\\)%\\s-+/\\s-+\\(-?[[:digit:]]+\\(\.[[:digit:]]+\\)?\\) dB")
+           (volumes-re (concat volumes-re-component
+                               "[^[:digit:]]+"
+                               volumes-re-component))
+           (percentage-left (string-to-number (or (match-string 2 volumes-current) "0")))
+           (percentage-right (string-to-number (match-string 6 volumes-current) "0")))
+      (if (or (> (+ percentage-left
+                    volume-step)
+                 volume-max)
+              (> (+ percentage-right
+                    volume-step)
+                 volume-max))
+          ;; Clamp volume to value of pulseaudio-control--volume-maximum.
+          (pulseaudio-control--call-pactl (concat "set-sink-volume "
+                                                  pulseaudio-control--current-sink
+                                                  " "
+                                                  pulseaudio-control--volume-maximum))
+        ;; Increase volume by pulseaudio-control-volume-step.
+        (pulseaudio-control--call-pactl (concat "set-sink-volume "
+                                                pulseaudio-control--current-sink
+                                                " +"
+                                                pulseaudio-control-volume-step)))
+      (if pulseaudio-control-volume-verbose
+          (pulseaudio-control-display-volume))))
 #+END_SRC
 *** COMMENT Desktop Environment
 ~desktop-environment~ is a package which provides keybindings for tasks such as changing volume.
@@ -4234,7 +4274,7 @@ new messages from scrolling the page past the bottom.
               #'me/erc-display-after)
 
   (defun damd-erc-send-post-hook ()
-    (when (>= (point) erc-input-marker)
+    (when (>= (window-end) erc-input-marker)
       (goto-char (point-max))
       (widen)
       (recenter erc-input-line-position)))
@@ -4242,7 +4282,7 @@ new messages from scrolling the page past the bottom.
 
   (defun damd-window-configuration-change-hook ()
     (when (and (eq major-mode 'erc-mode)
-               (>= (point) erc-input-marker))
+               (>= (window-end) erc-input-marker))
       (recenter erc-input-line-position)))
   (add-hook 'window-configuration-change-hook #'damd-window-configuration-change-hook)
 #+END_SRC
