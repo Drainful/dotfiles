@@ -114,8 +114,7 @@ These are my settings for the Evil, the Vim emulator.
     ;; The undo tree sometimes deletes undo data, I prefer to just disable it.
     (global-undo-tree-mode -1)
 
-    ;; highlight all search results
-    (setq evil-search-module 'evil-search)
+    ;; (setq evil-search-module 'isearch)
 
     ;; ex commands
     (eval-after-load 'evil-ex
@@ -694,6 +693,11 @@ I use 4 space indentation by default.
 Do not truncate lines.
 #+BEGIN_SRC emacs-lisp
   (setq truncate-lines nil)
+#+END_SRC
+
+Do not show visual-lines-mode (word wrap mode) in the mode line
+#+BEGIN_SRC emacs-lisp
+  (delight 'visual-line-mode nil t)
 #+END_SRC
 ** Start frame maximized
 #+BEGIN_SRC emacs-lisp
@@ -3607,7 +3611,8 @@ This allows sending Common Lisp code to a live running Next browser process.
 *** Qutebrowser
 #+BEGIN_SRC emacs-lisp
   (setq browse-url-browser-function #'browse-url-generic)
-  (setq browse-url-generic-program "qutebrowser")
+  (setq browse-url-generic-program "qutebrowser"
+        browse-url-generic-args '("--target" "window"))
 
   (require 'helm-qutebrowser)
 
@@ -3615,10 +3620,18 @@ This allows sending Common Lisp code to a live running Next browser process.
     (not (string= exwm-class-name "qutebrowser")))
 
   (setq helm-exwm-source (helm-exwm-build-source #'not-qutebrowser-buffer-p))
+
+  (defvar helm-source-start-program
+    (helm-build-dummy-source
+        "Create buffer"
+      :action (helm-make-actions
+               "Start program"
+               (lambda (candidate) (start-process-shell-command candidate nil candidate)))))
+
   (setq helm-qutebrowser-sources '(helm-qutebrowser--buffers-source
                                    helm-exwm-source
                                    helm-qutebrowser-source-not-found
-                                   helm-source-buffer-not-found))
+                                   helm-source-start-program))
 #+END_SRC
 *** COMMENT EXWM firefox
 #+BEGIN_SRC emacs-lisp
@@ -4038,8 +4051,8 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                      (propertize "."
                                  'rear-nonsticky t string
                                  'field 'erc-timestamp string
-                                 'display `((margin right-margin) ,string)
-                                 )))))
+                                 'display `((margin right-margin) ,string))))))
+
   (defun me/erc-fill-static ()
     "Fills a text such that messages start at column `erc-fill-static-center'."
     (save-match-data
@@ -4055,7 +4068,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   (setq erc-track-position-in-mode-line 'after-modes
         ;;erc-mode-line-format "%S %a"
         erc-hide-list '("JOIN" "PART" "QUIT")
-        erc-rename-buffers t
+        ;; erc-rename-buffers t
         erc-interpret-mirc-color t
         erc-fill-function 'me/erc-fill-static
         erc-fill-static-center 15
@@ -4063,6 +4076,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
         erc-timestamp-right-column 90
         erc-insert-timestamp-function #'me/erc-insert-timestamp-right-margin
         erc-insert-away-timestamp-function #'me/erc-insert-timestamp-right-margin
+        erc-prompt "          ERC>"
         erc-hide-list '("JOIN" "PART" "QUIT")
         erc-lurker-hide-list '("JOIN" "PART" "QUIT")
         erc-lurker-threshold-time 43200
@@ -4103,6 +4117,13 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   ;; (advice-add 'split-window
   ;;             :around
   ;;             #'me/erc-margin-remove)
+
+  (general-def '(normal visual) erc-mode-map
+    ;; Make evil-mode up/down operate in screen lines instead of logical lines
+    "j" #'evil-next-visual-line
+    "k" #'evil-previous-visual-line
+    "0" #'evil-beginning-of-visual-line
+    "E" #'evil-end-of-visual-line)
 
   (defun me/erc-setup ()
     (setq
@@ -4159,11 +4180,23 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   ;; Bouncer
   (use-package znc
     :config
-    (setq znc-servers `(("znc.fullmer.info" 5000 t
-                         ((irc\.freenode\.net ,(concat me/freenode-nick
-                                                       "/freenode"))
-                          (irc\.rizon\.net ,(concat me/freenode-nick
-                                                    "/rizon"))))))
+    (setq znc-servers
+          ;; `(("localhost" 12533 t
+          ;;    ((network-slug "znc-username" "znc-password"))))
+          `(("znc.fullmer.info" 5000 t
+             ((irc\.freenode\.net ,(concat me/freenode-nick
+                                           "/freenode")
+                                  ,(me/znc-password))
+              (irc\.rizon\.net ,(concat me/freenode-nick
+                                        "/rizon")
+                               ,(me/znc-password))
+              (irc\.indymedia\.net ,(concat me/freenode-nick
+                                            "/indymedia")
+                                   ,(me/znc-password))
+              ;; (irc\.tilde\.chat ,(concat me/freenode-nick
+              ;;                            "/tilde")
+              ;;                   ,(me/znc-password))
+              ))))
     (defun me/znc-self-message ()
       (erc-server-send "CAP REQ :znc.in/self-message")
       (erc-server-send "CAP END"))
@@ -4178,6 +4211,40 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     :config
     (add-to-list 'erc-modules 'image)
     (erc-update-modules))
+#+END_SRC
+**** Scroll to bottom
+A fix based on Deniz Dogan's scrolltobottom patch from [[https://lists.gnu.org/archive/html/bug-gnu-emacs/2012-06/msg00360.html][here]] prevents
+new messages from scrolling the page past the bottom.
+#+BEGIN_SRC emacs-lisp
+  (erc-scrolltobottom-enable)
+  (setq erc-input-line-position -1)
+
+  (defun me/erc-display-after (_ buffer)
+    (with-current-buffer buffer
+      (let ((windows (get-buffer-window-list (current-buffer) nil 'visible)))
+        (dolist (w windows)
+          (with-selected-window w
+            (when (>= (window-end) erc-input-marker)
+              (save-excursion
+                (goto-char (point-max))
+                (recenter erc-input-line-position))))))))
+
+  (advice-add 'erc-display-line-1
+              :after
+              #'me/erc-display-after)
+
+  (defun damd-erc-send-post-hook ()
+    (when (>= (point) erc-input-marker)
+      (goto-char (point-max))
+      (widen)
+      (recenter erc-input-line-position)))
+  (add-hook 'erc-send-post-hook #'damd-erc-send-post-hook)
+
+  (defun damd-window-configuration-change-hook ()
+    (when (and (eq major-mode 'erc-mode)
+               (>= (point) erc-input-marker))
+      (recenter erc-input-line-position)))
+  (add-hook 'window-configuration-change-hook #'damd-window-configuration-change-hook)
 #+END_SRC
 *** COMMENT Circe
 #+BEGIN_SRC emacs-lisp
@@ -4208,6 +4275,11 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     ;;          :tls nil
     ;;          :nick ,me/freenode-nick
     ;;          :nickserv-password me/nickserv-password))))
+#+END_SR
+** Gnus
+#+BEGIN_SRC emacs-lisp
+  (setq gnus-select-method
+        '(nnimap "imap.yahoo.com"))
 #+END_SRC
 ** Weather
 Interface to wttr.in

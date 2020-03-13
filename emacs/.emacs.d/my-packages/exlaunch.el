@@ -32,6 +32,9 @@
 (defvar exlaunch-shortcut-functions nil
   "List of functions representing exlaunch shortcuts.")
 
+(defvar exlaunch-named-workspaces-integration nil
+  "If non nil, support exwm-named-workspace keywords")
+
 (defun exlaunch--get-exwm-buffer (class)
   "Get the buffer of the exwm program with the given
 class (`exwm-class-name')"
@@ -45,12 +48,12 @@ class (`exwm-class-name')"
     (car last)))
 
 (cl-defmacro exlaunch-shortcut (name &key shell-command args
-                                     (switch-to t)
-                                     exwm-class
-                                     other-window
-                                     before
-                                     after
-                                     in-workspace)
+                             (switch-to t)
+                             exwm-class
+                             other-window
+                             before
+                             after
+                             in-workspace)
   "Create a function to launch the program given by NAME. 
 
 The following keyword args are available:
@@ -93,7 +96,8 @@ exist."
          ,(when before `(funcall ,before))
          ,(if (require 'exwm nil t)
               `(progn
-                 ,(when (and (require 'exwm-named-workspace nil t)
+                 ,(when (and exlaunch-named-workspaces-integration
+                             (require 'exwm-named-workspace nil t)
                              in-workspace)
                     `(exwm-named-workspace-make-or-switch ,in-workspace))
                  (if ,(when switch-to `(get-process ,name-string))

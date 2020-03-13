@@ -56,21 +56,14 @@ I imagine that it will become useful to others, so why not make a package?
 
 The .desktop parser just outputs launch functions AKA shortcuts whose
 properties can be overriden by ~launcher-shortcuts~.
-** Keybindings
-- Bind leader to also be s-, so that you can access leader in helm buffers.
-** Qutebrowser
+** COMMENT Qutebrowser
 I want qutebrowser and exwm buffers to be part of the same helm source
 in helm-mini, but the default display for helm buffers hangs for
 absurdly long URLs in the qutebrowser buffer's title. You need to make
 a source patch to helm-mini to fix this. Look at helm-exwm and
 helm-qutebrowser for inspiration.
-** Mode line
-I want to use a heavily customizable mode line like spaceline in order
-to maximize information and space. For example, only display battery
-and time in the bottom right most mode line
-** Contribute
-Make that eshell patch that makes next/prev more bearable with evil
-** Other 
+**  EXWM
+*** COMMENT randr
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.
 

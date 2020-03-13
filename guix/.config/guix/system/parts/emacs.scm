@@ -8,6 +8,7 @@
 (os-part '()
          (list
           emacs
+          emacs-next
 
           ;; spell check
           aspell aspell-dict-en
