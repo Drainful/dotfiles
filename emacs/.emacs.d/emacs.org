@@ -987,6 +987,7 @@ Dired is the file manager built into Emacs.
 ** Image Dired
 ~image-dired~ is a built-in image thumbnail viewer for dired.
 #+BEGIN_SRC emacs-lisp
+  (require 'image-dired)
   (add-hook 'dired-mode-hook #'dired-hide-details-mode)
 
   (setq image-dired-thumb-size 400
@@ -1919,7 +1920,10 @@ I use the ~Company~ package for autocompletion.
     ;; (remove-hook 'sly-mode-hook (lambda () (progn (setq company-idle-delay 0.1)
     ;;                                               (setq company-minimum-prefix-length 2))))
 
-    (global-company-mode nil))
+    (global-company-mode nil)
+
+    (defun company-mode-disable ()
+      (company-mode -1)))
 #+END_SRC
 *** Smart Tab
 #+BEGIN_SRC emacs-lisp
@@ -3848,6 +3852,7 @@ This allows sending Common Lisp code to a live running Next browser process.
 ** Image viewer
 Emacs has an inbuilt image viewer ~image-mode~.
 #+BEGIN_SRC emacs-lisp
+  (require 'image)
   (require 'image-dimensions-minor-mode)
 
   (setq imagemagick-render-type 1 ; increase image scaling speed
@@ -3886,7 +3891,7 @@ Emacs has an inbuilt image viewer ~image-mode~.
     (let ((image-transform-resize 'fit-width))
       (image-toggle-display-image)))
 
-  (add-hook 'image-minor-mode-hook #'image-transform-fit-to-width-or-height)
+  ;; (add-hook 'image-minor-mode-hook #'image-transform-fit-to-width-or-height)
 
   (general-def normal image-mode-map
 
@@ -4105,18 +4110,35 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                                32)))
         (erc-restore-text-properties))))
 
+
+  (defvar me/erc-right-margin-width 10)
+  (defvar me/erc-left-pseudomargin-width 15)
+
+  (defun me/erc-wrap-prefix (&optional width)
+    (let ((prefix ""))
+      (dotimes (_ (or width me/erc-left-pseudomargin-width))
+        (setq prefix (concat " " prefix)))
+      prefix))
+
+  (defvar me/erc-prompt "ERC>")
+
+  (defun me/erc-prompt-with-margin ()
+    (concat (me/erc-wrap-prefix (max 0 (1- (- me/erc-left-pseudomargin-width
+                                              (length me/erc-prompt)))))
+            me/erc-prompt))
+
   (setq erc-track-position-in-mode-line 'after-modes
         ;;erc-mode-line-format "%S %a"
         erc-hide-list '("JOIN" "PART" "QUIT")
         ;; erc-rename-buffers t
         erc-interpret-mirc-color t
         erc-fill-function 'me/erc-fill-static
-        erc-fill-static-center 15
+        erc-fill-static-center me/erc-left-pseudomargin-width
         erc-input-line-position -1
         erc-timestamp-right-column 90
         erc-insert-timestamp-function #'me/erc-insert-timestamp-right-margin
         erc-insert-away-timestamp-function #'me/erc-insert-timestamp-right-margin
-        erc-prompt "          ERC>"
+        erc-prompt (me/erc-prompt-with-margin)
         erc-hide-list '("JOIN" "PART" "QUIT")
         erc-lurker-hide-list '("JOIN" "PART" "QUIT")
         erc-lurker-threshold-time 43200
@@ -4124,7 +4146,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
         erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
                                   "324" "329" "332" "333" "353" "477"))
 
-  (defvar me/erc-margin-adjust-delay "0.5 sec")
+  (defvar me/erc-text-region-width 86)
 
   (defun me/erc-margin-adjust (&optional buffer width)
     (let ((buffer (or buffer (window-buffer))))
@@ -4132,11 +4154,16 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
       (with-current-buffer buffer
         (when (eq major-mode 'erc-mode)
           (setq right-margin-width (or width
-                                       (max 10 (- (+ (window-width (get-buffer-window))
-                                                     (cdr (window-margins (get-buffer-window))))
-                                                  102))))
+                                       (max me/erc-right-margin-width
+                                            (- (+ (window-width (get-buffer-window))
+                                                  (or (cdr (window-margins (get-buffer-window)))
+                                                      0))
+                                               (+ me/erc-left-pseudomargin-width
+                                                  me/erc-text-region-width
+                                                  1)))))
           (set-window-buffer (get-buffer-window) buffer)))))
 
+  (defvar me/erc-margin-adjust-delay "0.5 sec")
   (let ((timer nil))
     (defun me/erc-margin-adjust-delayed ()
       (when (find timer timer-list)
@@ -4146,17 +4173,25 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                             #'me/erc-margin-adjust
                             (window-buffer)))))
 
-  ;; (defun me/erc-margin-remove (oldfun window &rest args)
-  ;;   (if (eq major-mode 'erc-mode)
-  ;;       (let ((old-width right-margin-width))
-  ;;         (me/erc-margin-adjust (window-buffer window) 0)
-  ;;         (apply oldfun window args)
-  ;;         (me/erc-margin-adjust (window-buffer window)))
-  ;;     (apply oldfun window args)))
+  (defun me/erc-reset-margins (window &rest _)
+    (if (window-live-p window)
+        (with-selected-window window
+          (when (eq (with-current-buffer (window-buffer window)
+                      major-mode)
+                    'erc-mode)
+            (set-window-margins window nil)))))
 
-  ;; (advice-add 'split-window
-  ;;             :around
-  ;;             #'me/erc-margin-remove)
+  (advice-add 'split-window
+              :before
+              #'me/erc-reset-margins)
+
+  (advice-add 'split-window-sensibly
+              :before
+              #'me/erc-reset-margins)
+
+  (defun temp ()
+    (set-window-margins (selected-window) nil)
+    (split-window-horizontally))
 
   (general-def '(normal visual) erc-mode-map
     ;; Make evil-mode up/down operate in screen lines instead of logical lines
@@ -4168,12 +4203,20 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   (defun me/erc-setup ()
     (setq
      fringes-outside-margins t
-     right-margin-width 10
+     right-margin-width me/erc-right-margin-width
      word-wrap t
-     wrap-prefix "               ")
-    ;; (add-hook 'window-configuration-change-hook
-    ;;           #'me/erc-margin-adjust-delayed nil t)
-    )
+     wrap-prefix (me/erc-wrap-prefix))
+    (add-hook 'window-configuration-change-hook
+              #'me/erc-margin-adjust nil t))
+
+  (add-hook 'erc-mode-hook #'me/erc-setup)
+  (add-hook 'erc-mode-hook #'erc-pcomplete-enable)
+  (add-hook 'erc-mode-hook #'company-mode-disable)
+
+  ;; (add-to-list 'erc-modules 'notifications)
+  ;; (add-to-list 'erc-modules 'spelling)
+  ;; (erc-services-mode 1)
+  ;; (erc-update-modules)
 
   (defun bitlbee ()
     (interactive)
@@ -4181,13 +4224,6 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
          :port 6667
          :nick "adrian"
          :password (me/bitlbee-password)))
-
-  (add-hook 'erc-mode-hook #'me/erc-setup)
-
-  ;; (add-to-list 'erc-modules 'notifications)
-  ;; (add-to-list 'erc-modules 'spelling)
-  ;; (erc-services-mode 1)
-  ;; (erc-update-modules)
 
   (defun me/erc-count-users ()
     "Displays the number of users connected on the current channel."
@@ -4256,8 +4292,8 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 A fix based on Deniz Dogan's scrolltobottom patch from [[https://lists.gnu.org/archive/html/bug-gnu-emacs/2012-06/msg00360.html][here]] prevents
 new messages from scrolling the page past the bottom.
 #+BEGIN_SRC emacs-lisp
-  (erc-scrolltobottom-enable)
-  (setq erc-input-line-position -1)
+  (erc-scrolltobottom-mode)
+  (setq erc-input-line-position -2)
 
   (defun me/erc-display-after (_ buffer)
     (with-current-buffer buffer
@@ -4280,11 +4316,11 @@ new messages from scrolling the page past the bottom.
       (recenter erc-input-line-position)))
   (add-hook 'erc-send-post-hook #'damd-erc-send-post-hook)
 
-  (defun damd-window-configuration-change-hook ()
-    (when (and (eq major-mode 'erc-mode)
-               (>= (window-end) erc-input-marker))
-      (recenter erc-input-line-position)))
-  (add-hook 'window-configuration-change-hook #'damd-window-configuration-change-hook)
+  ;; (defun damd-window-configuration-change-hook ()
+  ;;   (when (and (eq major-mode 'erc-mode)
+  ;;              (>= (window-end) erc-input-marker))
+  ;;     (recenter erc-input-line-position)))
+  ;; (add-hook 'window-configuration-change-hook #'damd-window-configuration-change-hook)
 #+END_SRC
 *** COMMENT Circe
 #+BEGIN_SRC emacs-lisp
