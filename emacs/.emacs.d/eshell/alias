@@ -1,16 +1,17 @@
-alias reconf sudo guix system reconfigure -L ~/.config/guix/system/ ~/.config/guix/system/yoga.scm  $*
-alias clear clear t
-alias tb nc termbin.com 9999
-alias def bash ~/auto/def/def.bash
-alias spotify spotify --force-device-scale-factor=2.0 > out.log 2> /dev/null &
-alias :q exit
-alias nget sudo nix-env -f '<nixpkgs>' --install -A $*
-alias nuninstall sudo nix-env -f '<nixpkgs>' --uninstall $*
-alias nquery nix-env --query $*
-alias nfind nix-env -f '<nixpkgs>' -qaP $*
-alias nrb sudo nixos-rebuild boot
-alias nrs sudo nixos-rebuild switch
-alias .... ../../..
-alias ... ../..
-alias md mkdir $*
+alias fantasygrounds wine ~/.wine/drive_c/Program\ Files/Fantasy\ Grounds/FantasyGrounds.exe
 alias ll ls -l $*
+alias md mkdir $*
+alias ... ../..
+alias .... ../../..
+alias nrs sudo nixos-rebuild switch
+alias nrb sudo nixos-rebuild boot
+alias nfind nix-env -f '<nixpkgs>' -qaP $*
+alias nquery nix-env --query $*
+alias nuninstall sudo nix-env -f '<nixpkgs>' --uninstall $*
+alias nget sudo nix-env -f '<nixpkgs>' --install -A $*
+alias :q exit
+alias spotify spotify --force-device-scale-factor=2.0 > out.log 2> /dev/null &
+alias def bash ~/auto/def/def.bash
+alias tb nc termbin.com 9999
+alias clear clear t
+alias reconf sudo guix system reconfigure -L ~/.config/guix/system/ ~/.config/guix/system/yoga.scm  $*

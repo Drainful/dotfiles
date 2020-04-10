@@ -63,10 +63,17 @@ absurdly long URLs in the qutebrowser buffer's title. You need to make
 a source patch to helm-mini to fix this. Look at helm-exwm and
 helm-qutebrowser for inspiration.
 **  EXWM
+Set default-directory of exwm buffers (mpv)
 *** COMMENT randr
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.
 
+** ERC
+*** Bitlbee
+helm interface for joining discord channel, or at least an interface
+organized by server
+
+twitter shortened links replaced with expanded forms in buffer (request.el)
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗

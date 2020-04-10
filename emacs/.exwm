@@ -20,6 +20,13 @@
 (sh-cmd "redshift" "-l 42.05:-87.69" t)
 (sh-cmd "compton" "--vsync drm --paint-on-overlay" t)
 
+(defun eshell/fantasygrounds ()
+  (interactive)
+  (let ((default-directory "/home/guix/adrian/.wine/drive_c/Program Files/Fantasy Grounds/"))
+    (start-process-shell-command "fantasygrounds"
+                                 "wine /home/guix/adrian/.wine/drive_c/Program\\ Files/Fantasy\\ Grounds/FantasyGrounds.exe")))
+
+;; (sh-cmd "mpv" "https://www.twitch.tv/yogscast")
 ;; (start-process-shell-command "pulseaudio daemon" "*pulseaudio-daemon*" "pulseaudio")
 
 ;; (server-start)

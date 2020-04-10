@@ -3,47 +3,31 @@
              (gnu system nss)
              (gnu services base)
              (gnu services xorg)
+             (gnu services mcron)
              (gnu packages linux)
+             (gnu packages fonts)
              (nongnu packages linux)
-             (lib))
+             (lib)
+             (os-modules)
+             (os-modules graphical)
+             (os-modules emacs))
 
 (use-service-modules desktop xorg)
 (use-package-modules certs)
 
-(let* ((keyboard-layout (keyboard-layout "us" "altgr-intl"))
-       (default-user-name "adrian")
-       (os-part ((os-part (list
-                           (load "./parts/core.scm")
-                           (load "./parts/exwm.scm")
-                           (load "./parts/audio.scm")
-                           (load "./parts/bluetooth.scm")
-                           (load "./parts/games.scm")
-                           (load "./parts/bitlbee.scm"))
-                          (list nss-certs)
-                          (list))))
-       (services (modify-services (assoc-ref os-part #:services)
-                   (gdm-service-type
-                    config => (gdm-configuration
-                               (inherit config)
-                               (default-user default-user-name)
-                               (xorg-configuration
-                                (xorg-configuration
-                                 (inherit (gdm-configuration-xorg config))
-                                 (keyboard-layout keyboard-layout)))))
-                   (slim-service-type
-                    config => (slim-configuration
-                               (inherit config)
-                               (default-user default-user-name)
-                               (xorg-configuration
-                                (xorg-configuration
-                                 (inherit (slim-configuration-xorg config))
-                                 (keyboard-layout keyboard-layout)))))
-                   (console-font-service-type
-                    config => (map (lambda (tty)
-                                     (cons (car tty)
-                                           (file-append font-terminus "/share/consolefonts/ter-132n")))
-                                   config))))
-       (packages (append (assoc-ref os-part #:packages) %base-packages)))
+(let ((keyboard-layout (keyboard-layout "us" "altgr-intl"))
+      (default-user-name "adrian")
+      (os-module ((os-module #:inherit (list core
+                                             exwm
+                                             audio
+                                             bluetooth
+                                             graphical-games
+                                             bitlbee
+                                             virtual-machines
+                                             android
+                                             (garbage-collection #:free "10G"
+                                                                 #:delete-after "1w"))
+                             #:packages (list nss-certs)))))
   (operating-system
     (kernel linux-5.4)
     (firmware (list linux-firmware))
@@ -70,7 +54,6 @@
                  (bootloader grub-efi-bootloader)
                  (target "/boot/efi")
                  (keyboard-layout keyboard-layout)
-
                  (menu-entries
                   (list (menu-entry
                          (label "Ubuntu")
@@ -88,6 +71,31 @@
                                           "audio" "video" "nonet"))
                   (home-directory (string-append "/home/guix/" default-user-name)))
                  %base-user-accounts))
-    (packages packages)
-    (services services)
+    (packages (append (assoc-ref os-module #:packages) %base-packages))
+    (services (cons*
+               (service mcron-service-type
+                        (mcron-configuration
+                         (jobs (assoc-ref os-module #:jobs))))
+               (modify-services (assoc-ref os-module #:services)
+                 (gdm-service-type
+                  config => (gdm-configuration
+                             (inherit config)
+                             (default-user default-user-name)
+                             (xorg-configuration
+                              (xorg-configuration
+                               (inherit (gdm-configuration-xorg config))
+                               (keyboard-layout keyboard-layout)))))
+                 (slim-service-type
+                  config => (slim-configuration
+                             (inherit config)
+                             (default-user default-user-name)
+                             (xorg-configuration
+                              (xorg-configuration
+                               (inherit (slim-configuration-xorg config))
+                               (keyboard-layout keyboard-layout)))))
+                 (console-font-service-type
+                  config => (map (lambda (tty)
+                                   (cons (car tty)
+                                         (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                 config)))))
     (name-service-switch %mdns-host-lookup-nss)))

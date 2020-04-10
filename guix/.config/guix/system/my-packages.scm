@@ -1,9 +1,57 @@
 (define-module (my-packages)
   #:use-module (guix packages)
   #:use-module (guix git-download)
+  #:use-module (guix download)
   #:use-module (gnu packages emacs-xyz)
   #:use-module (gnu packages messaging)
   #:use-module (ice-9 match))
+
+;; (define-public my-emacs-doom-themes
+;;   (let ((commit "655685d3bdc5322e68581dd306b09fcecafbc912")
+;;         (revision "5")
+;;         (version "2.1.6"))
+;;     (package
+;;       (inherit emacs-doom-themes)
+;;       (version (git-version version revision))
+;;       (source (origin
+;;                 (method git-fetch)
+;;                 (uri (git-reference
+;;                       (url "https://github.com/hlissner/emacs-doom-themes.git")
+;;                       (commit commit)))
+;;                 (file-name (git-file-name name version))
+;;                 (sha256
+;;                  (base32 "1jwdjq4q2gkhi6jwas3ywgmdz5dg14sfb3fzhqd7wih6j3i2l3cr")))))))
+
+(define-public my-emacspeak
+  (package
+    (inherit emacspeak)
+    (version "49.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://github.com/tvraman/emacspeak/releases/download/"
+             version "/emacspeak-" version ".tar.bz2"))
+       (sha256
+        (base32
+         "0qsj7rzfyqmyidfsjrhjnxi2d43axx6r3gac1fhv5xkkbiiqzqkb"))))))
+
+(define-public my-emacs-nov-el
+  (let* ((commit "cd1b264b3f978a9285fa9297e40ad29d1434adf5")
+         (version (git-version "0.2.9" "0" commit)))
+    (package
+      (inherit emacs-nov-el)
+      (name "emacs-nov-el")
+      (version version)
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url "https://github.com/wasamasa/nov.el.git")
+                      (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "02apbr5x9vdrx05mfs8qyp4ami1y30n8mmy4kpd4xw04nza9wxki")))))))
 
 (define-public my-bitlbee-discord
   (package

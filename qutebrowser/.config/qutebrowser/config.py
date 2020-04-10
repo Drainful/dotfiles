@@ -1,5 +1,5 @@
 # blocked hosts
-c.content.host_blocking.lists = ['https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social/hosts']
+c.content.host_blocking.lists = []
 
 # smooth scrolling
 c.scrolling.smooth = False
@@ -16,7 +16,9 @@ c.tabs.show = "never"
 c.window.title_format = "{perc}{current_title} -- {current_url}"
 
 # url
-c.url.searchengines = {"DEFAULT": "https://google.com/search?hl=en&q={}"}
+c.url.searchengines = {"DEFAULT": "https://duckduckgo.com/?q={}",
+                       "g": "https://google.com/search?hl=en&q={}",
+                       "yt": "https://www.youtube.com/results?search_query={}"}
 c.url.start_pages = ["about:blank"]
 
 # keybindings

@@ -68,13 +68,25 @@ packages.
 #+BEGIN_SRC emacs-lisp
   (push "~/.emacs.d/my-packages/" load-path)
   (push "~/.emacs.d/emacs-wiki/" load-path)
+  (push "~/Code/elisp/load/" load-path)
 #+END_SRC
 ** Packages
 
 #+BEGIN_SRC emacs-lisp
   (require 'package)
+  (require 'subr-x)
   (package-initialize) ;; to use use-package :ensure in user init file
   (add-to-list 'package-archives '("melpa" . "http://melpa.milkbox.net/packages/"))
+
+
+  (defun which-linux-distribution ()
+    "from lsb_release"
+    (interactive)
+    (when (eq system-type 'gnu/linux)
+      (string-trim (shell-command-to-string "lsb_release -si"))))
+
+  (when (string-equal "Ubuntu" (which-linux-distribution))
+    (setq use-package-always-ensure t))
 #+END_SRC
 ** COMMENT Straight.el
 Straight.el A functional alternative to package.el.
@@ -283,6 +295,25 @@ These are visual mode mappings not specific to any major mode.
   ;; Move a visual block of text using ALT+[jk]
   "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
 #+END_SRC
+** Visual line mode macro
+
+#+BEGIN_SRC emacs-lisp
+  (defmacro my-visual-line-mode-rebind (mode)
+    `(general-def '(normal visual) ,mode
+       ;; Make evil-mode up/down operate in screen lines instead of logical lines
+       "j" #'evil-next-visual-line
+       "k" #'evil-previous-visual-line
+       "0" #'evil-beginning-of-visual-line
+       "$" #'evil-end-of-visual-line
+       "." #'evil-repeat-visual-line
+       "^" #'evil-first-non-blank-of-visual-line
+
+       "g j" #'evil-next-line
+       "g k" #'evil-previous-line
+       "g 0" #'evil-beginning-of-line
+       "g $" #'evil-end-of-line
+       "g ^" #'evil-first-non-blank))
+#+END_SRC
 ** COMMENT Insert Mode
 These are insert mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
@@ -400,6 +431,7 @@ Usage:
                   "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
+                  "c" 'me/evil-comment-or-uncomment-region
                   "RET" (kbd ":noh"))
   (alt-leader-key-def 'normal
     "q" 'evil-record-macro
@@ -413,10 +445,10 @@ Usage:
 #+END_SRC
 *** Visual Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
-(leader-key-def 'visual
-  "c" 'comment-or-uncomment-region
-  "O" 'helm-do-ag-this-file 
-  "o" 'helm-occur)
+  (leader-key-def 'visual
+                  "c" 'me/evil-comment-or-uncomment-region
+                  "O" 'helm-do-ag-this-file
+                  "o" 'helm-occur)
 #+END_SRC
 ** Shell Commands
 These are M-x commands for common shell commands such as reboot.
@@ -511,7 +543,7 @@ blurbs.
                   "  " mode-line-modes
                   mode-line-end-spaces))
 
-  (when (require 'exwm)
+  (when (featurep 'exwm)
     (defvar me/exwm-mode-line-format nil)
     (setq me/exwm-mode-line-format 
           '("%e" mode-line-front-space
@@ -530,17 +562,19 @@ the mode line.
 *** Minibuffer line
 Package to use the minibuffer in the manner of the mode line.
 #+begin_src emacs-lisp
-(use-package minibuffer-line
-  :config
-  (setq minibuffer-line-format
-        '("%e" mode-line-misc-info mode-line-end-spaces))
-  (setq minibuffer-line-refresh-interval 0.5)
-  (setq display-time-format " %R %d %b")
-  (setq display-time-default-load-average nil)
-  (display-time-mode)
-  (setq battery-mode-line-format " | %p%% %B %t")
-  (display-battery-mode)
-  (minibuffer-line-mode))
+  (use-package minibuffer-line
+    :config
+    (setq minibuffer-line-format
+          '("%e" mode-line-misc-info mode-line-end-spaces))
+    (setq minibuffer-line-refresh-interval 0.5)
+    (setq display-time-format " %R %d %b")
+    (setq display-time-default-load-average nil)
+    (display-time-mode)
+    (setq battery-load-critical 25)
+    (setq battery-load-low 40)
+    (setq battery-mode-line-format " | %p%% %B %t")
+    (display-battery-mode)
+    (minibuffer-line-mode))
 #+end_src
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
@@ -686,8 +720,8 @@ of the screen in ~prog-mode~.
 ** Tabs and Indentation
 I use 4 space indentation by default.
 #+BEGIN_SRC emacs-lisp
-(setq-default tab-width 4
-              indent-tabs-mode nil)
+  (setq-default tab-width 8
+                indent-tabs-mode nil)
 #+END_SRC
 ** Line wrap
 Do not truncate lines.
@@ -1177,10 +1211,12 @@ primary shell.
 
   (setq eshell-prompt-regexp  "^[^#$\n]* [Λλ] ")
 
-  (defun eshell-buffer-name-function (&optional directory)
+  (cl-defun eshell-buffer-name-function (&optional (directory default-directory))
     (concat "*eshell at "
-            (abbreviate-file-name (or directory
-                                      default-directory))
+            (let ((directory (abbreviate-file-name directory)))
+              (if (equal ?/ (car (last (string-to-list directory))))
+                  directory
+                (concat directory "/")))
             "*"))
 
   (defun eshell-new ()
@@ -1959,8 +1995,8 @@ A package to interact with Git forges like Gitlab.
 #+BEGIN_SRC emacs-lisp
   (use-package forge)
 #+END_SRC
-** COMMENT Snippets
-~yasnippet~ allows the creation of snippets to automate repetitive typing.
+** Snippets
+~yasnippet~ expands short trigger strings in to interactive text snippets
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet
     :delight yas-minor-mode
@@ -1973,10 +2009,6 @@ A package to interact with Git forges like Gitlab.
     ;;       )
     ;; (ys-reload-all)
     )
-#+END_SRC
-A large collection of snippets is found in the ~yasnippet-snippets~ package.
-#+BEGIN_SRC emacs-lisp
-  (use-package yasnippet-snippets)
 #+END_SRC
 ~yasnippet~ can be used as a backend for ~company~.
 #+BEGIN_SRC emacs-lisp
@@ -1991,6 +2023,11 @@ A large collection of snippets is found in the ~yasnippet-snippets~ package.
               '(:with company-yasnippet))))
 
   (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
+#+END_SRC
+*** COMMENT
+A large collection of snippets is found in the ~yasnippet-snippets~ package.
+#+BEGIN_SRC emacs-lisp
+  (use-package yasnippet-snippets)
 #+END_SRC
 ** Language client features
 The language server protocol can provide IDE-like features for many
@@ -2147,6 +2184,9 @@ through ~lispyville~ minor mode.
 Lispy is my de-facto mode for lisp languages, so lisp-specific
 functionality can be bound to that mode.
 #+BEGIN_SRC emacs-lisp
+  (evil-define-operator me/lispyville-prettify (beg end type)
+    (lispyville-prettify beg end))
+
   (general-def :states 'insert
     :keymaps 'lispyville-mode-map
     "M-l" (lambda () (interactive)
@@ -2159,7 +2199,16 @@ functionality can be bound to that mode.
     "M-k" #'lispy-slurp-or-barf-right
     "M-j" #'lispy-slurp-or-barf-left
     "[" #'lispyville-beginning-of-defun
-    "]" #'lispyville-beginning-of-next-defun)
+    "]" #'lispyville-beginning-of-next-defun
+    "=" #'me/lispyville-prettify)
+
+  (leader-key-def :states 'normal
+                  :keymaps 'lispyville-mode-map
+                  "c" #'lispyville-comment-or-uncomment)
+
+  (leader-key-def :states 'visual
+                  :keymaps 'lispyville-mode-map
+                  "c" #'lispyville-comment-or-uncomment)
 #+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is
@@ -2404,6 +2453,8 @@ It's like ~slime~ for Scheme. Kinda.
           (mapcar (lambda (path)
                     (add-to-list 'geiser-guile-load-path path))
                   (read (car (guix-eval "%load-path"))))))
+
+    ;; (add-to-list 'geiser-guile-load-path "~/Code/guix")
 
     (defun geiser-add-company-file-backend ()
       (setq company-backends
@@ -2705,27 +2756,30 @@ Enable ~flycheck~
 #+END_SRC
 ** ATS
 #+BEGIN_SRC emacs-lisp
-  (add-to-list 'load-path  "~/Code/ats/ATS-Postiats/utils/emacs")
-  (require 'ats-mode "ats2-mode")
-  (require 'ats2-flymake "flymake-ats2")
+  (when (require 'ats-mode nil t)
+    (add-to-list 'load-path  "~/Code/ats/ATS-Postiats/utils/emacs")
+    (require 'ats-mode "ats2-mode")
+    (require 'ats2-flymake "flymake-ats2")
 
-  (defvar-local flymake-do-after-change t)
+    (defvar-local flymake-do-after-change t)
 
-  (defun flymake-after-change-advice (oldfun &rest args)
-    (when flymake-do-after-change
-      (apply oldfun args)))
+    (defun flymake-after-change-advice (oldfun &rest args)
+      (when flymake-do-after-change
+        (apply oldfun args)))
 
-  (advice-add 'flymake-after-change-function
-              :around
-              #'flymake-after-change-advice)
+    (advice-add 'flymake-after-change-function
+                :around
+                #'flymake-after-change-advice)
 
-  (defun ats-flymake-hook-fn ()
-    (flymake-mode)
-    (setq flymake-do-after-change nil))
+    (defun ats-flymake-hook-fn ()
+      (flymake-mode)
+      (setq flymake-do-after-change nil))
 
-  (add-hook 'ats-mode-hook
-            #'ats-flymake-hook-fn)
-  ;; (setenv "ATSHOME" "~/code/ats/ATS-Postiats/")
+    (add-hook 'ats-mode-hook
+              #'ats-flymake-hook-fn)
+    ;; (setenv "ATSHOME" "~/code/ats/ATS-Postiats/")
+
+    )
 #+END_SRC
 ** COMMENT Elm
 #+BEGIN_SRC emacs-lisp
@@ -2811,7 +2865,7 @@ literate source files like this one.
         ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
         ;;org-ellipsis "  " ;; folding symbol
         org-pretty-entities t
-        org-hide-emphasis-markers t
+        org-hide-emphasis-markers nil
         ;; show actually italicized text instead of /italicized text/
   ;;;org-agenda-block-separator ""
         org-fontify-whole-heading-line t
@@ -2827,10 +2881,12 @@ literate source files like this one.
   (setq org-babel-lisp-eval-fn #'slime-eval)
   (setq org-babel-python-eval-fn #'python-send-string)
 
-  (add-hook 'org-mode-hook #'auto-fill-mode)
   (require 'delight)
   (delight 'auto-fill-function "" t)
   (delight 'org-indent-mode "" t)
+
+  (add-hook 'org-mode-hook #'visual-line-mode)
+  (add-hook 'org-mode-hook #'company-mode-disable)
 
   ;; "C-j" 'evil-window-down
   ;; "C-k" 'evil-window-up
@@ -2846,16 +2902,53 @@ literate source files like this one.
       (org-open-at-point args)
       (evil-set-jump point)))
 
+  (my-visual-line-mode-rebind org-mode-map)
+
   (add-hook 'org-mode-hook (lambda ()
                              (general-def :states 'normal :keymaps 'org-mode-map
                                "C-j" 'evil-window-down
                                "C-k" 'evil-window-up
                                "RET" 'me/org-open-at-point)))
 #+END_SRC
+*** Table auto allign
 
+#+BEGIN_SRC emacs-lisp
+  (require 'subr-x)
+
+  (defvar org-table-auto-align-in-progress nil)
+
+  (defun org-table-auto-align (begin end length)
+    (save-match-data
+      (unless (or org-table-auto-align-in-progress
+                  (not (org-at-table-p))
+                  (and (eq this-command 'org-self-insert-command)
+                       (member (this-command-keys)
+                               '(" " "+" "|" "-"))))
+        (run-with-idle-timer
+         0 nil
+         (lambda ()
+           (if (looking-back "| *\\([^|]+\\)")
+               (let ((pos (string-trim-right (match-string 1))))
+                 (setq org-table-auto-align-in-progress t)
+                 (unwind-protect
+                     (progn
+                       (org-table-align)
+                       (search-forward pos nil t))
+                   (setq org-table-auto-align-in-progress nil)))))))))
+
+  (define-minor-mode org-table-auto-align-mode
+    "A mode for aligning Org more tabales automatically as you type."
+    :lighter ""
+    (if org-table-auto-align-mode
+        (add-hook 'after-change-functions #'org-table-auto-align t t)
+      (remove-hook 'after-change-functions #'org-table-auto-align t)))
+
+  ;; (add-hook 'org-mode-hook
+  ;;           #'org-table-auto-align-minor-mode)
+#+END_SRC
 *** Source block generation
 #+BEGIN_SRC emacs-lisp
-  (defun org-in-src-block-p ()
+  (defun me/org-in-src-block-p ()
     (let* ((element (org-element-at-point))
            (type (org-element-type element)))
       (if (and (memq type '(example-block src-block))
@@ -2878,7 +2971,7 @@ literate source files like this one.
 
   (defun org-edit-src-code-or-make-block ()
     (interactive)
-    (unless (org-in-src-block-p)
+    (unless (me/org-in-src-block-p)
       (let ((language (or (org-get-src-language)
                           (read-string "Language: "))))
         (move-end-of-line nil)
@@ -2931,60 +3024,67 @@ Create a table of contents without exporting.
   :config
   (add-hook 'org-mode-hook 'toc-org-mode))
 #+END_SRC
-** Guix
+*** Guix
 Tools for Guix, a package manager and operating system.
 #+BEGIN_SRC emacs-lisp
-  (use-package guix
-    :config
-    (add-to-path "~/.guix-profile/bin/")
+  (if (not (string-equal "Ubuntu" (which-linux-distribution)))
+      (use-package guix
+        :after yasnippet
+        :config
+        (add-to-path "~/.guix-profile/bin/")
 
-    (setq guix-load-path me/guix-config-dir)
+        (setq guix-load-path me/guix-config-dir)
 
-    (setq guix-guile-program
-          '("/run/current-system/profile/bin/guile" "--no-auto-compile" "--listen=37146"))
+        (with-eval-after-load 'guix-external
+          (add-to-list 'guix-guile-program  "--listen=37146" t))
 
-    ;; shut up error
-    (defun guix-repl-autoload-emacs-packages-maybe ()
-      "Load autoloads for Emacs packages if needed.
-  See `guix-emacs-activate-after-operation' for details."
-      (and guix-emacs-activate-after-operation
-           (require 'guix-emacs nil t)
-           ;; FIXME Since a user can work with a non-current profile (using
-           ;; C-u before `guix-search-by-name' and other commands), emacs
-           ;; packages can be installed to another profile, and the
-           ;; following code will not work (i.e., the autoloads for this
-           ;; profile will not be loaded).
-           (guix-emacs-autoload-packages)))
+        (add-hook 'geiser-mode-hook #'guix-devel-mode)
 
-    ;; avoid error when deleting and re-starting guix repl
-    (defun geiser-repl--narrow-to-prompt ()
-      "Narrow to active prompt region and return t, otherwise returns nil."
-      (if (get-buffer-process (current-buffer))
-          (let* ((proc (get-buffer-process (current-buffer)))
-                 (pmark (and proc (process-mark proc)))
-                 (intxt (and pmark
-                             (when (>= (point) (marker-position pmark))
-                               (save-excursion
-                                 (if comint-eol-on-send
-                                     (if comint-use-prompt-regexp
-                                         (end-of-line)
-                                       (goto-char (field-end))))
-                                 (buffer-substring pmark (point))))))
-                 (prompt-beg (and pmark (marker-position pmark)))
-                 (prompt-end (and prompt-beg (+ prompt-beg (length intxt)))))
-            (when (> (length intxt) 0)
-              (and prompt-end (narrow-to-region prompt-beg prompt-end))
-              t))
-        nil)))
+        (add-to-list 'yas-snippet-dirs "~/Code/guix/etc/snippets")
+
+        ;; shut up error
+        ;; (defun guix-repl-autoload-emacs-packages-maybe ()
+        ;;     "Load autoloads for Emacs packages if needed.
+        ;; See `guix-emacs-activate-after-operation' for details."
+        ;;     (and guix-emacs-activate-after-operation
+        ;;          (require 'guix-emacs nil t)
+        ;;          ;; FIXME Since a user can work with a non-current profile (using
+        ;;          ;; C-u before `guix-search-by-name' and other commands), emacs
+        ;;          ;; packages can be installed to another profile, and the
+        ;;          ;; following code will not work (i.e., the autoloads for this
+        ;;          ;; profile will not be loaded).
+        ;;          (guix-emacs-autoload-packages)))
+
+        ;; avoid error when deleting and re-starting guix repl
+        (with-eval-after-load 'geiser-repl
+          (defun geiser-repl--narrow-to-prompt ()
+            "Narrow to active prompt region and return t, otherwise returns nil."
+            (if (get-buffer-process (current-buffer))
+                (let* ((proc (get-buffer-process (current-buffer)))
+                       (pmark (and proc (process-mark proc)))
+                       (intxt (and pmark
+                                   (when (>= (point) (marker-position pmark))
+                                     (save-excursion
+                                       (if comint-eol-on-send
+                                           (if comint-use-prompt-regexp
+                                               (end-of-line)
+                                             (goto-char (field-end))))
+                                       (buffer-substring pmark (point))))))
+                       (prompt-beg (and pmark (marker-position pmark)))
+                       (prompt-end (and prompt-beg (+ prompt-beg (length intxt)))))
+                  (when (> (length intxt) 0)
+                    (and prompt-end (narrow-to-region prompt-beg prompt-end))
+                    t))
+              nil)))))
 #+END_SRC
-** Nix
+*** Nix
 Tools for Nix, a package manager and operating system.
-*** COMMENT Sandbox
+**** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
 (use-package nix-sandbox)
 #+END_SRC
-*** Nix language support
+**** Nix language support
 #+BEGIN_SRC emacs-lisp
   ;; (use-package company-nixos-options
   ;;   :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
@@ -2998,23 +3098,23 @@ Features for dealing with nix-shell in Emacs.
                 (setq indent-tabs-mode t))))
 
 #+END_SRC
-*** COMMENT Updating Nix hashes
+**** COMMENT Updating Nix hashes
 #+BEGIN_SRC emacs-lisp
   (use-package nix-update)
 #+END_SRC
-*** COMMENT Nixos options search
+**** COMMENT Nixos options search
 #+BEGIN_SRC emacs-lisp
   (use-package nixos-options)
   (use-package helm-nixos-options)
 #+END_SRC
-** Bash
+*** Bash
 #+BEGIN_SRC emacs-lisp
   (auto-mode-add 'sh-mode ; set shell mode for configuration files as they appear in this repository.
                  "\\(/\\|\\`\\)\\(bash_\\(aliases\\|profile\\|history\\|log\\(in\\|out\\)\\)\\|z?log\\(in\\|out\\)\\)\\'"
                  "\\(/\\|\\`\\)\\(shrc\\|zshrc\\|m?kshrc\\|bashrc\\|inputrc\\|t?cshrc\\|esrc\\)\\'"
                  "\\(/\\|\\`\\)\\([kz]shenv\\|xinitrc\\|startxrc\\|xsession\\)\\'")
 #+END_SRC
-*** Auto Mode
+**** Auto Mode
 Enter ~common-lisp-mode~ in the following files
 #+BEGIN_SRC emacs-lisp
   (auto-mode-add 'common-lisp-mode
@@ -3023,6 +3123,11 @@ Enter ~common-lisp-mode~ in the following files
        ".otherlisprc\\'")
 #+END_SRC
 
+*** Agenda
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-agenda-files '("~/Documents/notes"))
+#+END_SRC
 * External tools
 #+BEGIN_SRC emacs-lisp
   ;; startup programs
@@ -3041,7 +3146,7 @@ Enter ~common-lisp-mode~ in the following files
     :config
     ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
     (defvar my-ok-large-file-types
-      "\\.\\(?:mpe?g\\|mkv\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+      "\\.\\(?:mpe?g\\|m4v\\|mkv\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
       "Regexp matching filenames which are definitely ok to visit,
   even when the file is larger than `large-file-warning-threshold'.")
 
@@ -3060,7 +3165,7 @@ Enter ~common-lisp-mode~ in the following files
     ;; (ad-deactivate 'abort-if-file-too-large)
 
     (setq openwith-associations
-          '(("\\.\\(?:mpe?g\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+          '(("\\.\\(?:mpe?g\\|m4v\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
              "mpv" ("--loop" file))
             ("\\.\\(?:mkv\\)$"
              "mpv" (file))))
@@ -3070,6 +3175,17 @@ Enter ~common-lisp-mode~ in the following files
     "M-D" #'process-menu-delete-process)
 #+END_SRC
 * Emacs does everything
+** Writing
+Olivetti creates an environment fit for writing
+
+#+BEGIN_SRC emacs-lisp
+  (use-package olivetti
+    :config)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+  (use-package adaptive-wrap)
+#+END_SRC
 ** COMMENT Spotify
 Control spotify running on any device from Emacs.
 #+BEGIN_SRC emacs-lisp
@@ -3154,9 +3270,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (fringe-mode 1)
     (require 'exwm-config)
 
+    ;; Make sure minibuffer-line is visible after a command.
     (add-hook 'exwm-mode-hook #'set-clear-minibuffer-delayed)
-                                          ; Make sure minibuffer-line is
-                                          ; visible after a command.
 
     (add-hook 'exwm-update-class-hook
               (lambda ()
@@ -3193,8 +3308,8 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
             ([?\s-`] . helm-qutebrowser)
             ([?\s-1] . eshell-here)
-            ([?\s-2] . helm-find-files)
-            ([?\s-3] . multi-term)
+            ([?\s-2] . multi-term)
+            ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
 
             ;; ,@(mapcar (lambda (n)
             ;;             `(,(kbd (format "s-%d" n)) .
@@ -3251,10 +3366,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ([s-tab] . evil-buffer)
 
             ;; switch to scratch winconf and scratch buffer
-            ([?\s-0] . (lambda ()
-                         (interactive)
-                         (helm-winconf-switch "scratch")
-                         (scratch)))
+            ([?\s-0] . org-agenda)
 
             ;; bind "s-[v and s] to split vertical and horizontal"
             ([?\s-v] . evil-window-vsplit)
@@ -3275,7 +3387,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
             ;; program, and "s-w" to kill the current buffer AND window
             ([?\s-w] . actually-kill-this-buffer)
             ([?\s-q] . evil-delete-buffer)
-            ([?\s-a] . bury-evil-buffer)
             ([?\s-a] . bury-evil-buffer)
             ([?\s-A] . (lambda ()
                          (interactive)
@@ -3841,13 +3952,46 @@ This allows sending Common Lisp code to a live running Next browser process.
   (add-hook 'exwm-randr-refresh-hook #'my-zoom-frm-by-dpi)
   ;; (add-hook 'after-make-frame-functions #'my-zoom-frm-by-dpi)
 #+END_SRC
-** COMMENT Document viewer
-
+** Document viewer
+*** COMMENT PDF
 ~pdf-tools~ is a document viewer for emacs
 #+BEGIN_SRC emacs-lisp
   (use-package pdf-tools
     :config
     (pdf-loader-install))
+#+END_SRC
+*** EPUB
+~nov.el~ provides support for viewing epub files. Best combined with olivetti-mode
+
+#+BEGIN_SRC emacs-lisp
+  (use-package nov
+    :config
+    (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+
+    (setq nov-text-width t)
+
+    (add-hook 'nov-mode-hook #'visual-line-mode)
+    (add-hook 'nov-mode-hook #'olivetti-mode)
+    ;; (defun me/nov-mode-init ()
+    ;;   (setq cursor-type nil))
+    ;; (add-hook 'nov-mode-hook #'me/nov-mode-init)
+    (my-visual-line-mode-rebind nov-mode-map)
+
+    (defun toggle-cursor ()
+      (interactive)
+      (if cursor-type
+          (setq cursor-type nil)
+        (setq cursor-type t)))
+  
+    (defun evil-force-normal-state-and-toggle-cursor ()
+      (interactive)
+      (evil-force-normal-state)
+      (toggle-cursor))
+
+    (general-def 'normal 'nov-mode-map
+      "L" 'nov-history-forward
+      "H" 'nov-history-back
+      "<escape>" #'toggle-cursor))
 #+END_SRC
 ** Image viewer
 Emacs has an inbuilt image viewer ~image-mode~.
@@ -3941,7 +4085,6 @@ Emacs has an inbuilt image viewer ~image-mode~.
 Emacs media manager
 #+BEGIN_SRC emacs-lisp
   (use-package emms
-    :ensure nil
     :config
 
     (require 'emms-setup)
@@ -3968,12 +4111,16 @@ Emacs media manager
           emms-volume-change-amount 5
           emms-mode-line-format " | %s"
           emms-mode-line-mode-line-function #'me/emms-playlist-current-nondirectory 
+          emms-browser-covers #'emms-browser-cache-thumbnail-async
+          emms-browser-default-covers '("~/Music/default-cover-small.png"
+                                        "~/Music/default-cover-medium.png"
+                                        "~/Music/default-cover-large.png")
           ;; emms-stream-info-backend 'mplayer
           )
 
 
-    (general-def normal emms-playlist-mode-map
-      "<return>" #'emms-playlist-mode-play-current-track)
+    ;; (general-def normal emms-playlist-mode-map
+    ;;   "<return>" #'emms-playlist-mode-play-current-track)
 
     (general-create-definer emms-key-def
       :prefix "s-m")
@@ -3986,10 +4133,33 @@ Emacs media manager
       "<XF86AudioStop>" 'emms-stop)
 
     (emms-key-def 'normal 
-      "s-m" 'emms-pause
-      "m" 'emms
-      "b" 'emms-browse-by-album
-      "r" 'emms-player-mpd-update-all-reset-cache))
+      "s-m" #'emms-pause
+      "m" #'emms
+      "b" #'emms-browse-by-album
+      ;; "r" 'emms-player-mpd-update-all-reset-cache
+      ))
+
+  (defun me/pulseaudio-control--get-current-mute ()
+    "Get volume of currently-selected sink."
+    (let (beg)
+      (pulseaudio-control--maybe-update-current-sink)
+      (with-temp-buffer
+        (pulseaudio-control--call-pactl "list sinks")
+        (goto-char (point-min))
+        (search-forward (concat "Sink #" pulseaudio-control--current-sink))
+        (search-forward "Mute:")
+        (backward-word)
+        (setq beg (point))
+        (move-end-of-line nil)
+        (buffer-substring beg (point)))))
+
+  (defun me/pulsaudio-display-mute ()
+    (if pulseaudio-control-volume-verbose
+        (message (me/pulseaudio-control--get-current-mute))))
+
+  (advice-add 'pulseaudio-control-toggle-current-sink-mute
+              :after
+              #'me/pulsaudio-display-mute)
 #+END_SRC
 *** Uncle Dave's Commands
 Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDavesEmacs]]
@@ -4075,6 +4245,8 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 ** IRC (ERC)
 #+BEGIN_SRC emacs-lisp
   ;; -*- lexical-binding: t; -*-
+  (require 'erc)
+
   (erc-keep-place-enable)
 
   (defun me/erc-insert-timestamp-right-margin (string)
@@ -4131,6 +4303,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
         ;;erc-mode-line-format "%S %a"
         erc-hide-list '("JOIN" "PART" "QUIT")
         ;; erc-rename-buffers t
+        erc-join-buffer 'bury
         erc-interpret-mirc-color t
         erc-fill-function 'me/erc-fill-static
         erc-fill-static-center me/erc-left-pseudomargin-width
@@ -4143,6 +4316,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
         erc-lurker-hide-list '("JOIN" "PART" "QUIT")
         erc-lurker-threshold-time 43200
         erc-server-reconnect-timeout 3
+        erc-track-exclude-server-buffer t
         erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
                                   "324" "329" "332" "333" "353" "477"))
 
@@ -4280,7 +4454,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                 :before
                 #'me/znc-self-message))
 #+END_SRC
-**** ERC Image
+**** COMMENT ERC Image
 #+BEGIN_SRC emacs-lisp
   (use-package erc-image
     :ensure t
@@ -4366,8 +4540,8 @@ Interface to wttr.in
 #+END_SRC
 ** Bluetooth interface
 #+BEGIN_SRC emacs-lisp
+  (require 'bluetooth "~/Code/elisp/load/emacs-bluetooth/bluetooth.el")
   (use-package bluetooth
-    :ensure t
     :config
     (leader-key-def normal
                     "1" #'bluetooth-list-devices)
