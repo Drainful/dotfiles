@@ -5,6 +5,7 @@ source ~/.secrets.sh
 
 # export PS1="\[\033[1;32m\][\w]\n ==> \[\033[0m\]"
 export PS1="\[\033[1;32m\][\w] λ \[\033[0m\]"
+export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
 
 # Bash initialization for interactive non-login shells and
 # for remote shells (info "(bash) Bash Startup Files").
@@ -41,7 +42,7 @@ source /etc/bashrc
 
 # # Disable completion if run from emacs.
 # if [[ ( -z "$INSIDE_EMACS" || "$EMACS_BASH_COMPLETE" = "t" ) &&\
-#           -f /etc/bash_completion ]]; then
+    #           -f /etc/bash_completion ]]; then
 #     . /etc/bash_completion
 # fi
 
@@ -63,7 +64,7 @@ source /etc/bashrc
 #    fd() {
 #        local dir
 #        dir=$(find ${1:-.} -path '*/\.*' -prune \
-#                   -o -type d -print 2> /dev/null | fzf +m) &&
+    #                   -o -type d -print 2> /dev/null | fzf +m) &&
 #            cd "$dir"
 #    }
 

@@ -34,7 +34,9 @@
   #:use-module (gnu packages pulseaudio)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages lxqt)
-  #:use-module (gnu packages libreoffice))
+  #:use-module (gnu packages libreoffice)
+  #:use-module (gnu packages gnupg)
+  #:use-module (gnu packages syncthing))
 
 (define-public graphical-games (os-module #:packages (list crawl-tiles multimc)))
 
@@ -82,7 +84,12 @@
 
                          screengrab
 
-                         libreoffice)))
+                         libreoffice
+                         pinentry-emacs
+
+                         syncthing
+                         ;; qsyncthingtray
+                         )))
 
 (define-public no-desktop-environment
   (os-module

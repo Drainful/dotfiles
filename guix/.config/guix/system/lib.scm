@@ -1,5 +1,7 @@
 (define-module (lib)
-  ;; #:use-module (guix records)
+  #:use-module (guix packages)
+  #:use-module (gnu services)
+  #:use-module (guix gexp)
   #:export (os-module
             ;; merge-records
             ))
@@ -19,11 +21,21 @@ standard struct system (perhaps not defining a new defun for each
 field) with the capacity to be reified into guile structs. This will
 do for now. |#
 
+(define (assert-all list pred)
+  (map
+   (lambda (elt)
+     (if (pred elt)
+         elt
+         (error
+          (string-append (format #f "os-module argument \"~A\" does not conform to " elt)
+                         (symbol->string (procedure-name pred))))))
+   list))
+
 (define* (os-module #:key (inherit '()) (packages '()) (services '()) (jobs '()))
   (if (null? inherit)
-      (lambda () (list (cons packages-keyword packages)
-                  (cons services-keyword services)
-                  (cons jobs-keyword jobs)))
+      (lambda () (list (cons packages-keyword (assert-all packages package?))
+                  (cons services-keyword (assert-all services service?))
+                  (cons jobs-keyword (assert-all jobs gexp?))))
       (lambda () (let ((inherited ((car inherit))))
               ((os-module #:inherit (cdr inherit)
                           #:packages (append (or (assoc-ref inherited packages-keyword) #nil)

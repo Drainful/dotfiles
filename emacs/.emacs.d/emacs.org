@@ -137,6 +137,14 @@ These are my settings for the Evil, the Vim emulator.
          (evil-ex-define-cmd "Q[uit]" 'evil-quit)
          (evil-ex-define-cmd "Qa" 'evil-quit-all))))
 #+END_SRC
+** Evil commentary
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-commentary
+    :config
+    (general-def '(normal visual)
+      "gy" 'evil-commentary-yank
+      "gc" 'evil-commentary))
+#+END_SRC
 ** Evil collection
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
@@ -431,7 +439,6 @@ Usage:
                   "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
-                  "c" 'me/evil-comment-or-uncomment-region
                   "RET" (kbd ":noh"))
   (alt-leader-key-def 'normal
     "q" 'evil-record-macro
@@ -446,7 +453,6 @@ Usage:
 *** Visual Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'visual
-                  "c" 'me/evil-comment-or-uncomment-region
                   "O" 'helm-do-ag-this-file
                   "o" 'helm-occur)
 #+END_SRC
@@ -593,8 +599,7 @@ which integrates well across Emacs.
           helm-window-prefer-horizontal-split t
           helm-window-show-buffers-function 'helm-window-mosaic-fn
           helm-split-window-default-side 'same)
-
-
+  
     (defun me/helm-fix-insert-state-keys ()
       (setq evil-insert-state-local-map (make-keymap))
       (define-key evil-insert-state-local-map (kbd "C-n") #'helm-next-line)
@@ -973,6 +978,50 @@ buffers. Faster than ~,-b\r~.
                       "<tab>" 'evil-buffer)
 #+END_SRC
 
+** Buffer management
+Utilities for buffer management
+
+#+BEGIN_SRC emacs-lisp
+  (defun get-next-valid-buffer-if (list pred &optional buffer visible-ok frame)
+    (setq frame (or frame (selected-frame)))
+    (let ((frame-pred (frame-parameter frame 'buffer-predicate))
+          found buf)
+      (while (and (not found) list)
+        (setq buf (car list))
+        (if (and (not (eq buffer buf))
+                 (buffer-live-p buf)
+                 (or (null frame-pred) (funcall frame-pred buf))
+                 (funcall pred buf)
+                 (not (eq (aref (buffer-name buf) 0) ?\s))
+                 (or visible-ok (null (get-buffer-window buf 'visible))))
+            (setq found buf)
+          (setq list (cdr list))))
+      (car list)))
+
+  (defun last-buffer-if (pred &optional buffer visible-ok frame)
+    (setq frame (or frame (selected-frame)))
+    (or (get-next-valid-buffer-if (nreverse (buffer-list frame))
+                                  pred
+                                  buffer visible-ok frame)
+        (get-buffer "*scratch*")
+        (let ((scratch (get-buffer-create "*scratch*")))
+          (set-buffer-major-mode scratch)
+          scratch)))
+
+  (defvar me/unbury-blacklist (if (featurep 'helm)
+                                  helm-boring-buffer-regexp-list
+                                nil))
+
+  (defun me/unbury-interesting-pred (buffer)
+    (every (lambda (regex)
+             (not (string-match-p regex
+                                  (buffer-name buffer))))
+           me/unbury-blacklist))
+
+  (defun unbury-interesting-buffer ()
+    (interactive)
+    (switch-to-buffer (last-buffer-if #'me/unbury-interesting-pred)))
+#+END_SRC
 * Text editing
 ** Spell Check
 #+BEGIN_SRC emacs-lisp
@@ -2202,13 +2251,8 @@ functionality can be bound to that mode.
     "]" #'lispyville-beginning-of-next-defun
     "=" #'me/lispyville-prettify)
 
-  (leader-key-def :states 'normal
-                  :keymaps 'lispyville-mode-map
-                  "c" #'lispyville-comment-or-uncomment)
-
-  (leader-key-def :states 'visual
-                  :keymaps 'lispyville-mode-map
-                  "c" #'lispyville-comment-or-uncomment)
+  (general-def 'visual 'lispyville-mode-map
+    "gc" #'lispyville-comment-or-uncomment)
 #+END_SRC
 *** Rainbow delimiters
 While ~rainbow-delimeters-mode~ is active each depth of delimiter is
@@ -3294,107 +3338,105 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
       )
 
     (require 'helm-qutebrowser)
-    (setq exwm-input-global-keys
-          `(;; Bind "s-r" to exit char-mode and fullscreen mode.
-            ([?\s-r] . exwm-reset)
+    (customize-set-variable
+     'exwm-input-global-keys
+     `(;; Bind "s-r" to exit char-mode and fullscreen mode.
+       ([?\s-r] . exwm-reset)
 
-            ;; Bind f11 to toggle full screen
-            ([f11] . exwm-layout-toggle-fullscreen)
+       ;; Bind f11 to toggle full screen
+       ([f11] . exwm-layout-toggle-fullscreen)
 
-            ;; Bind "s-!" to launch exteral commands with READ-SHELL-COMMAND
-            ([?\s-!] . (lambda (command)
-                         (interactive (list (read-shell-command "$ ")))
-                         (start-process-shell-command command nil command)))
+       ;; Bind "s-!" to launch exteral commands with READ-SHELL-COMMAND
+       ([?\s-!] . (lambda (command)
+                    (interactive (list (read-shell-command "$ ")))
+                    (start-process-shell-command command nil command)))
 
-            ([?\s-`] . helm-qutebrowser)
-            ([?\s-1] . eshell-here)
-            ([?\s-2] . multi-term)
-            ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
+       ([?\s-`] . helm-qutebrowser)
+       ([?\s-1] . eshell-here)
+       ([?\s-2] . multi-term)
+       ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
 
-            ;; ,@(mapcar (lambda (n)
-            ;;             `(,(kbd (format "s-%d" n)) .
-            ;;               (lambda ()
-            ;;                 (interactive)
-            ;;                 (eshell ,n))))
-            ;;           (number-sequence 1 3))
-
-
-            (,(kbd "<XF86MonBrightnessUp>"). desktop-brightness-increment-large)
-            (,(kbd "<XF86MonBrightnessDown>" ). desktop-brightness-decrement-large)
-            (,(kbd "<S-XF86MonBrightnessUp>" ). desktop-brightness-increment-normal)
-            (,(kbd "<S-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-normal)
-            (,(kbd "<C-XF86MonBrightnessUp>" ). desktop-brightness-increment-small)
-            (,(kbd "<C-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-small)
-
-            (,(kbd "<XF86AudioRaiseVolume>") . desktop-volume-increment-large)
-            (,(kbd "<XF86AudioLowerVolume>") . desktop-volume-decrement-large)
-            (,(kbd "S-<XF86AudioRaiseVolume>") . desktop-volume-increment-normal)
-            (,(kbd "S-<XF86AudioLowerVolume>") . desktop-volume-decrement-normal)
-            (,(kbd "C-<XF86AudioRaiseVolume>") . desktop-volume-increment-small)
-            (,(kbd "C-<XF86AudioLowerVolume>") . desktop-volume-decrement-small)
-            (,(kbd "<XF86AudioMute>") . pulseaudio-control-toggle-current-sink-mute)
+       ;; ,@(mapcar (lambda (n)
+       ;;             `(,(kbd (format "s-%d" n)) .
+       ;;               (lambda ()
+       ;;                 (interactive)
+       ;;                 (eshell ,n))))
+       ;;           (number-sequence 1 3))
 
 
-            ;; Bind "s- " to launch external commands through my launcher.
-            ([?\s- ] . exlaunch)
+       (,(kbd "<XF86MonBrightnessUp>"). desktop-brightness-increment-large)
+       (,(kbd "<XF86MonBrightnessDown>" ). desktop-brightness-decrement-large)
+       (,(kbd "<S-XF86MonBrightnessUp>" ). desktop-brightness-increment-normal)
+       (,(kbd "<S-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-normal)
+       (,(kbd "<C-XF86MonBrightnessUp>" ). desktop-brightness-increment-small)
+       (,(kbd "<C-XF86MonBrightnessDown>" ) . desktop-brightness-decrement-small)
 
-            ;; Winconf
-            ([s-return] . helm-winconf)
+       (,(kbd "<XF86AudioRaiseVolume>") . desktop-volume-increment-large)
+       (,(kbd "<XF86AudioLowerVolume>") . desktop-volume-decrement-large)
+       (,(kbd "S-<XF86AudioRaiseVolume>") . desktop-volume-increment-normal)
+       (,(kbd "S-<XF86AudioLowerVolume>") . desktop-volume-decrement-normal)
+       (,(kbd "C-<XF86AudioRaiseVolume>") . desktop-volume-increment-small)
+       (,(kbd "C-<XF86AudioLowerVolume>") . desktop-volume-decrement-small)
+       (,(kbd "<XF86AudioMute>") . pulseaudio-control-toggle-current-sink-mute)
 
-            ;; bind "s-[direction] to switch windows"
-            ([?\s-h] . windmove-left)
-            ([?\s-j] . windmove-down)
-            ([?\s-k] . windmove-up)
-            ([?\s-l] . windmove-right)
 
-            ;; bind "s-arrow" to move, "maximize" or "minimize" a window
-            ([s-right] . windows-right)
-            ([s-down] . evil-quit)
-            ([s-up] . delete-other-windows)
-            ([s-left] . windows-left)
+       ;; Bind "s- " to launch external commands through my launcher.
+       ([?\s- ] . exlaunch)
 
-            ;; lock screen
-            ([?\s-o] . desktop-environment-lock-screen)
+       ;; Winconf
+       ([s-return] . helm-winconf)
 
-            ;; symon mode toggle
-            ([?\s-\\] . symon-mode)
+       ;; bind "s-[direction] to switch windows"
+       ([?\s-h] . windmove-left)
+       ([?\s-j] . windmove-down)
+       ([?\s-k] . windmove-up)
+       ([?\s-l] . windmove-right)
 
-            ;; toggle window floating
-            ([?\s-/] . exwm-floating-toggle-floating)
+       ;; bind "s-arrow" to move, "maximize" or "minimize" a window
+       ([s-right] . windows-right)
+       ([s-down] . evil-quit)
+       ([s-up] . delete-other-windows)
+       ([s-left] . windows-left)
 
-            ;; switch between buffers
-            ([s-tab] . evil-buffer)
+       ;; lock screen
+       ([?\s-o] . desktop-environment-lock-screen)
 
-            ;; switch to scratch winconf and scratch buffer
-            ([?\s-0] . org-agenda)
+       ;; symon mode toggle
+       ([?\s-\\] . symon-mode)
 
-            ;; bind "s-[v and s] to split vertical and horizontal"
-            ([?\s-v] . evil-window-vsplit)
-            ([?\s-s] . evil-window-split)
-            ([?\s-u] . hydra-winner/winner-undo)
-            ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
-            ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
-            ;; ([?\s-c ?\l] . exwm-floating-toggle-floating)
-            ;; bind "s-z" to M-x
-            ([?\s-z] . helm-M-x)
-            ;; bind "s-;" to ex mode
-            ([?\s-\;] . evil-ex)
-            ;; bind "s-b" to buffer switching
-            ([?\s-b] . me/helm-buffer)
-            ;; bind "s-f" to file switching
-            ([?\s-f] . helm-find-files)
-            ;; bind "s-q" to kill this buffer, closing the current
-            ;; program, and "s-w" to kill the current buffer AND window
-            ([?\s-w] . actually-kill-this-buffer)
-            ([?\s-q] . evil-delete-buffer)
-            ([?\s-a] . bury-evil-buffer)
-            ([?\s-A] . (lambda ()
-                         (interactive)
-                         (bury-evil-buffer)
-                         (evil-quit)))
-            ([?\s-g] . guix)
-            ;; bind "s-g" to keyboard-quit
-            ([?\s-G] . keyboard-quit)))
+       ;; toggle window floating
+       ([?\s-/] . exwm-floating-toggle-floating)
+
+       ;; switch between buffers
+       ([s-tab] . evil-buffer)
+
+       ;; switch to scratch winconf and scratch buffer
+       ([?\s-0] . org-agenda)
+
+       ;; bind "s-[v and s] to split vertical and horizontal"
+       ([?\s-v] . evil-window-vsplit)
+       ([?\s-s] . evil-window-split)
+       ([?\s-u] . hydra-winner/winner-undo)
+       ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
+       ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
+       ;; ([?\s-c ?\l] . exwm-floating-toggle-floating)
+       ;; bind "s-z" to M-x
+       ([?\s-z] . helm-M-x)
+       ;; bind "s-;" to ex mode
+       ([?\s-\;] . evil-ex)
+       ;; bind "s-b" to buffer switching
+       ([?\s-b] . me/helm-buffer)
+       ;; bind "s-f" to file switching
+       ([?\s-f] . helm-find-files)
+       ;; bind "s-q" to kill this buffer, closing the current
+       ;; program, and "s-w" to kill the current buffer AND window
+       ([?\s-w] . actually-kill-this-buffer)
+       ([?\s-q] . evil-delete-buffer)
+       ([?\s-a] . bury-evil-buffer)
+       ([?\s-A] . unbury-interesting-buffer)
+       ([?\s-g] . guix)
+       ;; bind "s-g" to keyboard-quit
+       ([?\s-G] . keyboard-quit)))
 
     ;; ;; start in char mode by default
     ;; (setq exwm-manage-configurations '((t char-mode t)))
@@ -4430,23 +4472,24 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   ;; Bouncer
   (use-package znc
     :config
-    (setq znc-servers
-          ;; `(("localhost" 12533 t
-          ;;    ((network-slug "znc-username" "znc-password"))))
-          `(("znc.fullmer.info" 5000 t
-             ((irc\.freenode\.net ,(concat me/freenode-nick
-                                           "/freenode")
-                                  ,(me/znc-password))
-              (irc\.rizon\.net ,(concat me/freenode-nick
-                                        "/rizon")
-                               ,(me/znc-password))
-              (irc\.indymedia\.net ,(concat me/freenode-nick
-                                            "/indymedia")
-                                   ,(me/znc-password))
-              ;; (irc\.tilde\.chat ,(concat me/freenode-nick
-              ;;                            "/tilde")
-              ;;                   ,(me/znc-password))
-              ))))
+    (let ((pass (auth-source-pass-get 'secret "znc")))
+      (setq znc-servers
+            ;; `(("localhost" 12533 t
+            ;;    ((network-slug "znc-username" "znc-password"))))
+            `(("znc.fullmer.info" 5000 t
+               ((irc\.freenode\.net ,(concat me/freenode-nick
+                                             "/freenode")
+                                    ,pass)
+                (irc\.rizon\.net ,(concat me/freenode-nick
+                                          "/rizon")
+                                 ,pass)
+                (irc\.indymedia\.net ,(concat me/freenode-nick
+                                              "/indymedia")
+                                     ,pass)
+                ;; (irc\.tilde\.chat ,(concat me/freenode-nick
+                ;;                            "/tilde")
+                ;;                   ,(me/znc-password))
+                )))))
     (defun me/znc-self-message ()
       (erc-server-send "CAP REQ :znc.in/self-message")
       (erc-server-send "CAP END"))
@@ -4563,6 +4606,21 @@ Emacs interface to ~bitwarden-cli~
     :config
     (setq bitwarden-automatic-unlock (lambda ()
                                        (read-passwd "Password: "))))
+#+END_SRC
+** Pass
+
+#+BEGIN_SRC emacs-lisp
+
+  (use-package pass)
+  (use-package auth-source-pass
+    :config
+    (auth-source-pass-enable))
+
+  (use-package helm-pass)
+
+  (use-package pinentry
+    :config
+    (pinentry-start))
 #+END_SRC
 * Utilities
 Various functions and macros which are evaluated before anything else in the file.

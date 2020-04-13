@@ -5,7 +5,9 @@
                 #:select ((emacs . emacs-package)))
   #:use-module (gnu packages aspell)
   #:use-module (gnu packages rsync)
-  #:use-module (gnu packages emacs-xyz))
+  #:use-module (gnu packages emacs-xyz)
+
+  #:use-module (gnu packages gnupg))
 
 (define-public emacs
   (os-module
@@ -16,6 +18,7 @@
          ;; commented out emacs packages are installed via package.el
          emacs-use-package
          emacs-evil
+         emacs-evil-commentary
          emacs-evil-collection
          emacs-evil-surround
          emacs-general
@@ -91,4 +94,8 @@
          ;; emacs-erc-image ; bugged build?
          emacs-wttrin
          ;; emacs-bluetooth
-         )))
+
+         emacs-pinentry
+         emacs-pass
+         emacs-helm-pass
+         emacs-auth-source-pass)))

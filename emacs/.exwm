@@ -6,6 +6,7 @@
 (setenv "EDITOR" "emacsclient")
 (setenv "BROWSER" "firefox")
 (setenv "GDK_SCALE" "1")
+(setenv "PASSWORD_STORE_ENABLE_EXTENSIONS" "true")
 ;; (setenv "XDG_DATA_HOME" "~/.local/share/applications/")
 (add-to-path  "/home/guix/adrian/.local/share/applications/" "XDG_DATA_DIRS")
 (defun sh-cmd (command &optional args buffer)
@@ -19,6 +20,8 @@
 ;; (sh-cmd "pulseaudio" "" t)
 (sh-cmd "redshift" "-l 42.05:-87.69" t)
 (sh-cmd "compton" "--vsync drm --paint-on-overlay" t)
+(sh-cmd "ssh-agent")
+(sh-cmd "syncthing" "-no-browser" "-home=/home/guix/adrian/.config/syncthing/")
 
 (defun eshell/fantasygrounds ()
   (interactive)

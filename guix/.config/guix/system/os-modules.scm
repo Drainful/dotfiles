@@ -29,6 +29,7 @@
   #:use-module (gnu packages lisp)
   #:use-module (gnu packages rsync)
   #:use-module (gnu packages disk)
+  #:use-module (gnu packages groff)
   ;; (gnu packages graphvis)
   #:use-module (gnu packages android)
   #:use-module (gnu packages libusb)
@@ -67,7 +68,7 @@
    (list neovim
 
          git curl wget youtube-dl ffmpeg neofetch file usbutils
-         iptables netcat patchelf rlwrap stow openssh
+         iptables netcat patchelf rlwrap stow openssh groff
 
          tree the-silver-searcher
 
