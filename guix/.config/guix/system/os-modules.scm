@@ -30,9 +30,12 @@
   #:use-module (gnu packages rsync)
   #:use-module (gnu packages disk)
   #:use-module (gnu packages groff)
+  #:use-module (gnu packages maven)
   ;; (gnu packages graphvis)
   #:use-module (gnu packages android)
   #:use-module (gnu packages libusb)
+  #:use-module (gnu packages commencement)
+
   #:use-module (gnu services base)
   #:use-module (gnu services xorg)
   #:use-module (gnu services virtualization)
@@ -75,12 +78,12 @@
          ;; archiving
          atool #|unrar|# unzip zip
 
-         busybox ; utilities
+         ;; busybox ; utilities
 
          direnv ; directory-specific environment variables
-         
-         ;; used as an application, not for development
-         openjdk12)))
+
+         glibc
+         gcc-toolchain)))
 
 (define-public android
   (os-module #:packages (list adb fastboot gmtp)))

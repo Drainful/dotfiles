@@ -4,6 +4,9 @@
   #:use-module (guix gexp)
   #:export (os-module
             ;; merge-records
+            maplist
+            plist-get
+            plist-set
             ))
 
 
@@ -44,6 +47,31 @@ do for now. |#
                                              services)
                           #:jobs (append (or (assoc-ref inherited jobs-keyword) #nil)
                                          jobs)))))))
+
+(define (maplist f l)
+  (if (or (null? l) (null? (cdr l)))
+      l
+      (cons (f l) (maplist f (cdr l)))))
+
+(define (plist-get list key)
+  (if (null? list)
+      '()
+      (if (eq? (car list) key)
+          (cadr list)
+          (if (and (not (null? (cdr list)))
+                   (not (null? (cddr list))))
+              (plist-get (cddr list) key)
+              '()))))
+
+(define (plist-set list key val)
+  (reverse
+   (maplist (lambda (l) (if (null? l)
+                       '()
+                       (if (and (not (null? (cdr l)))
+                                (eq? (cadr l) key))
+                           val
+                           (car l))))
+            (reverse list))))
 
 ;; (define-macro (os-module-paths inherit packages services)
 ;;   `(os-module (list ,@(map (lambda (inherit-path)

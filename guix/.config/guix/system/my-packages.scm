@@ -4,7 +4,41 @@
   #:use-module (guix download)
   #:use-module (gnu packages emacs-xyz)
   #:use-module (gnu packages messaging)
+  #:use-module (gnu packages messaging)
+  #:use-module (games packages minecraft)
+
+  #:use-module (guix build-system cmake)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages pulseaudio)
+  #:use-module (gnu packages qt)
+  #:use-module (gnu packages xorg)
+  #:use-module (gnu packages gl)
+  #:use-module (gnu packages java)
+  #:use-module (guix packages)
+  #:use-module (guix git-download)
+
   #:use-module (ice-9 match))
+
+(define-public my-emacs-guix
+  (package
+    (inherit emacs-guix)
+    (version "0.5.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://emacs-guix.gitlab.io/website/"
+                                  "releases/emacs-guix-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0yz64c0z4ygi2k4af18k4r1ncgys18jb8icywkp2g5pgmpn5l7ps"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  ;; Add support for Guile 3.0.  Remove for versions > 0.5.2.
+                  (substitute* "configure"
+                    (("\"2\\.2 2\\.0\"")
+                     "\"3.0 2.2 2.0\""))
+                  #t))))
+    ))
 
 ;; (define-public my-emacs-doom-themes
 ;;   (let ((commit "655685d3bdc5322e68581dd306b09fcecafbc912")
@@ -21,6 +55,21 @@
 ;;                 (file-name (git-file-name name version))
 ;;                 (sha256
 ;;                  (base32 "1jwdjq4q2gkhi6jwas3ywgmdz5dg14sfb3fzhqd7wih6j3i2l3cr")))))))
+
+(define-public my-multimc
+  (package
+    (inherit multimc)
+    (version "0.6.11")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/MultiMC/MultiMC5.git")
+                    (recursive? #t)
+                    (commit version)))
+              (file-name (git-file-name (package-name multimc) version))
+              (sha256
+               (base32
+                "1jkbmb4sgfk8d93f5l1vd9pkpvhq9sxacc61w0rvf5xmz0wnszmz"))))))
 
 (define-public my-emacspeak
   (package

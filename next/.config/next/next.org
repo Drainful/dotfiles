@@ -24,7 +24,7 @@ Definition of a keymap for personal bindings.
     ", w" #'delete-current-buffer)
 #+END_SRC
 * Interface
-** Zoom
+** COMMENT Zoom
 #+BEGIN_SRC lisp
   (in-package :next-user)
 
@@ -100,7 +100,7 @@ Definition of a keymap for personal bindings.
     (scroll--scaled nil
                     (- (horizontal-scroll-distance (next:current-buffer)))))
 #+END_SRC
-** Hi Dpi
+** COMMENT Hi Dpi
 #+BEGIN_SRC lisp
   (in-package :next)
 
@@ -128,7 +128,7 @@ Definition of a keymap for personal bindings.
 
   (add-hook after-init-hook #'my-interface-defaults)
 #+END_SRC
-** Link Hints
+** COMMENT Link Hints
 #+BEGIN_SRC lisp
   (in-package :next-user)
 

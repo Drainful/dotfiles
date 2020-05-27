@@ -1,3 +1,4 @@
+alias nil  $*
 alias fantasygrounds wine ~/.wine/drive_c/Program\ Files/Fantasy\ Grounds/FantasyGrounds.exe
 alias ll ls -l $*
 alias md mkdir $*
@@ -15,3 +16,4 @@ alias def bash ~/auto/def/def.bash
 alias tb nc termbin.com 9999
 alias clear clear t
 alias reconf sudo guix system reconfigure -L ~/.config/guix/system/ ~/.config/guix/system/yoga.scm  $*
+alias sdo /run/setuid-programs/sudo $*

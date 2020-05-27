@@ -2,6 +2,10 @@
 ** Audio
 create a service for pulseaudio
 * Emacs
+eshell-at helm interface that has a separate source for existing
+buffers (which has an alternate binding for opening a new eshell in
+the directory of that existing buffer) placed above a filesystem
+searching source.
 ** language tools
 - Add Rust editing tools
 - add subleader for inspect (as opposed to eval)
@@ -64,6 +68,7 @@ a source patch to helm-mini to fix this. Look at helm-exwm and
 helm-qutebrowser for inspiration.
 **  EXWM
 Set default-directory of exwm buffers (mpv)
+
 *** COMMENT randr
 Some way to minimize exwm's "fullscreen" windows.  Easiest way is to
 just correct xrandr when switching from a fullscreen'd workspace.

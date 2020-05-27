@@ -137,13 +137,21 @@ These are my settings for the Evil, the Vim emulator.
          (evil-ex-define-cmd "Q[uit]" 'evil-quit)
          (evil-ex-define-cmd "Qa" 'evil-quit-all))))
 #+END_SRC
+** Evil space
+
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-space
+    :ensure t
+    :config
+    (setq evil-space-next-key (kbd ";"))
+    (evil-space-mode +1))
+#+END_SRC
 ** Evil commentary
 #+BEGIN_SRC emacs-lisp
   (use-package evil-commentary
     :config
-    (general-def '(normal visual)
-      "gy" 'evil-commentary-yank
-      "gc" 'evil-commentary))
+    (add-hook 'prog-mode #'evil-commentary-mode)
+    (define-key evil-commentary-mode-map (kbd "s-/") nil))
 #+END_SRC
 ** Evil collection
 This provides ~evil~ friendly keybindings for a variety of modes.
@@ -153,6 +161,7 @@ This provides ~evil~ friendly keybindings for a variety of modes.
     :init
     (setq evil-want-keybinding nil)
     :after evil
+    :custom (evil-collection-company-use-tng nil)
     :config
     ;; (setq evil-collection-term-sync-state-and-mode-p nil)
     (evil-collection-init))
@@ -288,7 +297,7 @@ These are normal mode mappings not specific to any major mode.
     "M-j" 'move-line-down
     "M-k" 'move-line-up
     ;; "/" 'evil-ex-search-forward
-    "t" 'evil-avy-goto-char-timer
+    "t" nil
     "q" 'evil-avy-goto-subword-1
     "g r" 'revert-buffer)
 
@@ -513,13 +522,17 @@ Set the initial mode in the scratch buffer to emacs.
   (setq initial-major-mode #'lisp-interaction-mode)
 #+END_SRC
 ** Font
-
 #+BEGIN_SRC emacs-lisp
   (defvar my-default-font-pixelsize 29)
   (add-to-list 'default-frame-alist
                `(font . ,(format
                           "DejaVu Sans Mono:pixelsize=%d:foundry=PfEd:weight=normal:slant=normal:width=normal:scalable=true"
                           my-default-font-pixelsize)))
+
+  (use-package unicode-fonts
+    :ensure t
+    :config
+    (unicode-fonts-setup))
 #+END_SRC
 ** Mode line
 *** Delight
@@ -549,38 +562,64 @@ blurbs.
                   "  " mode-line-modes
                   mode-line-end-spaces))
 
-  (when (featurep 'exwm)
+  (with-eval-after-load 'exwm
     (defvar me/exwm-mode-line-format nil)
     (setq me/exwm-mode-line-format 
-          '("%e" mode-line-front-space
+          '("%e"
+            mode-line-front-space
             mode-line-frame-identification
             mode-line-buffer-identification
-            "  " mode-line-modes mode-line-end-spaces))
-    (setq exwm-mode-hook nil)
-    (add-hook 'exwm-mode-hook (lambda () (setq mode-line-format me/exwm-mode-line-format))))
+            "  "
+            mode-line-end-spaces))
+
+    (defun exwm-mode-line-init ()
+      (setq mode-line-buffer-identification (propertized-buffer-identification "%12b"))
+      (setq mode-line-format me/exwm-mode-line-format))
+
+    (add-hook 'exwm-mode-hook #'exwm-mode-line-init))
+
 #+END_SRC
 *** Shorten mode-line buffer names
 This sets a limit of 70 characters for the display of buffern names in
-the mode line.
+the mode line. 
 #+BEGIN_SRC emacs-lisp
-(setq-default mode-line-buffer-identification (list -70 (propertized-buffer-identification "%12b")))
+  (setq-default mode-line-buffer-identification (list -70 (propertized-buffer-identification "%12b")))
 #+END_SRC
 *** Minibuffer line
 Package to use the minibuffer in the manner of the mode line.
 #+begin_src emacs-lisp
   (use-package minibuffer-line
+    :after erc
     :config
-    (setq minibuffer-line-format
-          '("%e" mode-line-misc-info mode-line-end-spaces))
+    ;; (defvar minibuffer-line-separator " | ")
+    ;; (defun minibuffer-line--update ()
+    ;;   (with-current-buffer minibuffer-line--buffer
+    ;;     (erase-buffer)
+    ;;     (insert (format-mode-line minibuffer-line-format 'mode-line-inactive))))
+    (setq minibuffer-line-format '("%e " display-time-string
+                                   battery-mode-line-string emms-mode-line-string
+                                   emms-playing-time-string " "))
+    ;; (setq global-mode-string '("" display-time-string
+    ;;                            battery-mode-line-string emms-mode-line-string
+    ;;                            emms-playing-time-string erc-modified-channels-object))
     (setq minibuffer-line-refresh-interval 0.5)
-    (setq display-time-format " %R %d %b")
+    (setq erc-mode-line-format " | ERC: %S %a")
+    (setq display-time-format "%R %d %b")
     (setq display-time-default-load-average nil)
     (display-time-mode)
     (setq battery-load-critical 25)
     (setq battery-load-low 40)
     (setq battery-mode-line-format " | %p%% %B %t")
     (display-battery-mode)
-    (minibuffer-line-mode))
+    (minibuffer-line-mode)
+
+
+    (defun erc-modified-channels-label-advice (fn &rest args)
+      (concat " | ERC:" (apply fn args)))
+
+    (advice-add 'erc-modified-channels-object
+                :around
+                'erc-modified-channels-label-advice))
 #+end_src
 ** Helm
 ~helm~ is a framework for incremental narrowing searching interfaces
@@ -599,7 +638,7 @@ which integrates well across Emacs.
           helm-window-prefer-horizontal-split t
           helm-window-show-buffers-function 'helm-window-mosaic-fn
           helm-split-window-default-side 'same)
-  
+
     (defun me/helm-fix-insert-state-keys ()
       (setq evil-insert-state-local-map (make-keymap))
       (define-key evil-insert-state-local-map (kbd "C-n") #'helm-next-line)
@@ -770,19 +809,25 @@ Close delimiters automatically as I write.
 *** Matching parens
 Highlight the parentheis whose pair is under the point.
 #+BEGIN_SRC emacs-lisp
-  (show-paren-mode 1)
+  (show-paren-mode 0.125)
   (setq show-paren-delay 0
         show-paren-style 'parenthesis)
 #+END_SRC
 *** Highlight parentheses
 Highlight the nearest outer parentheses. Thanks to [[https://stackoverflow.com/questions/34846531/show-parentheses-when-inside-them-emacs][this]] thread.
 #+BEGIN_SRC emacs-lisp
-  (define-advice show-paren-function (:around (fn) fix)
+  (defun show-enclosing-paren-advice (fn)
     "Highlight enclosing parens."
-    (cond ((looking-at-p "\\s(") (funcall fn))
-          (t (save-excursion
-               (ignore-errors (backward-up-list))
-               (funcall fn)))))
+    (if lispyville-mode
+        (cond ((looking-at-p "\\s(") (funcall fn))
+              (t (save-excursion
+                   (ignore-errors (backward-up-list))
+                   (funcall fn))))
+      (funcall fn)))
+
+  (advice-add 'show-paren-function
+              :around
+              #'show-enclosing-paren-advice)
 #+END_SRC
 ** Ediff
 Don't make a new frame for ediff.
@@ -1043,6 +1088,21 @@ Iedit is a package for interactive refactoring.
 
     (general-def global-map
       "C-;" #'me/evil-iedit-toggle))
+#+END_SRC
+* Info
+#+BEGIN_SRC emacs-lisp
+  (general-def 'normal 'Info-mode-map
+    "m" #'Info-menu
+    "n" #'Info-next
+    "p" #'Info-prev
+    "g m" #'evil-set-marker
+    "g n" #'evil-search-next
+    "g p" #'evil-search-previous)
+
+  (eval-after-load 'Info
+    (defface Info-quoted
+      '((t :inherit fixed-pitch))
+      "Face used for quoted elements."))
 #+END_SRC
 * Dired
 Dired is the file manager built into Emacs.
@@ -1436,6 +1496,8 @@ primary shell.
       "A" #'comint-style-append-line
       "M-<tab>" #'helm-winconf-swap
       "<return>" #'eshell-properly-send-input)
+    (general-def 'insert 'eshell-mode-map
+      "C-<return>" #'newline)
     (leader-key-def normal eshell-mode-map
                     "e" #'helm-eshell-history))
 
@@ -1980,6 +2042,8 @@ project.
     (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
     (add-to-list 'aggressive-indent-excluded-modes 'helm-mode)
     (add-to-list 'aggressive-indent-excluded-modes 'ats-mode)
+    (add-to-list 'aggressive-indent-excluded-modes 'slime-repl-mode)
+    (add-to-list 'aggressive-indent-excluded-modes 'java-mode)
     (add-to-list
      'aggressive-indent-dont-indent-if
      '(and (or (derived-mode-p 'c-mode) (derived-mode-p 'c++-mode))
@@ -1992,10 +2056,16 @@ I use the ~Company~ package for autocompletion.
   (use-package company
     :delight
     :config
-    (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
+    ;; (add-to-list 'company-frontends 'company-tng-frontend) ; test this vs evil collection
     (add-to-list 'company-backends 'company-files) ; test this vs evil collection
     (add-to-list 'completion-styles 'initials t)
     ;;(add-to-list 'completion-styles 'substring t)
+    (general-def 'company-active-map
+      "M-." #'company-show-location
+      "C-d" #'company-show-doc-buffer
+      "<return>" #'company-complete-selection
+      "C-s" #'company-filter-candidates
+      "C-h" nil)
     (define-key company-active-map (kbd "M-.") 'company-show-location)
     (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
     ;;(setq company-dabbrev-downcase 0)
@@ -2082,14 +2152,28 @@ A large collection of snippets is found in the ~yasnippet-snippets~ package.
 The language server protocol can provide IDE-like features for many
 languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~flymake~.
 #+BEGIN_SRC emacs-lisp
-  (use-package lsp-mode
-    :commands lsp
+  (use-package lsp-mode :commands lsp
     :config
-    (setq lsp-prefer-flymake t))
+
+    (defun seq-first (&rest args)
+      (apply #'lsp-seq-first args))
+
+    (defun seq-rest (&rest args)
+      (apply #'lsp-seq-rest args))
+
+    (setq lsp-keymap-prefix "M-l")
+
+    (general-def 'normal 'lsp-mode-map
+      "M-." #'lsp-goto-implementation))
 
   (use-package lsp-ui :commands lsp-ui-mode) ; adds flycheck support
   (use-package company-lsp :commands company-lsp) ; links with company
   (use-package helm-lsp :commands helm-lsp-workspace-symbol)
+  (use-package dap-mode
+    :ensure t :after lsp-mode
+    :config
+    (dap-mode t)
+    (dap-ui-mode t))
   ;; optionally if you want to use debugger
   ;; (use-package dap-mode)
 
@@ -2251,7 +2335,7 @@ functionality can be bound to that mode.
     "]" #'lispyville-beginning-of-next-defun
     "=" #'me/lispyville-prettify)
 
-  (general-def 'visual 'lispyville-mode-map
+  (general-def '(visual normal) 'lispyville-mode-map
     "gc" #'lispyville-comment-or-uncomment)
 #+END_SRC
 *** Rainbow delimiters
@@ -2489,6 +2573,14 @@ It's like ~slime~ for Scheme. Kinda.
   (use-package geiser
     :config
 
+    (setq-default scheme-imenu-generic-expression
+                  '((nil
+                     "^(define\\(\\|-\\(generic\\(\\|-procedure\\)\\|method\\|public\\)\\)*\\s-+(?\\(\\sw+\\)" 4)
+                    ("Types"
+                     "^(define-class\\s-+(?\\(\\sw+\\)" 1)
+                    ("Macros"
+                     "^(\\(defmacro\\|define-macro\\|define-syntax\\)\\s-+(?\\(\\sw+\\)" 2)))
+  
     (setq geiser-active-implementations '(guile))
 
     (setq geiser-guile-load-path nil)
@@ -2752,9 +2844,9 @@ Enable ~flycheck~
 *** Keybindings
 #+BEGIN_SRC emacs-lisp
   (leader-key-def 'normal c-mode-base-map
-    "s" 'projectile-find-other-file
-    "c" 'compile-rec
-    "r" '(lambda () (interactive) (compile-rec :command "make run")))
+                  "s" nil
+                  "c" nil
+                  "r" nil)
 #+END_SRC
 *** Style
 #+BEGIN_SRC emacs-lisp
@@ -2881,6 +2973,14 @@ Enable ~flycheck~
     :config
     (add-to-list 'auto-mode-alist
                  '("\\.jsm?\\'" . js2-mode)))
+#+END_SRC
+** Java
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-java)
+  (use-package dap-java
+    :ensure t
+    :after lsp-java)
 #+END_SRC
 ** HTML
 #+BEGIN_SRC emacs-lisp
@@ -3086,6 +3186,8 @@ Tools for Guix, a package manager and operating system.
 
         (add-to-list 'yas-snippet-dirs "~/Code/guix/etc/snippets")
 
+        (guix-prettify-global-mode +1)
+
         ;; shut up error
         ;; (defun guix-repl-autoload-emacs-packages-maybe ()
         ;;     "Load autoloads for Emacs packages if needed.
@@ -3190,7 +3292,7 @@ Enter ~common-lisp-mode~ in the following files
     :config
     ;; from https://emacs.stackexchange.com/questions/17095/how-supress-dired-confirmation-of-large-file-for-specific-extensions?rq=1
     (defvar my-ok-large-file-types
-      "\\.\\(?:mpe?g\\|m4v\\|mkv\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
+      "\\.\\(?:mpe?g\\|png\\|m4v\\|mkv\\|mp4\\|mp3\\|avi\\|flv\\|mov\\|gif?\\|webm\\)$"
       "Regexp matching filenames which are definitely ok to visit,
   even when the file is larger than `large-file-warning-threshold'.")
 
@@ -3447,14 +3549,21 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (exwm-systemtray-enable)
 
     ;; set prefix keys
-    (setq exwm-input-prefix-keys (list
-                                  ?\s-,
-                                  ?\s-m
-                                  (elt (kbd "M-<tab>") 0)
-                                  (elt (kbd "<XF86AudioPause>") 0)
-                                  (elt (kbd "<M-iso-lefttab>") 0)
-                                  (elt (kbd "s-<tab>") 0)
-                                  (elt (kbd "<s-iso-lefttab>") 0)))
+    (setq exwm-input-prefix-keys (append
+                                  (list
+                                   ?\s-,
+                                   ?\C-w
+                                   ?\s-m
+                                   (elt (kbd "M-<tab>") 0)
+                                   (elt (kbd "<XF86AudioPause>") 0)
+                                   (elt (kbd "<M-iso-lefttab>") 0)
+                                   (elt (kbd "s-<tab>") 0)
+                                   (elt (kbd "<s-iso-lefttab>") 0))
+                                  (cl-mapcar (lambda (i) (elt (kbd (concat "C-M-" (number-to-string i))) 0))
+                                             (iota 10))))
+
+    (setq exwm-input-simulation-keys
+          `((,(kbd "s-C-w") . [?\C-w])))
 
     ;; Allow pulling a window between workspaces by switching to its buffer
     (setq exwm-workspace-show-all-buffers t)
@@ -4260,14 +4369,14 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     :config
     ;; (setq helm-emms-dired-directories `(,me/music-directory))
     ;; (setq helm-emms-dired-directories nil)
-    (defun helm-emms-sans-dired ()
+    (defun helm-emms-sans-streams ()
       (interactive)
-      (helm :sources '(helm-source-emms-files
-                       helm-source-emms-streams)
+      (helm :sources '(helm-source-emms-dired
+                       helm-source-emms-files)
             :buffer "*Helm Emms*"))
 
     (emms-key-def 'normal
-      "," 'helm-emms))
+      "," 'helm-emms-sans-streams))
 #+END_SRC
 ** System package managment
 #+BEGIN_SRC emacs-lisp
@@ -4341,8 +4450,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                                               (length me/erc-prompt)))))
             me/erc-prompt))
 
-  (setq erc-track-position-in-mode-line 'after-modes
-        ;;erc-mode-line-format "%S %a"
+  (setq erc-track-position-in-mode-line t
         erc-hide-list '("JOIN" "PART" "QUIT")
         ;; erc-rename-buffers t
         erc-join-buffer 'bury
@@ -4439,7 +4547,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
     (erc :server "localhost"
          :port 6667
          :nick "adrian"
-         :password (me/bitlbee-password)))
+         :password (auth-source-pass-get 'secret "bitlbee")))
 
   (defun me/erc-count-users ()
     "Displays the number of users connected on the current channel."
@@ -4450,6 +4558,14 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                  (hash-table-count erc-channel-users)
                  channel)
       (user-error "The current buffer is not a channel")))
+
+  (defun erc-hide-users-on (message)
+    (when (string-match-p (rx "Users on " (* anything) ":")
+                          message)
+      (setq erc-insert-this nil)))
+
+  (add-hook 'erc-insert-pre-hook
+            #'erc-hide-users-on)
 
   (use-package erc-hl-nicks
     :after erc)
@@ -4472,30 +4588,59 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   ;; Bouncer
   (use-package znc
     :config
-    (let ((pass (auth-source-pass-get 'secret "znc")))
-      (setq znc-servers
-            ;; `(("localhost" 12533 t
-            ;;    ((network-slug "znc-username" "znc-password"))))
-            `(("znc.fullmer.info" 5000 t
-               ((irc\.freenode\.net ,(concat me/freenode-nick
-                                             "/freenode")
-                                    ,pass)
-                (irc\.rizon\.net ,(concat me/freenode-nick
-                                          "/rizon")
-                                 ,pass)
-                (irc\.indymedia\.net ,(concat me/freenode-nick
-                                              "/indymedia")
-                                     ,pass)
-                ;; (irc\.tilde\.chat ,(concat me/freenode-nick
-                ;;                            "/tilde")
-                ;;                   ,(me/znc-password))
-                )))))
+    (setq znc-servers
+          ;; `(("localhost" 12533 t
+          ;;    ((network-slug "znc-username" "znc-password"))))
+          `(("znc.fullmer.info" 5000 t
+             ((irc\.freenode\.net ,(concat me/freenode-nick
+                                           "/freenode")
+                                  auth)
+              (irc\.rizon\.net ,(concat me/freenode-nick
+                                        "/rizon")
+                               auth)
+              (irc\.indymedia\.net ,(concat me/freenode-nick
+                                            "/indymedia")
+                                   auth)
+              (irc\.esper\.net ,(concat me/freenode-nick
+                                        "/espernet")
+                               auth)
+              ;; (irc\.tilde\.chat ,(concat me/freenode-nick
+              ;;                            "/tilde")
+              ;;                   ,(me/znc-password))
+              ))))
     (defun me/znc-self-message ()
       (erc-server-send "CAP REQ :znc.in/self-message")
       (erc-server-send "CAP END"))
     (advice-add 'erc-login
                 :before
                 #'me/znc-self-message))
+
+  (defun znc-erc-connect (endpoint)
+    (message "Called with: %s" endpoint)
+    (let (authenticated-pass)
+      (cl-flet ((authenticate-pass
+                 (pass)
+                 (progn
+                   (if (equal pass 'auth)
+                       (or authenticated-pass
+                           (setq authenticated-pass
+                                 (auth-source-pass-get 'secret "znc")))
+                     pass))))
+        (with-endpoint endpoint
+                       (message "Have endpoint: %s" endpoint)
+                       (let* ((buffer (znc-network-buffer-name slug))
+                              (erc-fun (if ssl znc-erc-ssl-connector znc-erc-connector))
+                              (erc-args `(:server ,host :port ,port
+                                                  :nick ,user
+                                                  :password
+                                                  ,(format "%s:%s"
+                                                           user (authenticate-pass pass))))
+                              (erc-buffer (apply erc-fun erc-args)))
+                         (when (get-buffer buffer)
+                           (znc-kill-buffer-always buffer))
+                         (znc-set-name buffer erc-buffer)
+                         (with-current-buffer erc-buffer
+                           (rename-buffer buffer)))))))
 #+END_SRC
 **** COMMENT ERC Image
 #+BEGIN_SRC emacs-lisp
@@ -4611,7 +4756,10 @@ Emacs interface to ~bitwarden-cli~
 
 #+BEGIN_SRC emacs-lisp
 
-  (use-package pass)
+  (use-package pass
+    :config
+    (setq password-store-password-length 16))
+
   (use-package auth-source-pass
     :config
     (auth-source-pass-enable))
@@ -4626,7 +4774,14 @@ Emacs interface to ~bitwarden-cli~
 Various functions and macros which are evaluated before anything else in the file.
 #+NAME: utilities
 #+BEGIN_SRC emacs-lisp :tangle no
+  ;; -*- lexical-binding: t; -*-
   (require 'seq)
+
+  (defun iota (n)
+    (let (l)
+      (dotimes (i n)
+        (setq l (cons (1- (- n i)) l)))
+      l))
 
   (defun find-function-or-variable-at-point ()
     (interactive)

@@ -38,7 +38,8 @@
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages syncthing))
 
-(define-public graphical-games (os-module #:packages (list crawl-tiles multimc)))
+(define-public graphical-games (os-module #:packages (list crawl-tiles
+                                                           my-multimc)))
 
 (define-public art (os-module #:packages (list gimp krita)))
 
@@ -62,7 +63,8 @@
                          gparted
 
                          ;; fonts
-                         font-gnu-freefont-ttf
+                         font-gnu-freefont
+                         font-google-noto
                          font-tex-gyre
                          font-ubuntu
                          font-dejavu

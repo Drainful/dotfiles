@@ -74,7 +74,11 @@
          emacs-web-mode
          emacs-emmet-mode
          ;; emacs-toc-org
-         emacs-guix
+         emacs-lsp-java
+         (let ((file "/home/guix/adrian/Code/guix-packages/emacs-guix/guix.scm"))
+           (if (stat file #f)
+               (load file)
+               (load emacs-guix)))
          emacs-nix-mode
          emacs-openwith
          emacs-erc-hl-nicks 

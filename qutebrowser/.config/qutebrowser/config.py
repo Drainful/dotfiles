@@ -1,5 +1,8 @@
 # blocked hosts
-c.content.host_blocking.lists = []
+c.content.host_blocking.lists = ["https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"]
+# privacy
+c.content.javascript.enabled = False;
+c.content.cookies.accept = "never";
 
 # smooth scrolling
 c.scrolling.smooth = False
@@ -24,9 +27,12 @@ c.url.start_pages = ["about:blank"]
 # keybindings
 config.bind('xM', 'spawn --userscript view_in_mpv')
 config.bind('xm', 'hint links userscript view_in_mpv')
+config.bind('xm', 'hint links userscript view_in_mpv')
 config.bind('Q', 'config-cycle scrolling.bar always never')
+config.bind(',s', 'config-cycle -t -p content.javascript.enabled')
 config.bind(',h', 'config-cycle -t -p content.host_blocking.enabled')
-config.bind(',s', 'config-cycle -t -p statusbar.hide')
+config.bind(',b', 'config-cycle -t -p statusbar.hide')
+config.bind(',c', 'config-cycle -p content.cookies.accept never no-3rdparty')
 
 # default page
 c.url.default_page = "about:blank"
@@ -35,6 +41,7 @@ c.url.default_page = "about:blank"
 c.aliases['reader-mode'] = "spawn --userscript readability"
 c.aliases['bitwarden'] = "spawn --userscript qute-bitwarden"
 c.aliases['mpv'] = "spawn --userscript view_in_mpv"
+c.aliases['pass'] = "spawn --userscript password_fill"
 
 # ui
 c.scrolling.bar = "never"
@@ -44,3 +51,4 @@ c.content.user_stylesheets = "./user.css"
 
 # external programs
 c.editor.command = ["emacsclient", "{}"]
+

@@ -4,6 +4,7 @@
              (gnu services base)
              (gnu services xorg)
              (gnu services mcron)
+             (gnu services networking)
              (gnu packages linux)
              (gnu packages fonts)
              (nongnu packages linux)
@@ -76,7 +77,25 @@
                (service mcron-service-type
                         (mcron-configuration
                          (jobs (assoc-ref os-module #:jobs))))
+               (service iptables-service-type
+                        (let ((rules (plain-file
+                                      "iptables-nonet.rules"
+                                      "*filter 
+:INPUT ACCEPT
+:FORWARD ACCEPT
+:OUTPUT ACCEPT
+-A OUTPUT -m owner --gid-owner nonet -j DROP
+COMMIT
+"
+                                      
+                                      )))
+                          
+                          (iptables-configuration
+                           (ipv4-rules rules)
+                           (ipv6-rules rules)
+                           )))
                (modify-services (assoc-ref os-module #:services)
+                 
                  (gdm-service-type
                   config => (gdm-configuration
                              (inherit config)
