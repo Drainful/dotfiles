@@ -9,6 +9,7 @@
 
   #:use-module (gnu packages gnupg))
 
+;; TODO write macro to prepend emacs- to each symbol
 (define-public emacs
   (os-module
    #:packages
@@ -21,6 +22,7 @@
          emacs-evil-commentary
          emacs-evil-collection
          emacs-evil-surround
+         emacs-god-mode
          emacs-general
          emacs-hydra
          emacs-delight
@@ -53,12 +55,11 @@
          emacs-lsp-ui
          emacs-company-lsp
          emacs-helm-lsp
-         emacs-direnv
+         ;; emacs-direnv
          emacs-lispyville
          emacs-rainbow-delimiters
          ;; emacs-nameless
-         emacs-slime
-         emacs-helm-slime
+         emacs-sly
          emacs-clojure-mode
          emacs-cider
          emacs-spinner
@@ -74,6 +75,10 @@
          emacs-web-mode
          emacs-emmet-mode
          ;; emacs-toc-org
+         ;; emacs-elfeed-org
+         emacs-org
+         my-emacs-org-roam
+         my-emacs-company-org-roam
          emacs-lsp-java
          (let ((file "/home/guix/adrian/Code/guix-packages/emacs-guix/guix.scm"))
            (if (stat file #f)
@@ -96,8 +101,10 @@
          emacs-helm-system-packages
          emacs-znc
          ;; emacs-erc-image ; bugged build?
+         ;; emacs-elfeed
          emacs-wttrin
          ;; emacs-bluetooth
+         emacs-transmission
 
          emacs-pinentry
          emacs-pass

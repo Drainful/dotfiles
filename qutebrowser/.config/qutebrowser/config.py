@@ -11,7 +11,7 @@ c.scrolling.smooth = False
 c.statusbar.hide = False # todo: set true when browsing an image file?
 
 c.qt.highdpi = True
-# c.zoom.default = 67
+# c.zoom.default = 33
 
 c.new_instance_open_target = "window"
 c.tabs.tabs_are_windows = True

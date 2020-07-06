@@ -26,7 +26,7 @@
   #:use-module (gnu packages busybox)
   #:use-module (gnu packages shellutils)
   #:use-module (gnu packages java)
-  #:use-module (gnu packages lisp)
+  ;; #:use-module (gnu packages lisp)
   #:use-module (gnu packages rsync)
   #:use-module (gnu packages disk)
   #:use-module (gnu packages groff)
@@ -78,9 +78,12 @@
          ;; archiving
          atool #|unrar|# unzip zip
 
+         ;; ntfs filesystem
+         ntfs-3g
+
          ;; busybox ; utilities
 
-         direnv ; directory-specific environment variables
+         ;; direnv ; directory-specific environment variables
 
          glibc
          gcc-toolchain)))
@@ -101,7 +104,7 @@
    #:jobs
    (list
     #~(job '(next-hour '(0))
-           (string-append "guix gc -d "
-                          delete-after
-                          " -F "
-                          free)))))
+           (string-append "guix gc -d " delete-after
+                          " -F " free " ; "
+                          "guix package --delete-generations "
+                          delete-after)))))

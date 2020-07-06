@@ -6,6 +6,7 @@ source ~/.secrets.sh
 # export PS1="\[\033[1;32m\][\w]\n ==> \[\033[0m\]"
 export PS1="\[\033[1;32m\][\w] λ \[\033[0m\]"
 export PASSWORD_STORE_ENABLE_EXTENSIONS="true"
+export INFOPATH=$INFOPATH:/home/guix/adrian/Documents/programming/lisp/info
 
 # Bash initialization for interactive non-login shells and
 # for remote shells (info "(bash) Bash Startup Files").

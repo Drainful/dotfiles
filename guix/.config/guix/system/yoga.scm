@@ -24,7 +24,7 @@
                                              bluetooth
                                              graphical-games
                                              bitlbee
-                                             virtual-machines
+                                             ;; virtual-machines
                                              android
                                              (garbage-collection #:free "10G"
                                                                  #:delete-after "1w"))

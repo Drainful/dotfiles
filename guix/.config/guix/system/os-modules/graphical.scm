@@ -36,7 +36,9 @@
   #:use-module (gnu packages lxqt)
   #:use-module (gnu packages libreoffice)
   #:use-module (gnu packages gnupg)
-  #:use-module (gnu packages syncthing))
+  #:use-module (gnu packages syncthing)
+  #:use-module (gnu packages freedesktop)
+  )
 
 (define-public graphical-games (os-module #:packages (list crawl-tiles
                                                            my-multimc)))
@@ -60,7 +62,7 @@
                          wine
                          winetricks
 
-                         gparted
+                         ;; gparted
 
                          ;; fonts
                          font-gnu-freefont
@@ -86,11 +88,12 @@
 
                          screengrab
 
-                         libreoffice
                          pinentry-emacs
 
                          syncthing
                          ;; qsyncthingtray
+
+                         udiskie
                          )))
 
 (define-public no-desktop-environment

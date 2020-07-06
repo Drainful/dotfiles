@@ -2,6 +2,9 @@
 ** Audio
 create a service for pulseaudio
 * Emacs
+enable lexical scope in org source buffers since that's where most
+evaluation happens
+
 eshell-at helm interface that has a separate source for existing
 buffers (which has an alternate binding for opening a new eshell in
 the directory of that existing buffer) placed above a filesystem

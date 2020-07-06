@@ -1,8 +1,10 @@
 (define-module (my-packages)
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix download)
   #:use-module (gnu packages emacs-xyz)
+  #:use-module (guix build-system emacs)
   #:use-module (gnu packages messaging)
   #:use-module (gnu packages messaging)
   #:use-module (games packages minecraft)
@@ -18,6 +20,103 @@
   #:use-module (guix git-download)
 
   #:use-module (ice-9 match))
+
+(define-public my-emacs-emacsql-sqlite3
+  (let ((commit "6db90f91516ca6a91e4a3e56d2cdc6c433cbfab8")
+        (revision "0"))
+    (package
+      (name "emacs-emacsql-sqlite3")
+      (version (git-version "20200627" revision commit))
+      (home-page "https://github.com/cireu/emacsql-sqlite3.git")
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url home-page)
+               (commit commit)))
+         (file-name (git-file-name name version))
+         (sha256
+          (base32 "0g11fmpmv18xq8bklwknr65brpmdnp8ssq5cq98h46lw04h0ia0y"))))
+      (build-system emacs-build-system)
+      (propagated-inputs
+       `(("emacs-emacsql" ,emacs-emacsql)))
+      (synopsis "Sqlite3 interface for emacs")
+      (description "")
+      (license license:expat))))
+
+(define-public my-emacs-org-roam
+  (let ((commit "21bc220ed328b34fe9a664da3d1962b7a2229ef3")
+        (revision "0"))
+    (package
+      (inherit emacs-org-roam)
+      (name "emacs-org-roam")
+      (version (git-version "20200627" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/org-roam/org-roam.git")
+               (commit commit)))
+         (file-name (git-file-name name version))
+         (sha256
+          (base32 "191ivrv5mz8im8z0cdav32cblxwvby8gvlxa2wy782d4pqbh1am0"))))
+      (propagated-inputs
+       `(("emacs-dash" ,emacs-dash)
+         ("emacs-emacsql" ,emacs-emacsql)
+         ("emacs-emacsql-sqlite3" ,my-emacs-emacsql-sqlite3)
+         ("emacs-f" ,emacs-f)
+         ("emacs-org" ,emacs-org)
+         ("emacs-s" ,emacs-s))))))
+
+(define-public my-emacs-company-org-roam
+  (let ((commit "674c2bd493f571c5323d69279557a6c18ccbd14e")
+        (revision "0"))
+    (package
+      (name "emacs-company-org-roam")
+      (version (git-version "20200511" revision commit))
+      (home-page "https://github.com/org-roam/company-org-roam.git")
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url home-page)
+               (commit commit)))
+         (file-name (git-file-name name version))
+         (sha256
+          (base32 "1x88kvxawbpg4sagi0kh4y7inyhy05dxcg8hl0ih4x40cwxyxrs5"))))
+      (build-system emacs-build-system)
+      (propagated-inputs
+       `(("emacs-company" ,emacs-company)
+         ("emacs-dash" ,emacs-dash)
+         ("emacs-org-roam" ,my-emacs-org-roam)))
+      (synopsis "Company completion backend for org-roam")
+      (description "")
+      (license license:expat))))
+
+;; (define-public my-emacs-org-roam-bibtex
+;;   (let ((commit "119dd36a4813ea2429542f52f230a379652cce0a")
+;;         (revision "0"))
+;;     (package
+;;       (name "emacs-org-roam-bibtex")
+;;       (version (git-version "20200630" revision commit))
+;;       (home-page "https://github.com/org-roam/company-org-roam.git")
+;;       (source
+;;        (origin
+;;          (method git-fetch)
+;;          (uri (git-reference
+;;                (url home-page)
+;;                (commit commit)))
+;;          (file-name (git-file-name name version))
+;;          (sha256
+;;           (base32 "0g11fmpmv18xq8bklwknr65brpmdnp8ssq5cq98h46lw04h0ia0y"))))
+;;       (build-system emacs-build-system)
+;;       (propagated-inputs
+;;        `(("emacs-company" ,emacs-company)
+;;          ("emacs-dash" ,emacs-dash)
+;;          ("emacs-org-roam" ,my-emacs-org-roam)))
+;;       (synopsis "Company completion backend for org-roam")
+;;       (description "")
+;;       (license license:expat))))
 
 (define-public my-emacs-guix
   (package

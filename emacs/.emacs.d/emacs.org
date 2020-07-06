@@ -233,6 +233,18 @@ More complex text objects are defined manually:
   (define-key evil-outer-text-objects-map "a" #'evil-entire-buffer)
 #+END_SRC
 * Keybindings and Commands
+** God mode
+An alternative modal editing style which provides a compliment to ~evil-mode~. 
+
+#+BEGIN_SRC emacs-lisp
+  (use-package god-mode
+    :config
+    (general-def 'normal
+      "," #'god-execute-with-current-bindings)
+    (with-eval-after-load 'exwm
+      (general-def exwm-mode-map
+        "s-," #'god-execute-with-current-bindings)))
+#+END_SRC
 ** General.el
 I mainly use the the package ~general~ to define keybindings and
 commands. 
@@ -284,11 +296,6 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
 These are normal mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
   (general-nmap
-    "C-h" 'evil-window-left
-    "C-j" 'evil-window-down
-    "C-k" 'evil-window-up
-    "C-l" 'evil-window-right
-
     "C-u" 'evil-scroll-up
 
     "C--" 'helm-do-ag-project-root
@@ -301,16 +308,16 @@ These are normal mode mappings not specific to any major mode.
     "q" 'evil-avy-goto-subword-1
     "g r" 'revert-buffer)
 
-  (general-vmap
-    "t" 'evil-avy-goto-char
-    "q" 'evil-avy-goto-subword-1)
+  
 #+END_SRC
 ** Visual Mode
 These are visual mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
-(general-vmap
-  ;; Move a visual block of text using ALT+[jk]
-  "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z"))
+  (general-vmap
+    ;; Move a visual block of text using ALT+[jk]
+    "M-k" (kbd ":move '< -2 RET `> my `< mz gv`yo`z")
+    "t" 'evil-avy-goto-char
+    "q" 'evil-avy-goto-subword-1)
 #+END_SRC
 ** Visual line mode macro
 
@@ -349,8 +356,8 @@ First ~which-key~ must be loaded early
 then I define the leader keys,
 #+BEGIN_SRC emacs-lisp
   (cl-eval-when (compile load eval)
-    (defconst leader-key ",")
-    (defconst alt-leader-key "SPC"))
+    (defconst leader-key "SPC")
+    (defconst alt-leader-key "SPC SPC"))
 
   (general-create-definer no-super-leader-key-def
     :prefix leader-key)
@@ -448,16 +455,17 @@ Usage:
                   "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
-                  "RET" (kbd ":noh"))
-  (alt-leader-key-def 'normal
-    "q" 'evil-record-macro
-    "j" 'evil-avy-goto-line-below
-    "k" 'evil-avy-goto-line-above)
+                  ;; "RET" (kbd ":noh")
+                  )
+  ;; (alt-leader-key-def 'normal
+  ;;   "q" 'evil-record-macro
+  ;;   "j" 'evil-avy-goto-line-below
+  ;;   "k" 'evil-avy-goto-line-above)
 
-  (alt-leader-key-def 'normal
-    "q" 'evil-record-macro
-    "j" 'evil-avy-goto-line-below
-    "k" 'evil-avy-goto-line-above)
+  ;; (alt-leader-key-def 'normal
+  ;;   "q" 'evil-record-macro
+  ;;   "j" 'evil-avy-goto-line-below
+  ;;   "k" 'evil-avy-goto-line-above)
 #+END_SRC
 *** Visual Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
@@ -606,12 +614,12 @@ Package to use the minibuffer in the manner of the mode line.
     (setq erc-mode-line-format " | ERC: %S %a")
     (setq display-time-format "%R %d %b")
     (setq display-time-default-load-average nil)
-    (display-time-mode)
+    (display-time-mode +1)
     (setq battery-load-critical 25)
     (setq battery-load-low 40)
     (setq battery-mode-line-format " | %p%% %B %t")
-    (display-battery-mode)
-    (minibuffer-line-mode)
+    (display-battery-mode +1)
+    (minibuffer-line-mode +1)
 
 
     (defun erc-modified-channels-label-advice (fn &rest args)
@@ -1120,6 +1128,9 @@ Dired is the file manager built into Emacs.
 #+END_SRC
 ** Dired Keybindings
 #+BEGIN_SRC emacs-lisp
+  (general-def normal dired-mode-map
+    "SPC" nil)
+
   (leader-key-def normal dired-mode-map
                   "i" (lambda nil (interactive)
                         (image-dired default-directory)))
@@ -1485,10 +1496,6 @@ primary shell.
     (leader-key-def normal eshell-mode-map
                     "c" #'fish-completion-mode)
     (general-def :states 'normal :keymaps 'eshell-mode-map
-      ;; Let me use C-j/k
-      "C-j" #'evil-window-down
-      "C-k" #'evil-window-up
-
       "M-p" #'eshell-previous-matching-input-from-input
       "M-n" #'eshell-next-matching-input-from-input
 
@@ -1587,9 +1594,6 @@ This code is the sum of failed attempts to get the above feature working.
   (general-def
    :states 'normal
    :keymaps 'comint-mode-map
-   ;; was overridden
-   "C-j" #'evil-window-down
-   "C-k" #'evil-window-up
    ;; go to prompt before append or insert line in comint mode
    "I" #'comint-style-insert-line
    "A" #'comint-style-append-line)
@@ -1597,11 +1601,6 @@ This code is the sum of failed attempts to get the above feature working.
 
 ** Shell
 Shell mode is a comint-based mode for bash and other external shells.
-#+BEGIN_SRC emacs-lisp
-  (general-def :states 'normal :keymaps 'shell-mode-map
-     "C-j" 'evil-window-down
-     "C-k" 'evil-window-up)
-#+END_SRC
 I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
 #+BEGIN_SRC emacs-lisp
   (push (cons "\\*shell\\*" display-buffer--same-window-action) display-buffer-alist)
@@ -1656,21 +1655,18 @@ This code was the restult of a bad misunderstanding of the function of ~ansi-ter
 ** Multi-Term
 Allows multiple term buffers to be created.
 #+BEGIN_SRC emacs-lisp
-(use-package multi-term
-  :config
-  ;; (global-set-key [f1] 'multi-term)
-  ;; access shift arrow keys
-  (define-key global-map "\eO2D" (kbd "S-<left>"))
-  (define-key global-map "\eO2C" (kbd "S-<right>"))
-  ;; term movement
-  (general-def
-   :states 'normal
-   :keymaps 'term-mode-map
-   "S-<right>" 'multi-term-next
-   "S-<left>" 'multi-term-prev
-   ;; was overridden
-   "C-j" 'evil-window-down
-   "C-k" 'evil-window-up))
+  (use-package multi-term
+    :config
+    ;; (global-set-key [f1] 'multi-term)
+    ;; access shift arrow keys
+    (define-key global-map "\eO2D" (kbd "S-<left>"))
+    (define-key global-map "\eO2C" (kbd "S-<right>"))
+    ;; term movement
+    (general-def
+      :states 'normal
+      :keymaps 'term-mode-map
+      "S-<right>" 'multi-term-next
+      "S-<left>" 'multi-term-prev))
 #+END_SRC
 
 * Tramp
@@ -1808,7 +1804,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-one-light)
+  (switch-theme 'doom-tomorrow-day)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -1842,7 +1838,7 @@ I wrote a small and simple package for managing named window configurations.
   (general-def "M-<tab>" #'helm-winconf-swap)
 
   (unless (featurep 'exwm)
-    (alt-leader-key-def 'normal
+    (leader-key-def 'normal
       "RET" #'helm-winconf))
 #+END_SRC
 *** COMMENT Alt tab style winconf switching
@@ -1883,6 +1879,24 @@ And an alt-tab hydra for it. Doomed to fail.
       "Winconf history: "
       ("M-<tab>" (helm-winconf-history-delta 1))
       ("M-<S-iso-lefttab>" (helm-winconf-history-delta -1))))
+#+END_SRC
+** Keybindings
+
+#+BEGIN_SRC emacs-lisp
+  (general-nmap
+    "C-w C-+" #'evil-window-increase-height
+    "C-w C--" #'evil-window-decrease-height
+
+    "C-w C->" #'evil-window-increase-width
+    "C-w C-<" #'evil-window-decrease-width
+
+    "C-w C-h" #'evil-window-left
+    "C-w C-j" #'evil-window-down
+    "C-w C-k" #'evil-window-up
+    "C-w C-l" #'evil-window-right
+
+    "C-w C-=" #'balance-windows
+    "C-w C-\\" #'evil-window-set-width)
 #+END_SRC
 ** COMMENT Persp-mode
 ~persp-mode~ is a package for managing window configurations. I prefer
@@ -2152,7 +2166,7 @@ A large collection of snippets is found in the ~yasnippet-snippets~ package.
 The language server protocol can provide IDE-like features for many
 languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~flymake~.
 #+BEGIN_SRC emacs-lisp
-  (use-package lsp-mode :commands lsp
+  (use-package lsp-mode ; :commands lsp
     :config
 
     (defun seq-first (&rest args)
@@ -2161,7 +2175,12 @@ languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~f
     (defun seq-rest (&rest args)
       (apply #'lsp-seq-rest args))
 
-    (setq lsp-keymap-prefix "M-l")
+    ;; (setq lsp-keymap-prefix "s-l")
+    ;; (customize-set-variable 'lsp-keymap-prefix
+    ;;                         "M-l")
+
+    (general-def 'lsp-mode-map
+      "s-l" nil)
 
     (general-def 'normal 'lsp-mode-map
       "M-." #'lsp-goto-implementation))
@@ -2193,7 +2212,115 @@ search. Inspired by [[https://emacs.stackexchange.com/questions/7475/recursively
         (cd makefile-dir)
         (compile command)))))
 #+END_SRC
-** Direnv and Lorri
+** Envrc
+Buffer-local direnv integration with the Envrc package
+
+#+BEGIN_SRC emacs-lisp
+  (use-package envrc
+    :ensure t
+    :after projectile
+    :config)
+  ;; (envrc-global-mode) should be called late in the startup sequence
+#+END_SRC
+*** COMMENT envrc async
+
+#+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
+  (with-eval-after-load 'envrc
+    (defun envrc--export-async (env-dir result-fn)
+      (unless (file-exists-p (expand-file-name ".envrc" env-dir))
+        (error "%s is not a directory with a .envrc" env-dir))
+      (message "Running direnv in %s..." env-dir)
+      (unwind-protect
+          (let ((default-directory env-dir)
+                (stdout (generate-new-buffer (concat " *direnv output at " env-dir "*")))
+                (stderr (generate-new-buffer (concat "*envrc at " env-dir "*"))))
+            (let ((process-environment (default-value 'process-environment))
+                  (exec-path (default-value 'exec-path)))
+              (make-process
+               :name "direnv"
+               :buffer stdout
+               :stderr stderr
+               :command '("direnv" "export" "json")
+               :sentinel
+               (lambda (process msg)
+                 (unless (eq (process-status process) 'run)
+                   (let ((exit-code (process-exit-status process))
+                         result)
+                     (envrc--debug "Direnv exited with %s and output: %S" exit-code (buffer-string))
+                     (if (zerop exit-code)
+                         (progn
+                           (message "Direnv succeeded in %s" env-dir)
+                           (with-current-buffer stdout
+                             (unless (zerop (buffer-size))
+                               (goto-char (point-min))
+                               (setq result (let ((json-key-type 'string)) (json-read-object))))))
+                       (message "Direnv failed in %s" env-dir)
+                       (setq result 'error))
+                     (kill-buffer stdout)
+                     (envrc--at-end-of-special-buffer "*envrc*"
+                       (insert "==== " (format-time-string "%Y-%m-%d %H:%M:%S") " ==== " env-dir " ====\n\n")
+                       (let ((initial-pos (point)))
+                         (insert-buffer-substring stderr)
+                         ;; (insert-file-contents (let (ansi-color-context)
+                         ;;                         (ansi-color-apply stderr-file)))
+                         (goto-char (point-max))
+                         (add-face-text-property initial-pos (point) (if (zerop exit-code)
+                                                                         'success 'error)))
+                       (insert "\n\n"))
+                     (kill-buffer stderr)
+                     (funcall result-fn result)))))))))
+
+
+    (defun envrc--update-env-async (env-dir)
+      (when (not (eq 'loading (gethash env-dir envrc--envs)))
+        (puthash env-dir 'loading envrc--envs)
+        (envrc--apply-all env-dir)
+        (envrc--export-async env-dir
+                             (lambda (result)
+                               (puthash env-dir result envrc--envs)
+                               (envrc--apply-all env-dir)))))
+
+    (defun envrc--lighter ()
+      "Return a colourised version of `envrc--status' for use in the mode line."
+      `(" env["
+        (:propertize ,(symbol-name envrc--status)
+                     face
+                     ,(pcase envrc--status
+                        (`on 'envrc-mode-line-on-face)
+                        (`error 'envrc-mode-line-error-face)
+                        (`loading 'envrc-mode-line-none-face)
+                        (`none 'envrc-mode-line-none-face)))
+        "]"))
+
+    (defun envrc--apply (buf result)
+      "Update BUF with RESULT, which is a result of `envrc--export'."
+      (with-current-buffer buf
+        (setq-local
+         envrc--status
+         (pcase result
+           (`loading 'loading)
+           (`error 'error)
+           (`() 'none)
+           (_ 'on)))
+        (kill-local-variable 'exec-path)
+        (kill-local-variable 'process-environment)
+        (kill-local-variable 'eshell-path-env)
+        (let ((pairs (when (listp result) result)))
+          (if pairs
+              (progn
+                (envrc--debug "[%s] applied merged environment" buf)
+                (setq-local process-environment (envrc--merged-environment process-environment pairs))
+                (let ((path (getenv "PATH"))) ;; Get PATH from the merged environment: direnv may not have changed it
+                  (setq-local exec-path (parse-colon-path path))
+                  (when (derived-mode-p 'eshell-mode)
+                    (setq-local eshell-path-env path))))
+            (unless (eq 'loading result)
+              (envrc--debug "[%s] reset environment to default" buf))))))
+
+    (setf (symbol-function 'envrc--update-env) #'envrc--update-env-async))
+#+END_SRC
+** COMMENT Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
 per-buffer basis. Direnv integrates with Nix sandboxes through Lorri.
 #+BEGIN_SRC emacs-lisp
@@ -2389,7 +2516,7 @@ This uses font-lock to hide namespace prefixes automatically.
     "C-j" #'eval-print-last-sexp)
 #+END_SRC
 ** Common Lisp
-*** Slime
+*** COMMENT Slime
 ~slime~ is a Common Lisp IDE for Emacs.
 #+BEGIN_SRC emacs-lisp
   (use-package slime
@@ -2478,14 +2605,26 @@ This uses font-lock to hide namespace prefixes automatically.
                 "r" 'slime-eval-region)
 #+END_SRC
 
-*** COMMENT Sly
+**** Parenscript
+#+BEGIN_SRC emacs-lisp
+  (let ((file "~/Code/common-lisp/parenscript/extras/js-expander.el"))
+    (when (file-exists-p file)
+      (load-file file)
+      (map nil (lambda (x)
+                 (slime-add-custom-expander (car x)
+                                            (cdr x)
+                                            "*Parenscript generated Javascript*"
+                                            (if (featurep 'js) 'javascript-mode 'c-mode)
+                                            #'read))
+           '(("j" . ps:ps) ("d" . ps:ps-doc)))))
+
+#+END_SRC
+*** Sly
 ~sly~ is a fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
   (use-package sly
     :after evil
     :config
-
-    (add-to-list 'sly-contribs 'slynk-retro)
 
     ;; make functions for using specific lisp implementations.
     (defmacro define-sly-lisp (name command)
@@ -2493,6 +2632,8 @@ This uses font-lock to hide namespace prefixes automatically.
 
     (defmacro define-sly-lisp-defun (name fn)
       `(defun ,name ()  (interactive)  (sly (funcall ,fn))))
+
+    (add-to-list 'sly-contribs 'sly-stickers)
 
     ;;(define-sly-lisp-defun sbcl (lambda () (nix-executable-find (nix-current-sandbox) "sbcl")))
     (define-sly-lisp sbcl "sbcl")
@@ -2516,7 +2657,11 @@ This uses font-lock to hide namespace prefixes automatically.
       "I" #'comint-style-insert-line
       "A" #'comint-style-append-line))
 #+END_SRC
-
+**** Sly Helm
+#+BEGIN_SRC emacs-lisp
+  (use-package helm-sly
+    :config)
+#+END_SRC
 **** Keybindings
 #+BEGIN_SRC emacs-lisp
   (general-def :states 'normal :keymaps 'sly-mode-map
@@ -2580,7 +2725,7 @@ It's like ~slime~ for Scheme. Kinda.
                      "^(define-class\\s-+(?\\(\\sw+\\)" 1)
                     ("Macros"
                      "^(\\(defmacro\\|define-macro\\|define-syntax\\)\\s-+(?\\(\\sw+\\)" 2)))
-  
+
     (setq geiser-active-implementations '(guile))
 
     (setq geiser-guile-load-path nil)
@@ -2640,10 +2785,7 @@ It's like ~slime~ for Scheme. Kinda.
                   "r" 'geiser-eval-region)
     (general-def
       :states 'normal
-      :keymaps 'geiser-repl-mode-map
-      ;; was overridden
-      "C-j" 'evil-window-down
-      "C-k" 'evil-window-up))
+      :keymaps 'geiser-repl-mode-map))
 #+END_SRC
 ** Python
 *** COMMENT Linting
@@ -2975,12 +3117,8 @@ Enable ~flycheck~
                  '("\\.jsm?\\'" . js2-mode)))
 #+END_SRC
 ** Java
-
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-java)
-  (use-package dap-java
-    :ensure t
-    :after lsp-java)
 #+END_SRC
 ** HTML
 #+BEGIN_SRC emacs-lisp
@@ -2994,181 +3132,7 @@ Enable ~flycheck~
     (add-hook 'web-mode #'emmet-mode))
 
 #+END_SRC
-** Org
-~org-mode~ is a markup mode with many features which include creating
-literate source files like this one.
-#+BEGIN_SRC emacs-lisp
-  (setq header-line-format " ")
-  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
-  ;; (lambda () (progn
-  ;;              (setq left-margin-width 2)
-  ;;              (setq right-margin-width 2)
-  ;;              (set-window-buffer nil (current-buffer))))
-  ;;(setq line-spacing 0.1)
-  (setq org-startup-indented t
-        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-        ;;org-ellipsis "  " ;; folding symbol
-        org-pretty-entities t
-        org-hide-emphasis-markers nil
-        ;; show actually italicized text instead of /italicized text/
-  ;;;org-agenda-block-separator ""
-        org-fontify-whole-heading-line t
-        org-fontify-done-headline t
-        org-fontify-quote-and-verse-blocks t
-        org-src-ask-before-returning-to-edit-buffer nil
-        org-src-window-setup 'current-window)
-
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((lisp . t)
-     (python . t)))
-  (setq org-babel-lisp-eval-fn #'slime-eval)
-  (setq org-babel-python-eval-fn #'python-send-string)
-
-  (require 'delight)
-  (delight 'auto-fill-function "" t)
-  (delight 'org-indent-mode "" t)
-
-  (add-hook 'org-mode-hook #'visual-line-mode)
-  (add-hook 'org-mode-hook #'company-mode-disable)
-
-  ;; "C-j" 'evil-window-down
-  ;; "C-k" 'evil-window-up
-  ;; (define-key org-mode-map (kbd "<C-j>") nil)
-  ;; (define-key org-mode-map (kbd "<C-k>") nil)
-  (leader-key-def 'normal org-src-mode-map
-                  "q" 'org-edit-src-exit)
-
-  (defun me/org-open-at-point (&rest args)
-    "org-open-at-point except it does the jumpy jump"
-    (interactive)
-    (let ((point (point)))
-      (org-open-at-point args)
-      (evil-set-jump point)))
-
-  (my-visual-line-mode-rebind org-mode-map)
-
-  (add-hook 'org-mode-hook (lambda ()
-                             (general-def :states 'normal :keymaps 'org-mode-map
-                               "C-j" 'evil-window-down
-                               "C-k" 'evil-window-up
-                               "RET" 'me/org-open-at-point)))
-#+END_SRC
-*** Table auto allign
-
-#+BEGIN_SRC emacs-lisp
-  (require 'subr-x)
-
-  (defvar org-table-auto-align-in-progress nil)
-
-  (defun org-table-auto-align (begin end length)
-    (save-match-data
-      (unless (or org-table-auto-align-in-progress
-                  (not (org-at-table-p))
-                  (and (eq this-command 'org-self-insert-command)
-                       (member (this-command-keys)
-                               '(" " "+" "|" "-"))))
-        (run-with-idle-timer
-         0 nil
-         (lambda ()
-           (if (looking-back "| *\\([^|]+\\)")
-               (let ((pos (string-trim-right (match-string 1))))
-                 (setq org-table-auto-align-in-progress t)
-                 (unwind-protect
-                     (progn
-                       (org-table-align)
-                       (search-forward pos nil t))
-                   (setq org-table-auto-align-in-progress nil)))))))))
-
-  (define-minor-mode org-table-auto-align-mode
-    "A mode for aligning Org more tabales automatically as you type."
-    :lighter ""
-    (if org-table-auto-align-mode
-        (add-hook 'after-change-functions #'org-table-auto-align t t)
-      (remove-hook 'after-change-functions #'org-table-auto-align t)))
-
-  ;; (add-hook 'org-mode-hook
-  ;;           #'org-table-auto-align-minor-mode)
-#+END_SRC
-*** Source block generation
-#+BEGIN_SRC emacs-lisp
-  (defun me/org-in-src-block-p ()
-    (let* ((element (org-element-at-point))
-           (type (org-element-type element)))
-      (if (and (memq type '(example-block src-block))
-               (org-src--on-datum-p element))
-          t nil)))
-
-  (defun org-get-src-language ()
-    (save-excursion
-      (goto-char (point-min))
-      (cl-labels
-          ((rec ()
-                (or (plist-get (second (org-element-at-point))
-                               :language)
-                    (and (forward-line)
-                         (< (line-number-at-pos)
-                            (count-lines (point-min)
-                                         (point-max)))
-                         (rec)))))
-        (rec))))
-
-  (defun org-edit-src-code-or-make-block ()
-    (interactive)
-    (unless (me/org-in-src-block-p)
-      (let ((language (or (org-get-src-language)
-                          (read-string "Language: "))))
-        (move-end-of-line nil)
-        (insert (format "
-  ,#+BEGIN_SRC %s
-
-  ,#+END_SRC"
-                        language))))
-    (org-edit-src-code))
-
-  (general-def :states 'normal :keymaps 'org-mode-map
-    "C-`" 'org-edit-src-code-or-make-block)
-#+END_SRC
-*** Block splitting
-#+BEGIN_SRC emacs-lisp
-  (defun org-src-split-block ()
-    "Split a source block at point. Not 100% functional."
-    (interactive)
-    (if (not (and (org-in-src-block-p)
-                  (save-excursion
-                    (forward-line)
-                    (org-in-src-block-p))))
-        (user-error "Not in source block")
-      (move-end-of-line nil)
-      (insert   "
-  ,#+END_SRC
-  ")
-      (let ((pos (point)))
-        (insert
-         (format
-          "
-  ,#+BEGIN_SRC %s"
-          (plist-get (second (org-element-at-point))
-                     :language)))
-        (goto-char pos))))
-#+END_SRC
-*** Source block hydra
-A hydra to jump between org-babel source blocks:
-#+BEGIN_SRC emacs-lisp
-  (defhydra hydra-org-babel-source-block-jump (org-mode-map "C-c C-v")
-      "Jump between org babel source blocks"
-      ("n" org-babel-next-src-block)
-      ("p" org-babel-previous-src-block))
-#+END_SRC
-*** COMMENT Toc-org
-Create a table of contents without exporting.
-#+BEGIN_SRC emacs-lisp
-(use-package toc-org
-  :ensure t
-  :config
-  (add-hook 'org-mode-hook 'toc-org-mode))
-#+END_SRC
-*** Guix
+** Guix
 Tools for Guix, a package manager and operating system.
 #+BEGIN_SRC emacs-lisp
   (if (not (string-equal "Ubuntu" (which-linux-distribution)))
@@ -3223,14 +3187,15 @@ Tools for Guix, a package manager and operating system.
                     t))
               nil)))))
 #+END_SRC
-*** Nix
+
+** Nix
 Tools for Nix, a package manager and operating system.
-**** COMMENT Sandbox
+*** COMMENT Sandbox
 Features for dealing with nix-shell in Emacs.
 #+BEGIN_SRC emacs-lisp
 (use-package nix-sandbox)
 #+END_SRC
-**** Nix language support
+*** Nix language support
 #+BEGIN_SRC emacs-lisp
   ;; (use-package company-nixos-options
   ;;   :hook (nix-mode-hook . (lambda () (add-to-list 'company-backends 'company-nixos-options))))
@@ -3244,23 +3209,23 @@ Features for dealing with nix-shell in Emacs.
                 (setq indent-tabs-mode t))))
 
 #+END_SRC
-**** COMMENT Updating Nix hashes
+*** COMMENT Updating Nix hashes
 #+BEGIN_SRC emacs-lisp
   (use-package nix-update)
 #+END_SRC
-**** COMMENT Nixos options search
+*** COMMENT Nixos options search
 #+BEGIN_SRC emacs-lisp
   (use-package nixos-options)
   (use-package helm-nixos-options)
 #+END_SRC
-*** Bash
+** Bash
 #+BEGIN_SRC emacs-lisp
   (auto-mode-add 'sh-mode ; set shell mode for configuration files as they appear in this repository.
                  "\\(/\\|\\`\\)\\(bash_\\(aliases\\|profile\\|history\\|log\\(in\\|out\\)\\)\\|z?log\\(in\\|out\\)\\)\\'"
                  "\\(/\\|\\`\\)\\(shrc\\|zshrc\\|m?kshrc\\|bashrc\\|inputrc\\|t?cshrc\\|esrc\\)\\'"
                  "\\(/\\|\\`\\)\\([kz]shenv\\|xinitrc\\|startxrc\\|xsession\\)\\'")
 #+END_SRC
-**** Auto Mode
+*** Auto Mode
 Enter ~common-lisp-mode~ in the following files
 #+BEGIN_SRC emacs-lisp
   (auto-mode-add 'common-lisp-mode
@@ -3269,11 +3234,214 @@ Enter ~common-lisp-mode~ in the following files
        ".otherlisprc\\'")
 #+END_SRC
 
-*** Agenda
 
+** Org
+~org-mode~ is a markup mode with many features which include creating
+literate source files like this one.
+#+BEGIN_SRC emacs-lisp
+  (setq header-line-format " ")
+  ;;(add-hook 'org-mode-hook '(load-theme-buffer-local 'tsdh-light (current-buffer)))
+  ;; (lambda () (progn
+  ;;              (setq left-margin-width 2)
+  ;;              (setq right-margin-width 2)
+  ;;              (set-window-buffer nil (current-buffer))))
+  ;;(setq line-spacing 0.1)
+  (setq org-startup-indented t
+        ;;org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+        ;;org-ellipsis "  " ;; folding symbol
+        org-pretty-entities t
+        org-hide-emphasis-markers nil
+        ;; show actually italicized text instead of /italicized text/
+  ;;;org-agenda-block-separator ""
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t
+        org-src-ask-before-returning-to-edit-buffer nil
+        org-src-window-setup 'current-window)
+
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((lisp . t)
+     (python . t)))
+  (setq org-babel-lisp-eval-fn #'sly-eval)
+  (setq org-babel-python-eval-fn #'python-send-string)
+
+  (require 'delight)
+  (delight 'auto-fill-function "" t)
+  (delight 'org-indent-mode "" t)
+
+  (add-hook 'org-mode-hook #'visual-line-mode)
+  (add-hook 'org-mode-hook #'company-mode-disable)
+
+  (leader-key-def 'normal org-src-mode-map
+                  "q" 'org-edit-src-exit)
+
+  (defun me/org-open-at-point (&rest args)
+    "org-open-at-point except it does the jumpy jump"
+    (interactive)
+    (let ((point (point)))
+      (org-open-at-point args)
+      (evil-set-jump point)))
+
+  (my-visual-line-mode-rebind org-mode-map)
+
+  (defun org-mode-hook-fn ()
+    (general-def :states 'normal :keymaps 'org-mode-map
+      "RET" 'me/org-open-at-point))
+
+  (add-hook 'org-mode-hook
+            #'org-mode-hook-fn)
+
+  ;; silly alternative to a hook
+  (defun org-babel-edit-prep:emacs-lisp (babel-info)
+    (setq lexical-binding t))
+#+END_SRC
+*** Keybindings
+#+BEGIN_SRC emacs-lisp
+  (general-def org-mode-map
+    "C-c C-'" #'org-edit-src-code-or-make-block)
+#+END_SRC
+*** Org src mode
+Settings for editing code in org src blocks
+**** Keybindings
+#+BEGIN_SRC emacs-lisp
+  (general-def org-src-mode-map
+    "C-c C-'" #'org-edit-src-exit)
+#+END_SRC
+**** Source block generation
+#+BEGIN_SRC emacs-lisp
+  (defun me/org-in-src-block-p ()
+    (let* ((element (org-element-at-point))
+           (type (org-element-type element)))
+      (if (and (memq type '(example-block src-block))
+               (org-src--on-datum-p element))
+          t nil)))
+
+  (defun org-get-src-language ()
+    (save-excursion
+      (goto-char (point-min))
+      (cl-labels
+          ((rec ()
+                (or (plist-get (second (org-element-at-point))
+                               :language)
+                    (and (forward-line)
+                         (< (line-number-at-pos)
+                            (count-lines (point-min)
+                                         (point-max)))
+                         (rec)))))
+        (rec))))
+
+  (defun org-edit-src-code-or-make-block ()
+    (interactive)
+    (unless (me/org-in-src-block-p)
+      (let ((language (or (org-get-src-language)
+                          (read-string "Language: "))))
+        (move-end-of-line nil)
+        (insert (format "
+  ,#+BEGIN_SRC %s
+
+  ,#+END_SRC"
+                        language))))
+    (org-edit-src-code))
+
+  (general-def :states 'normal :keymaps 'org-mode-map
+    "C-`" 'org-edit-src-code-or-make-block)
+#+END_SRC
+
+**** Source block jumping hydra
+A hydra to jump between org-babel source blocks:
+#+BEGIN_SRC emacs-lisp
+  (defhydra hydra-org-babel-source-block-jump (org-mode-map "C-c C-v")
+    "Jump between org babel source blocks"
+    ("n" org-babel-next-src-block)
+    ("p" org-babel-previous-src-block))
+
+  (general-def org-mode-map
+    "C-c C-v C-n" #'hydra-org-babel-source-block-jump/org-babel-next-src-block
+    "C-c C-v C-p" #'hydra-org-babel-source-block-jump/org-babel-previous-src-block)
+#+END_SRC
+**** Block splitting
+#+BEGIN_SRC emacs-lisp
+  (defun org-src-split-block ()
+    "Split a source block at point. Not 100% functional."
+    (interactive)
+    (if (not (and (org-in-src-block-p)
+                  (save-excursion
+                    (forward-line)
+                    (org-in-src-block-p))))
+        (user-error "Not in source block")
+      (move-end-of-line nil)
+      (insert   "
+  ,#+END_SRC
+  ")
+      (let ((pos (point)))
+        (insert
+         (format
+          "
+  ,#+BEGIN_SRC %s"
+          (plist-get (second (org-element-at-point))
+                     :language)))
+        (goto-char pos))))
+#+END_SRC
+*** Table auto allign
+#+BEGIN_SRC emacs-lisp
+  (require 'subr-x)
+
+  (defvar org-table-auto-align-in-progress nil)
+
+  (defun org-table-auto-align (begin end length)
+    (save-match-data
+      (unless (or org-table-auto-align-in-progress
+                  (not (org-at-table-p))
+                  (and (eq this-command 'org-self-insert-command)
+                       (member (this-command-keys)
+                               '(" " "+" "|" "-"))))
+        (run-with-idle-timer
+         0 nil
+         (lambda ()
+           (if (looking-back "| *\\([^|]+\\)")
+               (let ((pos (string-trim-right (match-string 1))))
+                 (setq org-table-auto-align-in-progress t)
+                 (unwind-protect
+                     (progn
+                       (org-table-align)
+                       (search-forward pos nil t))
+                   (setq org-table-auto-align-in-progress nil)))))))))
+
+  (define-minor-mode org-table-auto-align-mode
+    "A mode for aligning Org more tabales automatically as you type."
+    :lighter ""
+    (if org-table-auto-align-mode
+        (add-hook 'after-change-functions #'org-table-auto-align t t)
+      (remove-hook 'after-change-functions #'org-table-auto-align t)))
+
+  ;; (add-hook 'org-mode-hook
+  ;;           #'org-table-auto-align-minor-mode)
+#+END_SRC
+*** COMMENT Toc-org
+Create a table of contents without exporting.
+#+BEGIN_SRC emacs-lisp
+(use-package toc-org
+  :ensure t
+  :config
+  (add-hook 'org-mode-hook 'toc-org-mode))
+#+END_SRC
+*** Agenda
 #+BEGIN_SRC emacs-lisp
   (setq org-agenda-files '("~/Documents/notes"))
 #+END_SRC
+*** Zettelkasten
+
+Slip-box method of note-taking (like a personal wiki) using ~org-roam~
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-roam
+    :delight
+    :config
+    (setf org-roam-directory "~/Documents/notes/zettelkasten/")
+    (add-hook 'after-init-hook 'org-roam-mode))
+#+END_SRC
+
 * External tools
 #+BEGIN_SRC emacs-lisp
   ;; startup programs
@@ -3466,6 +3634,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
        ;;           (number-sequence 1 3))
 
 
+       (,(kbd "<print>") . (lambda () (interactive)
+                             (let ((command "screengrab"))
+                               (start-process-shell-command command nil command))))
+
        (,(kbd "<XF86MonBrightnessUp>"). desktop-brightness-increment-large)
        (,(kbd "<XF86MonBrightnessDown>" ). desktop-brightness-decrement-large)
        (,(kbd "<S-XF86MonBrightnessUp>" ). desktop-brightness-increment-normal)
@@ -3487,6 +3659,10 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
        ;; Winconf
        ([s-return] . helm-winconf)
+
+       ;; bind "s-[direction] to switch windows"
+       ([?\s-v] . evil-window-vsplit)
+       ([?\s-s] . evil-window-split)
 
        ;; bind "s-[direction] to switch windows"
        ([?\s-h] . windmove-left)
@@ -3515,9 +3691,6 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
        ;; switch to scratch winconf and scratch buffer
        ([?\s-0] . org-agenda)
 
-       ;; bind "s-[v and s] to split vertical and horizontal"
-       ([?\s-v] . evil-window-vsplit)
-       ([?\s-s] . evil-window-split)
        ([?\s-u] . hydra-winner/winner-undo)
        ;; ([?\s-c ?\u] . hydra-winner/winner-undo)
        ;; ([?\s-c ?\r] . hydra-winner/winner-redo)
@@ -3552,7 +3725,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
     (setq exwm-input-prefix-keys (append
                                   (list
                                    ?\s-,
-                                   ?\C-w
+                                   ;; ?\C-w
                                    ?\s-m
                                    (elt (kbd "M-<tab>") 0)
                                    (elt (kbd "<XF86AudioPause>") 0)
@@ -3877,42 +4050,42 @@ search for url if a matching tab is not found.
 *** Next Browser
 This allows sending Common Lisp code to a live running Next browser process.
 #+BEGIN_SRC emacs-lisp
-  ;; -*- lexical-binding: t; -*-
+  ;; ;; -*- lexical-binding: t; -*-
 
-  ;; (setq browse-url-browser-function #'browse-url-generic)
-  ;; (setq browse-url-generic-program "firefox")
+  ;; ;; (setq browse-url-browser-function #'browse-url-generic)
+  ;; ;; (setq browse-url-generic-program "firefox")
 
-  (require 'slime)
+  ;; ;; (require 'slime)
 
-  (defvar next-browser-connection nil)
+  ;; (defvar next-browser-connection nil)
 
-  (defun get-next-browser-connection ()
-    (if (and next-browser-connection
-             (find next-browser-connection slime-net-processes))
-        next-browser-connection
-      (aif (ignore-errors
-             (slime-net-connect "localhost"
-                                "4006"))
-           (setq next-browser-connection it))))
+  ;; (defun get-next-browser-connection ()
+  ;;   (if (and next-browser-connection
+  ;;            (find next-browser-connection slime-net-processes))
+  ;;       next-browser-connection
+  ;;     (aif (ignore-errors
+  ;;            (slime-net-connect "localhost"
+  ;;                               "4006"))
+  ;;          (setq next-browser-connection it))))
 
-  (defun next-browser-eval (sexp)
-    (aif (get-next-browser-connection)
-         (let ((slime-dispatching-connection it))
-           (slime-eval sexp))
-         (error "Next browser has not been started.")))
+  ;; (defun next-browser-eval (sexp)
+  ;;   (aif (get-next-browser-connection)
+  ;;        (let ((slime-dispatching-connection it))
+  ;;          (slime-eval sexp))
+  ;;        (error "Next browser has not been started.")))
 
-  (defun next-edit (id)
-    (let ((buffer (generate-new-buffer (generate-new-buffer-name "*Next edit*"))))
-      (switch-to-buffer buffer)
-      (with-current-buffer buffer
-        (add-hook 'kill-buffer-hook
-                  (lambda ()
-                    (ignore-errors
-                      (next-browser-eval
-                       `(next-user::emacs-edit-recieve-string
-                         ,id ,(with-current-buffer buffer
-                                (buffer-string))))))
-                  nil t))))
+  ;; (defun next-edit (id)
+  ;;   (let ((buffer (generate-new-buffer (generate-new-buffer-name "*Next edit*"))))
+  ;;     (switch-to-buffer buffer)
+  ;;     (with-current-buffer buffer
+  ;;       (add-hook 'kill-buffer-hook
+  ;;                 (lambda ()
+  ;;                   (ignore-errors
+  ;;                     (next-browser-eval
+  ;;                      `(next-user::emacs-edit-recieve-string
+  ;;                        ,id ,(with-current-buffer buffer
+  ;;                               (buffer-string))))))
+  ;;                 nil t))))
 #+END_SRC
 *** Qutebrowser
 #+BEGIN_SRC emacs-lisp
@@ -4102,6 +4275,16 @@ This allows sending Common Lisp code to a live running Next browser process.
   ;; Apply the scaling I want to each newly created frame:
   (add-hook 'exwm-randr-refresh-hook #'my-zoom-frm-by-dpi)
   ;; (add-hook 'after-make-frame-functions #'my-zoom-frm-by-dpi)
+#+END_SRC
+*** COMMENT MFF
+Snap mouse to the center of a window selected by the keyboard
+
+#+BEGIN_SRC emacs-lisp
+  (use-package exwm-mff
+    :config
+    (exwm-mff-mode)
+
+    (mouse-avoidance-mode 'banish))
 #+END_SRC
 ** Document viewer
 *** COMMENT PDF
@@ -4716,8 +4899,23 @@ new messages from scrolling the page past the bottom.
 #+END_SR
 ** Gnus
 #+BEGIN_SRC emacs-lisp
-  (setq gnus-select-method
-        '(nnimap "imap.yahoo.com"))
+  (require 'gnus)
+  (setq gnus-select-method 
+        ;; '(nnimap "imap.mail.yahoo.com:993")
+        '(nrss "https://www.youtube.com/feeds/videos.xml?channel_id=UCH-_hzb2ILSCo9ftVSnrCIQ")
+        )
+
+  (setq gnus-secondary-select-methods
+        nil
+        ;; nil
+        ;; '(
+        ;;   ;; (nntp "news.gnus.org")
+        ;;   (nrss "https://www.youtube.com/feeds/videos.xml?channel_id=UCH-_hzb2ILSCo9ftVSnrCIQ")
+        ;;   )
+        )
+
+  (setq user-mail-address "adrianfullmer@yahoo.com"
+        user-full-name "Adrian Fullmer")
 #+END_SRC
 ** Weather
 Interface to wttr.in
@@ -4769,6 +4967,22 @@ Emacs interface to ~bitwarden-cli~
   (use-package pinentry
     :config
     (pinentry-start))
+#+END_SRC
+** Bittorrent
+Interface to the bittorrent client Transmission
+
+#+BEGIN_SRC emacs-lisp
+  (use-package transmission)
+#+END_SRC
+* Post-startup
+~envrc-global-mode~ should be enabled late in the startup sequence so
+that it is initialized before other modes which might rely upon the
+updated environment variables, since ~envrc-global-mode~ prepends
+itself to various hooks
+#+BEGIN_SRC emacs-lisp
+  (eval-after-load 'envrc nil
+                   ;; (envrc-global-mode)
+                   )
 #+END_SRC
 * Utilities
 Various functions and macros which are evaluated before anything else in the file.
@@ -4936,12 +5150,13 @@ Various functions and macros which are evaluated before anything else in the fil
   (defun add-to-env (env val)
     (setenv env (concat (getenv env) val)))
 
-  (cl-defun add-to-path (paths &optional (env "PATH") (seperator ":"))
-    (dolist (path (split-string paths seperator))
+  (cl-defun add-to-path (file-paths-string &optional (env "PATH") (seperator ":"))
+    (dolist (path (split-string file-paths-string seperator))
       (unless (find-if (lambda (s)
                          (string= s path))
                        (split-string (getenv env) seperator))
-        (add-to-env env (concat seperator paths)))))
+        (add-to-env env (concat seperator (expand-file-name path)))))
+    (getenv env))
 
   (cl-defun remove-from-path (paths &optional (env "PATH") (seperator ":"))
     (let ((new-path (getenv env)))
@@ -4950,7 +5165,7 @@ Various functions and macros which are evaluated before anything else in the fil
                                  (if a (if b (concat a seperator b) a)
                                    (if b b "")))
                                (mapcar (lambda (s)
-                                         (if (string= s path) nil s))
+                                         (if (string= s (expand-file-name path)) nil s))
                                        (split-string new-path seperator)))))
       (setenv env new-path)))
 
