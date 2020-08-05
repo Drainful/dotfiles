@@ -1,0 +1,16 @@
+# -*- mode: snippet -*-
+# name: Guix Package 
+# key: pack
+# --
+(define-public ${0:`(downcase (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))`}
+  (package
+    (name "$0")
+    (version ${1:"0.0.1"})
+    (source $10)
+    (build-system ${2:gnu-build-system})
+    (arguments $3)
+    (inputs `($4))
+    (home-page ${5:"http://website.org/"})
+    (synopsis "$6")
+    (description "$7")
+    (license ${8:license:${9:expat}})))

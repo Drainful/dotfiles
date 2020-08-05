@@ -141,6 +141,9 @@
      ("flagged" :foreground "#0a9dff")
      ("deleted" :foreground "#ff2c4b" :bold t))))
  '(objed-cursor-color "#e45649")
+ '(org-agenda-files
+   (quote
+    ("/home/guix/adrian/Documents/notes/Appointments.org" "/home/guix/adrian/Documents/notes/Ideas.org" "/home/guix/adrian/Documents/notes/Notes.org" "/home/guix/adrian/Documents/notes/Remember.org" "/home/guix/adrian/Documents/notes/Remember.sync-conflict-20200413-080211-M5AHMQ4.org" "/home/guix/adrian/Documents/notes/Tasks.org" "/home/guix/adrian/Documents/notes/gpt-inspirations.org" "/home/guix/adrian/Documents/notes/small-number-of-vaguely-lisp-adjacent-thoughts.org")))
  '(org-blank-before-new-entry (quote ((heading . auto) (plain-list-item))))
  '(package-selected-packages
    (quote

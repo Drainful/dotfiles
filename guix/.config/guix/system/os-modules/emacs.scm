@@ -22,13 +22,14 @@
          emacs-evil-commentary
          emacs-evil-collection
          emacs-evil-surround
-         emacs-god-mode
+         my-emacs-god-mode
          emacs-general
          emacs-hydra
          emacs-delight
          emacs-minibuffer-line
          emacs-helm
          emacs-helm-ag
+         emacs-helm-company
          emacs-which-key
          emacs-iedit
          ;; emacs-evil-iedit-state
@@ -60,6 +61,7 @@
          emacs-rainbow-delimiters
          ;; emacs-nameless
          emacs-sly
+         emacs-helm-sly
          emacs-clojure-mode
          emacs-cider
          emacs-spinner

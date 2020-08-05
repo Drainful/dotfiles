@@ -1,4 +1,5 @@
 * Guix
+** TODO Implement hybernate
 ** Audio
 create a service for pulseaudio
 * Emacs
@@ -9,6 +10,7 @@ eshell-at helm interface that has a separate source for existing
 buffers (which has an alternate binding for opening a new eshell in
 the directory of that existing buffer) placed above a filesystem
 searching source.
+** TODO enable which-key-mode in god-mode
 ** language tools
 - Add Rust editing tools
 - add subleader for inspect (as opposed to eval)

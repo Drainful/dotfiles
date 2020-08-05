@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: Guix local package source
+# key: lsource
+# --
+(local-file "." #:recursive? #t)

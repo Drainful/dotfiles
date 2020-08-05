@@ -1,0 +1,45 @@
+# -*- mode: snippet -*-
+# name: Guix package from git
+# key: gpack
+# --
+(define-public ${1:`(downcase (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))`}
+  (let ((commit \"$12\")
+        (revision \"${13:0}\"))
+    (package
+     (name \"$1\")
+     (version (git-version \"${2:`(format-time-string "%Y%m%d")`}\" revision commit))
+     (source
+      (origin
+       (method git-fetch)
+       (uri (git-reference (url \"${3:https://github.com/$4}\")
+                           (commit commit)))
+       (file-name (git-file-name name version))
+       (sha256 (base32 ${14:"0000000000000000000000000000000000000000000000000000"}))))
+     (build-system ${5:$$(yas-choose-value "android-ndk-build-system"
+                                          "ant-build-system"
+                                          "asdf-build-system"
+                                          "cargo-build-system"
+                                          "cmake-build-system"
+                                          "dub-build-system"
+                                          "emacs-build-system"
+                                          "font-build-system"
+                                          "glib-or-gtk-build-system"
+                                          "gnu-build-system"
+                                          "go-build-system"
+                                          "haskell-build-system"
+                                          "meson-build-system"
+                                          "minify-build-system"
+                                          "ocaml-build-system"
+                                          "perl-build-system"
+                                          "python-build-system"
+                                          "r-build-system"
+                                          "ruby-build-system"
+                                          "scons-build-system"
+                                          "texlive-build-system"
+                                          "trivial-build-system"
+                                          "waf-build-system")})
+     (inputs `($6))
+     (home-page \"${7:$3}\")
+     (synopsis "$8")
+     (description "$9")
+     (license ${10:license:${11:expat}}))))

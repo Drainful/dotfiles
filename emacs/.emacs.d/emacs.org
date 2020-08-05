@@ -296,7 +296,7 @@ conditionally. They are inspired by [[https://www.emacswiki.org/emacs/Evil#toc14
 These are normal mode mappings not specific to any major mode.
 #+BEGIN_SRC emacs-lisp
   (general-nmap
-    "C-u" 'evil-scroll-up
+    ;; "C-u" 'evil-scroll-up
 
     "C--" 'helm-do-ag-project-root
     "C-=" 'helm-do-ag
@@ -308,7 +308,7 @@ These are normal mode mappings not specific to any major mode.
     "q" 'evil-avy-goto-subword-1
     "g r" 'revert-buffer)
 
-  
+
 #+END_SRC
 ** Visual Mode
 These are visual mode mappings not specific to any major mode.
@@ -455,6 +455,8 @@ Usage:
                   "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
+                  "r" 'evil-surround-edit
+                  "R" 'evil-Surround-edit
                   ;; "RET" (kbd ":noh")
                   )
   ;; (alt-leader-key-def 'normal
@@ -1592,11 +1594,24 @@ This code is the sum of failed attempts to get the above feature working.
         comint-scroll-show-maximum-output nil)
 
   (general-def
-   :states 'normal
-   :keymaps 'comint-mode-map
-   ;; go to prompt before append or insert line in comint mode
-   "I" #'comint-style-insert-line
-   "A" #'comint-style-append-line)
+    :states 'normal
+    :keymaps 'comint-mode-map
+    ;; go to prompt before append or insert line in comint mode
+    "I" #'comint-style-insert-line
+    "A" #'comint-style-append-line
+    "M-p" #'comint-previous-matching-input-from-input
+    "M-n" #'comint-next-matching-input-from-input)
+
+  (with-eval-after-load 'company
+    (defun comint-matching-input-like-eshell-advice (fun n)
+      (company-cancel "")
+      (funcall fun n)
+      (end-of-buffer))
+
+    (advice-add 'comint-previous-matching-input-from-input
+                :around #'comint-matching-input-like-eshell-advice)
+    (advice-add 'comint-next-matching-input-from-input
+                :around #'comint-matching-input-like-eshell-advice))
 #+END_SRC
 
 ** Shell
@@ -1604,15 +1619,28 @@ Shell mode is a comint-based mode for bash and other external shells.
 I prefer ~shell-mode~ to open its buffers in the same window (like eshell does)
 #+BEGIN_SRC emacs-lisp
   (push (cons "\\*shell\\*" display-buffer--same-window-action) display-buffer-alist)
+
+  (general-def 'shell-mode-map
+    "M-p" #'comint-previous-matching-input-from-input
+    "M-n" #'comint-next-matching-input-from-input)
 #+END_SRC
 ** Term mode
 Because terminal text cannot be edited with emacs ~evil mode~, bind ~C-g~
 to evil normal mode, and ~<escape>~ to escape within the terminal.
 #+BEGIN_SRC emacs-lisp
-  (general-def :states 'insert
-    :keymaps 'term-raw-map
-    "<escape>" 'term-send-esc
-    "C-g" 'evil-force-normal-state)
+  (require 'subr-x)
+
+  (defun me/term-paste ()
+    (interactive)
+    (term-send-raw-string (string-trim (current-kill 0))))
+
+  (general-def 'insert 'term-raw-map
+    "<escape>" #'term-send-esc
+    "C-g" #'evil-force-normal-state
+    "C-S-p" #'me/term-paste)
+
+  (general-def 'normal 'term-mode-map
+    "p" #'me/term-paste)
 
 
   ;; https://emacs.stackexchange.com/questions/17005/killing-ansi-term-says-has-a-running-process
@@ -1621,7 +1649,7 @@ to evil normal mode, and ~<escape>~ to escape within the terminal.
       (when (processp proc)
         (set-process-query-on-exit-flag proc nil))))
 
-  (add-hook 'term-exec-hook 'set-no-process-query-on-exit)
+  ;; (add-hook 'term-exec-hook #'set-no-process-query-on-exit)
 
   ;; stop paste from entering commands.
   (setq term-suppress-hard-newline t)
@@ -1889,6 +1917,8 @@ And an alt-tab hydra for it. Doomed to fail.
 
     "C-w C->" #'evil-window-increase-width
     "C-w C-<" #'evil-window-decrease-width
+    "C-w C-." #'evil-window-increase-width
+    "C-w C-," #'evil-window-decrease-width
 
     "C-w C-h" #'evil-window-left
     "C-w C-j" #'evil-window-down
@@ -2077,9 +2107,14 @@ I use the ~Company~ package for autocompletion.
     (general-def 'company-active-map
       "M-." #'company-show-location
       "C-d" #'company-show-doc-buffer
-      "<return>" #'company-complete-selection
+      ;; "<return>" #'company-complete-selection
+      "<return>" nil
+      "RET" nil
+      "<tab>" #'company-complete-selection
       "C-s" #'company-filter-candidates
-      "C-h" nil)
+      "C-h" nil
+      "M-n" nil
+      "M-p" nil)
     (define-key company-active-map (kbd "M-.") 'company-show-location)
     (define-key company-active-map (kbd "\C-d") 'company-show-doc-buffer)
     ;;(setq company-dabbrev-downcase 0)
@@ -2099,6 +2134,14 @@ I use the ~Company~ package for autocompletion.
   (use-package smart-tab
     :ensure t
     :delight)
+#+END_SRC
+*** Helm-company
+Complete helm candidates with helm-company
+#+BEGIN_SRC emacs-lisp
+  (use-package helm-company
+    :config
+    (general-def 'company-active-map
+      "M-<tab>" #'helm-company))
 #+END_SRC
 ** Linting
 I use the ~flycheck~ package for linting.
@@ -2141,7 +2184,7 @@ A package to interact with Git forges like Gitlab.
     ;;       ;;       yas/root-directory)
     ;;       )
     ;; (ys-reload-all)
-    )
+    (setq yas-snippet-dirs '("~/.emacs.d/snippets")))
 #+END_SRC
 ~yasnippet~ can be used as a backend for ~company~.
 #+BEGIN_SRC emacs-lisp
@@ -2437,7 +2480,20 @@ through ~lispyville~ minor mode.
        barf-cp
        c-w
        (escape insert)
-       (additional-movement normal visual motion))))
+       (additional-movement normal visual motion)))
+
+    (defun lispy-slurp-or-barf-advice (fun &rest args)
+      "Adjust lispy slurp or barf functions to operate with the
+  point to the left of the paren, rather than the right. Makes them
+  work better in normal-mode"
+      (forward-char)
+      (apply fun args)
+      (backward-char))
+
+    (aaa '(lispy-slurp-or-barf-left
+           lispy-slurp-or-barf-right)
+         #'lispy-slurp-or-barf-advice
+         :around))
 #+END_SRC
 
 *** Lisp keybindings
@@ -2622,6 +2678,7 @@ This uses font-lock to hide namespace prefixes automatically.
 *** Sly
 ~sly~ is a fork of ~slime~.
 #+BEGIN_SRC emacs-lisp
+  ;; -*- lexical-binding: t; -*-
   (use-package sly
     :after evil
     :config
@@ -2649,18 +2706,43 @@ This uses font-lock to hide namespace prefixes automatically.
     ;; (add-to-list 'helm-completing-read-handlers-alist
     ;;              '(sly-describe-symbol . nil)
     ;;              '(sly-describe-function . nil))
-    (general-def
-      :states 'normal
-      :keymaps 'sly-mrepl-mode-map
+
+    (defun sly-mode-hook-fn ()
+      ;; Sly completion at point provides out of order results in
+      ;; company when `company-backends' contains other backends.
+      (let ((backends '(company-capf)))
+        (when (company-safe-backends-p backends)
+          (setq-local company-backends backends)))) 
+
+    (add-hook 'sly-mrepl-mode-hook #'local-disable-electric-pair-mode)
+
+    (add-hook 'sly-mode-hook #'sly-mode-hook-fn)
+    (add-hook 'sly-mrepl-mode-hook #'sly-mode-hook-fn)
+
+    (cl-flet ((next () (interactive)
+                    (forward-char)
+                    (call-interactively #'sly-stickers-next-sticker))
+              (prev () (interactive)
+                    (backward-char)
+                    (call-interactively #'sly-stickers-prev-sticker)))
+      (cl-flet ((hydra-body (defhydra sly-stickers-jump () ("n" next) ("p" prev))))
+        (general-def sly-mode-map
+          "C-c C-s C-n" (lambda () (interactive) (next) (hydra-body))
+          "C-c C-s C-p" (lambda () (interactive) (prev) (hydra-body)))))
+
+    (general-def 'normal 'sly-mrepl-mode-map
       "<return>" #'sly-mrepl-return
 
       "I" #'comint-style-insert-line
-      "A" #'comint-style-append-line))
+      "A" #'comint-style-append-line)
+
+    (general-def 'sly-mrepl-mode-map
+      "M-p" #'comint-previous-matching-input-from-input
+      "M-n" #'comint-next-matching-input-from-input))
 #+END_SRC
-**** Sly Helm
+**** COMMENT Sly Helm
 #+BEGIN_SRC emacs-lisp
-  (use-package helm-sly
-    :config)
+  (use-package helm-sly)
 #+END_SRC
 **** Keybindings
 #+BEGIN_SRC emacs-lisp
@@ -3428,7 +3510,7 @@ Create a table of contents without exporting.
 #+END_SRC
 *** Agenda
 #+BEGIN_SRC emacs-lisp
-  (setq org-agenda-files '("~/Documents/notes"))
+  (setq org-agenda-files '("~/Documents/notes/" "~/dotfiles/"))
 #+END_SRC
 *** Zettelkasten
 
@@ -3623,7 +3705,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 
        ([?\s-`] . helm-qutebrowser)
        ([?\s-1] . eshell-here)
-       ([?\s-2] . multi-term)
+       ([?\s-2] . shell)
        ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
 
        ;; ,@(mapcar (lambda (n)
@@ -4696,10 +4778,6 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
               :before
               #'me/erc-reset-margins)
 
-  (defun temp ()
-    (set-window-margins (selected-window) nil)
-    (split-window-horizontally))
-
   (general-def '(normal visual) erc-mode-map
     ;; Make evil-mode up/down operate in screen lines instead of logical lines
     "j" #'evil-next-visual-line
@@ -4749,6 +4827,14 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 
   (add-hook 'erc-insert-pre-hook
             #'erc-hide-users-on)
+
+  (defun erc-cmd-NAMES-advice (fn &rest args)
+    (remove-hook 'erc-insert-pre-hook
+                 #'erc-hide-users-on)
+    (apply fn args)
+    (add-hook 'erc-insert-pre-hook
+              #'erc-hide-users-on))
+
 
   (use-package erc-hl-nicks
     :after erc)
@@ -4989,6 +5075,21 @@ Various functions and macros which are evaluated before anything else in the fil
 #+NAME: utilities
 #+BEGIN_SRC emacs-lisp :tangle no
   ;; -*- lexical-binding: t; -*-
+
+  (defun advice-add-all (symbols function where &optional props)
+    (mapcar (lambda (sym)
+              (advice-add sym where function props))
+            symbols))
+
+  (defalias 'aaa #'advice-add-all)
+
+  (defun advice-remove-all (symbols function &optional where)
+    (mapcar (lambda (sym)
+              (advice-remove sym function))
+            symbols))
+
+  (defalias 'ara #'advice-remove-all)
+
   (require 'seq)
 
   (defun iota (n)

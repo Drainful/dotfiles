@@ -1,4 +1,0 @@
-* packages to contribute to guix master
-
-- Finish bitlbee-discord (last message over 100 days ago!)
-- emacs-org-roam + friends

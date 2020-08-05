@@ -1,0 +1,37 @@
+# -*- mode: snippet -*-
+# name: Guix package 
+# key: pack
+# --
+(define-public ${1:`(downcase (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))`}
+  (package
+    (name \"$1\")
+    (version ${2:"0.0.1"})
+    (source $3)
+    (build-system ${4:$$(yas-choose-value "android-ndk-build-system"
+                                          "ant-build-system"
+                                          "asdf-build-system"
+                                          "cargo-build-system"
+                                          "cmake-build-system"
+                                          "dub-build-system"
+                                          "emacs-build-system"
+                                          "font-build-system"
+                                          "glib-or-gtk-build-system"
+                                          "gnu-build-system"
+                                          "go-build-system"
+                                          "haskell-build-system"
+                                          "meson-build-system"
+                                          "minify-build-system"
+                                          "ocaml-build-system"
+                                          "perl-build-system"
+                                          "python-build-system"
+                                          "r-build-system"
+                                          "ruby-build-system"
+                                          "scons-build-system"
+                                          "texlive-build-system"
+                                          "trivial-build-system"
+                                          "waf-build-system")})
+    (inputs `($5))
+    (home-page ${6:""})
+    (synopsis "$7")
+    (description "$8")
+    (license ${9:license:${10:expat}})))

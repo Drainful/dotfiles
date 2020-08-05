@@ -21,6 +21,21 @@
 
   #:use-module (ice-9 match))
 
+(define-public my-emacs-god-mode
+  (let ((commit "7122a1a8e617d87b9acb8fea7e322ee2c89e15cb")
+        (revision "0"))
+    (package
+      (inherit emacs-god-mode)
+      (name "emacs-god-mode")
+      (version (git-version "20200627" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference (url "https://github.com/emacsorphanage/god-mode")
+                             (commit commit)))
+         (file-name (git-file-name name version))
+         (sha256 (base32 "05hrcxxxj1y6n3if722s4apbhzid0qcsj1sc2r6ffs1idmbn1iam")))))))
+
 (define-public my-emacs-emacsql-sqlite3
   (let ((commit "6db90f91516ca6a91e4a3e56d2cdc6c433cbfab8")
         (revision "0"))
