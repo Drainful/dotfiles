@@ -36,3 +36,5 @@
 
 ;; (server-start)
 ;; (start-process-shell-command "Xresources" nil " [ -f \"$HOME/.Xresources\" ] && xrdb -merge \"$HOME/.Xresources\" ")
+
+(provide 'exwm-initialized)

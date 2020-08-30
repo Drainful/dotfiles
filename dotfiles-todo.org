@@ -1,15 +1,28 @@
 * Guix
+** TODO make macros in (lib) hygenic.
+In scheme symbols are not separated by package, but rather objects are exported from modules, so without hygene a macro may have hidden dependancies. Ugly.
 ** TODO Implement hybernate
+** TODO reduce mousepad scroll sensitivity/curve.
 ** Audio
 create a service for pulseaudio
+** TODO use as many emacs guix packages as possible
+the ones labeled TODO in emacs.org
+** TODO pull all machine specific config in dotfiles into either env vars determined by guix machine definition, or directly expressed by guix config
+This includes
+- DPI
+  - font size
+- probably other things
+** TODO transition to using more manifests rather than os modules
 * Emacs
-enable lexical scope in org source buffers since that's where most
-evaluation happens
+** TODO different winconfs have alternate buffer last visited orders (for winner, bury, and others)
+** TODO screen flash red when buffer deleted, blue when buried.
+** TODO make helm-occur work more like evil-search (in that a completed search can be returned to with n or something)
+** TODO evil motion command for dired mark (should be a 30 minute project)
+** TODO helm-image-dired which allows multiple directories at different levels of heiarchy to be selected for a single image-dired with tree dired
+** TODO make image dired select the line properly with tree dired
+** DONE enable lexical scope in org source buffers since that's where most evaluation happens (should be by default anyway in emacs 27)
 
-eshell-at helm interface that has a separate source for existing
-buffers (which has an alternate binding for opening a new eshell in
-the directory of that existing buffer) placed above a filesystem
-searching source.
+** eshell-at helm interface that has a separate source for existing buffers (which has an alternate binding for opening a new eshell in the directory of that existing buffer) placed above a filesystem searching source.
 ** TODO enable which-key-mode in god-mode
 ** language tools
 - Add Rust editing tools
@@ -84,6 +97,7 @@ helm interface for joining discord channel, or at least an interface
 organized by server
 
 twitter shortened links replaced with expanded forms in buffer (request.el)
+** TODO add override keybinding for leader key (SPC)
 * Other
 ⠀⠀⠀⣴⣴⡤
 ⠀⣠⠀⢿⠇⡇⠀⠀⠀⠀⠀⠀⠀⢰⢷⡗

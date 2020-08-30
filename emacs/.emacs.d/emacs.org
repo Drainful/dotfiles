@@ -157,7 +157,7 @@ These are my settings for the Evil, the Vim emulator.
 This provides ~evil~ friendly keybindings for a variety of modes.
 #+BEGIN_SRC emacs-lisp
   (use-package evil-collection
-    :ensure t
+    :ensure t ;; TODO
     :init
     (setq evil-want-keybinding nil)
     :after evil
@@ -233,6 +233,16 @@ More complex text objects are defined manually:
   (define-key evil-outer-text-objects-map "a" #'evil-entire-buffer)
 #+END_SRC
 * Keybindings and Commands
+** General.el
+I mainly use the the package ~general~ to define keybindings and
+commands. 
+#+BEGIN_SRC emacs-lisp
+  (use-package general)
+#+END_SRC
+It integrates well with ~evil~.
+#+BEGIN_SRC emacs-lisp
+  (general-evil-setup)
+#+END_SRC
 ** God mode
 An alternative modal editing style which provides a compliment to ~evil-mode~. 
 
@@ -244,16 +254,6 @@ An alternative modal editing style which provides a compliment to ~evil-mode~.
     (with-eval-after-load 'exwm
       (general-def exwm-mode-map
         "s-," #'god-execute-with-current-bindings)))
-#+END_SRC
-** General.el
-I mainly use the the package ~general~ to define keybindings and
-commands. 
-#+BEGIN_SRC emacs-lisp
-(use-package general)
-#+END_SRC
-It integrates well with ~evil~.
-#+BEGIN_SRC emacs-lisp
-(general-evil-setup)
 #+END_SRC
 ** Hydra.el
 ~hydra~ creates miniature modes to reduce repetitive keybindings.
@@ -533,16 +533,16 @@ Set the initial mode in the scratch buffer to emacs.
 #+END_SRC
 ** Font
 #+BEGIN_SRC emacs-lisp
-  (defvar my-default-font-pixelsize 29)
+  (defvar my-default-font-pixelsize (* 29 (/ (string-to-number (getenv "DPI")) 276)))
   (add-to-list 'default-frame-alist
                `(font . ,(format
                           "DejaVu Sans Mono:pixelsize=%d:foundry=PfEd:weight=normal:slant=normal:width=normal:scalable=true"
                           my-default-font-pixelsize)))
 
-  (use-package unicode-fonts
-    :ensure t
-    :config
-    (unicode-fonts-setup))
+  ;; (use-package unicode-fonts
+  ;;   :ensure t
+  ;;   :config
+  ;;   (unicode-fonts-setup))
 #+END_SRC
 ** Mode line
 *** Delight
@@ -647,7 +647,8 @@ which integrates well across Emacs.
           helm-follow-mode-persistent nil
           helm-window-prefer-horizontal-split t
           helm-window-show-buffers-function 'helm-window-mosaic-fn
-          helm-split-window-default-side 'same)
+          helm-split-window-default-side 'same
+          helm-ff-cache-mode nil)
 
     (defun me/helm-fix-insert-state-keys ()
       (setq evil-insert-state-local-map (make-keymap))
@@ -930,6 +931,7 @@ which-key buffer via the prefix-help-command.
 Keybindings for help mode
 #+BEGIN_SRC emacs-lisp
   (general-nmap help-mode-map 
+    "SPC" nil
     "H" #'help-go-back
     "L" #'help-go-forward)
 #+END_SRC
@@ -1077,6 +1079,20 @@ Utilities for buffer management
     (interactive)
     (switch-to-buffer (last-buffer-if #'me/unbury-interesting-pred)))
 #+END_SRC
+** Mouse wheel scroll
+
+#+BEGIN_SRC emacs-lisp
+  (setq mouse-wheel-scroll-amount '(2 ((shift) . 1) ((meta)) ((control) . text-scale)))
+#+END_SRC
+* Autosaves
+#+BEGIN_SRC emacs-lisp
+  (setq backup-directory-alist
+        `(("." . ,(concat user-emacs-directory "backups"))))
+  (setq auto-save-file-name-transforms
+        `(("\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'" ,(concat user-emacs-directory "backups") t)))
+
+  (setq create-lockfiles nil)
+#+END_SRC
 * Text editing
 ** Spell Check
 #+BEGIN_SRC emacs-lisp
@@ -1099,24 +1115,32 @@ Iedit is a package for interactive refactoring.
     (general-def global-map
       "C-;" #'me/evil-iedit-toggle))
 #+END_SRC
-* Info
+* Info/Man
 #+BEGIN_SRC emacs-lisp
-  (general-def 'normal 'Info-mode-map
-    "m" #'Info-menu
-    "n" #'Info-next
-    "p" #'Info-prev
-    "g m" #'evil-set-marker
-    "g n" #'evil-search-next
-    "g p" #'evil-search-previous)
+  (with-eval-after-load 'man
+    (general-def normal Info-mode-map
+      "SPC" nil
+      "m" #'Info-menu
+      "n" #'Info-next
+      "p" #'Info-prev
+      "g m" #'evil-set-marker
+      "g n" #'evil-search-next
+      "g p" #'evil-search-previous)
 
-  (eval-after-load 'Info
-    (defface Info-quoted
-      '((t :inherit fixed-pitch))
-      "Face used for quoted elements."))
+    (eval-after-load 'Info
+      (defface Info-quoted
+        '((t :inherit fixed-pitch))
+        "Face used for quoted elements."))
+
+
+    (general-def normal Man-mode-map
+      "SPC" nil))
 #+END_SRC
 * Dired
 Dired is the file manager built into Emacs.
 #+BEGIN_SRC emacs-lisp
+  (require 'dired)
+
   (setq dired-listing-switches "-alh")
 
   (defun me/dired-sort ()
@@ -1139,6 +1163,19 @@ Dired is the file manager built into Emacs.
 
   (general-def normal dired-mode-map
     "s" #'me/dired-sort)
+
+  (general-def dired-mode-map
+    "C-1" (lambda () (interactive)
+            (dynamic-flet (dired-run-shell-command
+                           (command)
+                           (let ((handler
+                                  (find-file-name-handler (directory-file-name default-directory)
+                                                          'shell-command)))
+                             (if handler (apply handler 'shell-command (list command))
+                               (start-process-shell-command command nil command)))
+                           ;; Return nil for sake of nconc in dired-bunch-files.
+                           nil) 
+              (call-interactively #'dired-do-shell-command))))
 #+END_SRC
 ** Image Dired
 ~image-dired~ is a built-in image thumbnail viewer for dired.
@@ -1160,6 +1197,13 @@ Dired is the file manager built into Emacs.
   (advice-add 'image-dired-mouse-select-thumbnail
               :after
               #'image-dired-select-advice)
+
+  (defun me/image-dired-thumbnail-mode-hook-fn ()
+    (setq-local mouse-wheel-scroll-amount
+                '(1 ((shift)) ((meta)) ((control) . text-scale))))
+
+  (add-hook 'image-dired-thumbnail-mode-hook
+            #'me/image-dired-thumbnail-mode-hook-fn)
 
   (defvar me/image-dired-display-image-buffer nil)
 
@@ -1185,7 +1229,10 @@ Dired is the file manager built into Emacs.
 
   (general-def normal image-dired-thumbnail-mode-map
     "=" #'image-increase-size
-    "RET" #'me/image-dired-display-thumbnail-original-image)
+    "RET" #'me/image-dired-display-thumbnail-original-image
+    "SPC" nil
+    "n" #'image-dired-display-next-thumbnail-original
+    "p" #'image-dired-display-previous-thumbnail-original)
 #+END_SRC
 ** COMMENT Async
 #+BEGIN_SRC emacs-lisp
@@ -1206,11 +1253,11 @@ Asynchronously copy files with Rsync
 Add additional font lock rules for dired
 #+BEGIN_SRC emacs-lisp
   (use-package diredfl
-    :ensure t
+    :ensure t ;; TODO
     :config
     (diredfl-global-mode 1))
 #+END_SRC
-** Dired Atool
+** COMMENT Dired Atool
 Use atool for compression and extraction
 #+BEGIN_SRC emacs-lisp
 (use-package dired-atool
@@ -1232,7 +1279,7 @@ Use du to list folder sizes
 #+END_SRC
 ** Dired Hacks
 [[https://github.com/Fuco1/dired-hacks#dired-rainbow][Various packages]] providing dired features
-*** Dired AVFS
+*** COMMENT Dired AVFS
 This allows seamless archive browsing
 #+BEGIN_SRC emacs-lisp
   (use-package dired-avfs)
@@ -1284,6 +1331,19 @@ selection.
     :config
     (leader-key-def normal dired-mode-map
                     "n" #'dired-narrow))
+#+END_SRC
+* Proced
+
+#+BEGIN_SRC emacs-lisp
+  (general-def normal proced-mode-map
+    "SPC" nil)
+
+  (setq proced-auto-update-interval 2)
+  (defun me/proced-hook-fn ()
+    (call-interactively #'proced-toggle-auto-update))
+
+  (add-hook 'proced-mode-hook
+            #'me/proced-hook-fn)
 #+END_SRC
 * Shell
 ** Fish/Bash Completion
@@ -1928,6 +1988,22 @@ And an alt-tab hydra for it. Doomed to fail.
     "C-w C-=" #'balance-windows
     "C-w C-\\" #'evil-window-set-width)
 #+END_SRC
+** COMMENT Perspective
+~perspective~ is a package for managing window configurations.
+#+BEGIN_SRC emacs-lisp
+  (use-package persp-mode
+    :config
+    (persp-mode)
+
+    ;; I just want to use `persp-mode' as a layout saver, so I remove
+    ;; all inter-persp buffer restrictions
+    (setq persp-disable-buffer-restriction-once t)
+    (setq persp-kill-foreign-buffer-behaviour 'just-kill)
+
+    (general-def :keymap 'persp-mode-map
+                        "M-<tab>" #'persp-next
+                        "<M-iso-lefttab>" #'persp-prev))
+#+END_SRC
 ** COMMENT Persp-mode
 ~persp-mode~ is a package for managing window configurations. I prefer
 this to managing frames.
@@ -2132,7 +2208,7 @@ I use the ~Company~ package for autocompletion.
 *** Smart Tab
 #+BEGIN_SRC emacs-lisp
   (use-package smart-tab
-    :ensure t
+    :ensure t ;; TODO is this necessary?
     :delight)
 #+END_SRC
 *** Helm-company
@@ -2200,7 +2276,7 @@ A package to interact with Git forges like Gitlab.
 
   (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
 #+END_SRC
-*** COMMENT
+*** COMMENT snippet collection
 A large collection of snippets is found in the ~yasnippet-snippets~ package.
 #+BEGIN_SRC emacs-lisp
   (use-package yasnippet-snippets)
@@ -2231,11 +2307,11 @@ languages. ~lsp-mode~ also serves as a backend for ~company~ and ~flycheck~ / ~f
   (use-package lsp-ui :commands lsp-ui-mode) ; adds flycheck support
   (use-package company-lsp :commands company-lsp) ; links with company
   (use-package helm-lsp :commands helm-lsp-workspace-symbol)
-  (use-package dap-mode
-    :ensure t :after lsp-mode
-    :config
-    (dap-mode t)
-    (dap-ui-mode t))
+  ;; (use-package dap-mode
+  ;;   :ensure t :after lsp-mode
+  ;;   :config
+  ;;   (dap-mode t)
+  ;;   (dap-ui-mode t))
   ;; optionally if you want to use debugger
   ;; (use-package dap-mode)
 
@@ -2314,7 +2390,6 @@ Buffer-local direnv integration with the Envrc package
                      (kill-buffer stderr)
                      (funcall result-fn result)))))))))
 
-
     (defun envrc--update-env-async (env-dir)
       (when (not (eq 'loading (gethash env-dir envrc--envs)))
         (puthash env-dir 'loading envrc--envs)
@@ -2335,6 +2410,22 @@ Buffer-local direnv integration with the Envrc package
                         (`loading 'envrc-mode-line-none-face)
                         (`none 'envrc-mode-line-none-face)))
         "]"))
+
+    (defun envrc-reload-async ()
+      "Run \"direnv allow\" in the current env."
+      (interactive)
+      (envrc--with-required-current-env env-dir
+        (envrc--update-env-async env-dir)))
+
+    (defun envrc-allow-async ()
+      "Run \"direnv allow\" in the current env."
+      (interactive)
+      (envrc--with-required-current-env env-dir
+        (let* ((default-directory env-dir)
+               (exit-code (envrc--call-process-in-default-env "direnv" nil (get-buffer-create "*envrc-allow*") nil "allow")))
+          (if (zerop exit-code)
+              (envrc--update-env-async env-dir)
+            (display-buffer "*envrc-allow*")))))
 
     (defun envrc--apply (buf result)
       "Update BUF with RESULT, which is a result of `envrc--export'."
@@ -2361,7 +2452,8 @@ Buffer-local direnv integration with the Envrc package
             (unless (eq 'loading result)
               (envrc--debug "[%s] reset environment to default" buf))))))
 
-    (setf (symbol-function 'envrc--update-env) #'envrc--update-env-async))
+    (setf (symbol-function 'envrc--update-env) #'envrc--update-env-async)
+    )
 #+END_SRC
 ** COMMENT Direnv and Lorri
 Direnv allows Emacs to automatically set environment variables on a
@@ -2895,7 +2987,7 @@ Python support is built in to ~lsp-mode~.
   (eval-key-def 'visual 'python-mode-map
     "r" 'python-shell-send-region)
 #+END_SRC
-** Lua
+** COMMENT Lua
 #+BEGIN_SRC emacs-lisp
   (use-package lua-mode
     :config
@@ -3151,6 +3243,7 @@ Enable ~flycheck~
 #+END_SRC
 ** Javascript
 #+BEGIN_SRC emacs-lisp
+
   (use-package indium
     :ensure t
     :config
@@ -3190,13 +3283,17 @@ Enable ~flycheck~
     (eval-key-def 'visual 'js-mode-map
                   "r" #'indium-eval-region)
 
-    (add-hook 'js-mode-hook
-              #'indium-interaction-mode))
+    (remove-hook 'js-mode-hook
+                 #'indium-interaction-mode))
 
   (use-package js2-mode
     :config
-    (add-to-list 'auto-mode-alist
-                 '("\\.jsm?\\'" . js2-mode)))
+    ;; (add-to-list 'auto-mode-alist
+    ;;              '("\\.jsm?\\'" . js2-mode))
+    (add-to-list 'aggressive-indent-excluded-modes 'js-mode)
+    (add-hook 'js-mode-hook #'js2-minor-mode)
+    (setq js2-mode-show-strict-warnings nil)
+    (setq js2-basic-offset 2))
 #+END_SRC
 ** Java
 #+BEGIN_SRC emacs-lisp
@@ -3233,6 +3330,13 @@ Tools for Guix, a package manager and operating system.
         (add-to-list 'yas-snippet-dirs "~/Code/guix/etc/snippets")
 
         (guix-prettify-global-mode +1)
+
+        (general-def '(guix-output-list-mode-map
+                       guix-package-info-mode-map
+                       guix-package-list-mode-map
+                       guix-profile-info-mode-map
+                       guix-profile-list-mode-map)
+          "SPC" nil)
 
         ;; shut up error
         ;; (defun guix-repl-autoload-emacs-packages-maybe ()
@@ -3689,6 +3793,17 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
       ;; "C-c C-l" 'exwm-floating-toggle-floating
       )
 
+    (defun me/launch (command))
+
+    (defun me/exwm-maybe-make-defualt-directory ()
+      (when me/exwm-always-home-dir
+        (setq default-directory "~/")
+        (setq me/exwm-always-home-dir nil)))
+
+    (add-hook 'exwm-manage-finish-hook #'me/exwm-maybe-make-defualt-directory)
+
+    (defvar me/exwm-always-home-dir nil)
+
     (require 'helm-qutebrowser)
     (customize-set-variable
      'exwm-input-global-keys
@@ -3698,9 +3813,13 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
        ;; Bind f11 to toggle full screen
        ([f11] . exwm-layout-toggle-fullscreen)
 
-       ;; Bind "s-!" to launch exteral commands with READ-SHELL-COMMAND
+       ;; Bind "s-!" and "s-@" to launch exteral commands with READ-SHELL-COMMAND
        ([?\s-!] . (lambda (command)
-                    (interactive (list (read-shell-command "$ ")))
+                    (interactive (list (read-shell-command "! ")))
+                    (setq me/exwm-always-home-dir t)
+                    (start-process-shell-command command nil command)))
+       ([?\s-@] . (lambda (command)
+                    (interactive (list (read-shell-command "@ ")))
                     (start-process-shell-command command nil command)))
 
        ([?\s-`] . helm-qutebrowser)
@@ -3809,6 +3928,7 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                                    ?\s-,
                                    ;; ?\C-w
                                    ?\s-m
+                                   (elt (kbd "C-g") 0)
                                    (elt (kbd "M-<tab>") 0)
                                    (elt (kbd "<XF86AudioPause>") 0)
                                    (elt (kbd "<M-iso-lefttab>") 0)
@@ -4318,25 +4438,32 @@ This allows sending Common Lisp code to a live running Next browser process.
 #+BEGIN_SRC emacs-lisp
   (require 'zoom-frm)
 
-  (defun my-dpi (&optional display)
+  (defun true-dpi (&optional display)
     "Get the DPI of DISPLAY.
   DISPLAY is a display name, frame or terminal, as in
   `display-monitor-attributes-list'."
-    (cl-flet ((pyth (lambda (w h)
-                      (sqrt (+ (* w w)
-                               (* h h)))))
-              (mm2in (lambda (mm)
-                       (/ mm 25.4))))
-      (let* ((atts (frame-monitor-attributes))
-             (pix-w (cl-fourth (assoc 'geometry atts)))
-             (pix-h (cl-fifth (assoc 'geometry atts)))
-             (pix-d (pyth pix-w pix-h))
-             (mm-w (cl-second (assoc 'mm-size atts)))
-             (mm-h (cl-third (assoc 'mm-size atts)))
-             (mm-d (pyth mm-w mm-h)))
-        (/ pix-d (mm2in mm-d)))))
+    (* (/ (cl-flet ((pyth (lambda (w h)
+                            (sqrt (+ (* w w)
+                                     (* h h)))))
+                    (mm2in (lambda (mm)
+                             (/ mm 25.4))))
+            (let* ((atts (frame-monitor-attributes))
+                   (pix-w (cl-fourth (assoc 'geometry atts)))
+                   (pix-h (cl-fifth (assoc 'geometry atts)))
+                   (pix-d (pyth pix-w pix-h))
+                   (mm-w (cl-second (assoc 'mm-size atts)))
+                   (mm-h (cl-third (assoc 'mm-size atts)))
+                   (mm-d (pyth mm-w mm-h)))
+              (/ pix-d (mm2in mm-d))))
+          282.7349271323943)
+       276.0))
 
-  (defvar my-zoom-frm-base-dpi 282.7349271323943
+  (defun get-dpi ()
+    (if (getenv "DPI")
+        (string-to-number (getenv "DPI"))
+      (true-dpi)))
+
+  (defvar my-zoom-frm-base-dpi (get-dpi)
     "The DPI of the screen when at maxiumum resolution.")
 
   (defun my-zoom-frm-by-dpi (&optional frame)
@@ -4348,7 +4475,7 @@ This allows sending Common Lisp code to a live running Next browser process.
       (when (frame-parameter frame 'zoomed)
         (zoom-frm-unzoom frame))
       (let ((frame-zoom-font-difference (round (* my-default-font-pixelsize
-                                                  (1- (/ (my-dpi frame)
+                                                  (1- (/ (true-dpi frame)
                                                          my-zoom-frm-base-dpi))))))
         (when (called-interactively-p 'interactive)
           (message "Zooming by %S" frame-zoom-font-difference))
@@ -4358,23 +4485,25 @@ This allows sending Common Lisp code to a live running Next browser process.
   (add-hook 'exwm-randr-refresh-hook #'my-zoom-frm-by-dpi)
   ;; (add-hook 'after-make-frame-functions #'my-zoom-frm-by-dpi)
 #+END_SRC
-*** COMMENT MFF
+*** Mouse follows focus
 Snap mouse to the center of a window selected by the keyboard
 
 #+BEGIN_SRC emacs-lisp
-  (use-package exwm-mff
-    :config
-    (exwm-mff-mode)
-
-    (mouse-avoidance-mode 'banish))
+  (with-eval-after-load 'exwm-initialized
+    (use-package exwm-mff
+      :after exwm
+      :config
+      ;; (mouse-avoidance-mode 'banish)
+      (exwm-mff-mode +1)))
 #+END_SRC
 ** Document viewer
-*** COMMENT PDF
+*** PDF
 ~pdf-tools~ is a document viewer for emacs
 #+BEGIN_SRC emacs-lisp
   (use-package pdf-tools
     :config
-    (pdf-loader-install))
+    ;; (pdf-tools-install)
+    )
 #+END_SRC
 *** EPUB
 ~nov.el~ provides support for viewing epub files. Best combined with olivetti-mode
@@ -4384,7 +4513,7 @@ Snap mouse to the center of a window selected by the keyboard
     :config
     (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-    (setq nov-text-width t)
+    (setq nov-text-width nil)
 
     (add-hook 'nov-mode-hook #'visual-line-mode)
     (add-hook 'nov-mode-hook #'olivetti-mode)
@@ -4398,15 +4527,18 @@ Snap mouse to the center of a window selected by the keyboard
       (if cursor-type
           (setq cursor-type nil)
         (setq cursor-type t)))
-  
+
     (defun evil-force-normal-state-and-toggle-cursor ()
       (interactive)
       (evil-force-normal-state)
       (toggle-cursor))
 
     (general-def 'normal 'nov-mode-map
-      "L" 'nov-history-forward
-      "H" 'nov-history-back
+      "SPC" nil
+      "f" #'evil-scroll-page-down
+      "C-f" #'evil-find-char
+      "L" #'nov-history-forward
+      "H" #'nov-history-back
       "<escape>" #'toggle-cursor))
 #+END_SRC
 ** Image viewer
@@ -4470,6 +4602,8 @@ Emacs has an inbuilt image viewer ~image-mode~.
     "-" #'image-decrease-size
     "+" #'image-increase-size
     "=" #'image-increase-size
+
+    "SPC" nil
 
     "C-j" (lambda nil (interactive)
             (image-next-line 1))
@@ -4646,7 +4780,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 ** System package managment
 #+BEGIN_SRC emacs-lisp
   (use-package system-packages
-    :ensure t
+    :ensure t ; TODO
     :config
     (setf (cdr
            (assoc
@@ -4762,7 +4896,7 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
                             #'me/erc-margin-adjust
                             (window-buffer)))))
 
-  (defun me/erc-reset-margins (window &rest _)
+  (defun me/erc-reset-margins (&optional window size side pixelwise)
     (if (window-live-p window)
         (with-selected-window window
           (when (eq (with-current-buffer (window-buffer window)
@@ -4829,11 +4963,20 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
             #'erc-hide-users-on)
 
   (defun erc-cmd-NAMES-advice (fn &rest args)
-    (remove-hook 'erc-insert-pre-hook
-                 #'erc-hide-users-on)
-    (apply fn args)
-    (add-hook 'erc-insert-pre-hook
-              #'erc-hide-users-on))
+    (if (find #'erc-hide-users-on
+              erc-insert-pre-hook)
+        (progn
+          (remove-hook 'erc-insert-pre-hook
+                       #'erc-hide-users-on t)
+          (let ((result (apply fn args)))
+            (add-hook 'erc-insert-pre-hook
+                      #'erc-hide-users-on t)
+            result))
+      (apply fn args)))
+
+  ;; (aaa '(erc-cmd-NAMES)
+  ;;      #'erc-cmd-NAMES-advice
+  ;;      :around)
 
 
   (use-package erc-hl-nicks
@@ -4853,6 +4996,19 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
   ;;    channel-names
 
   ;;    erc-track-shorten-start))
+
+  (defun me/erc (server)
+    (erc :server server
+         :port 6667
+         :nick "drainful"
+         :password (auth-source-pass-get
+                    'secret
+                    (concat (second (nreverse (split-string server "\\.")))
+                            " nickserv"))))
+
+  (defun freenode-erc ()
+    (interactive)
+    (me/erc "irc.freenode.net"))
 
   ;; Bouncer
   (use-package znc
@@ -4914,7 +5070,6 @@ Stolen from [[https://github.com/daedreth/UncleDavesEmacs#emms-with-mpd][UncleDa
 **** COMMENT ERC Image
 #+BEGIN_SRC emacs-lisp
   (use-package erc-image
-    :ensure t
     :config
     (add-to-list 'erc-modules 'image)
     (erc-update-modules))
@@ -5039,20 +5194,19 @@ Emacs interface to ~bitwarden-cli~
 ** Pass
 
 #+BEGIN_SRC emacs-lisp
-
   (use-package pass
     :config
-    (setq password-store-password-length 16))
+    (setq password-store-password-length 16)
+    (setq epg-pinentry-mode 'loopback))
 
   (use-package auth-source-pass
     :config
     (auth-source-pass-enable))
 
   (use-package helm-pass)
-
-  (use-package pinentry
-    :config
-    (pinentry-start))
+  ;; (use-package pinentry
+  ;;   :config
+  ;;   (pinentry-start))
 #+END_SRC
 ** Bittorrent
 Interface to the bittorrent client Transmission
@@ -5075,6 +5229,9 @@ Various functions and macros which are evaluated before anything else in the fil
 #+NAME: utilities
 #+BEGIN_SRC emacs-lisp :tangle no
   ;; -*- lexical-binding: t; -*-
+
+  (defun insert-current-date () (interactive)
+         (insert (calendar-date-string (calendar-current-date))))
 
   (defun advice-add-all (symbols function where &optional props)
     (mapcar (lambda (sym)

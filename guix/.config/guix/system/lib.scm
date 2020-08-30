@@ -2,18 +2,33 @@
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module (guix gexp)
+  #:use-module (gnu packages)
   #:export (os-module
             ;; merge-records
             maplist
             plist-get
             plist-set
-            ))
+            pkg
+            pkgs))
 
 
 ;; include udev rules merging
 
 ;; make functions to merge package and service lists and throw error
 ;; when have 2 of same name.
+
+;; TODO make these hygenic macros. In scheme symbols are not separated
+;; by package, but rather objects are exported from modules, so
+;; without hygene a macro may have hidden dependancies. Ugly.
+
+(define-macro (pkgs specification . rest)
+  (let ((specifications (cons specification rest)))
+    `(map specification->package
+          (list ,@(map symbol->string
+                       specifications)))))
+
+(define-macro (pkg specification)
+  `(specification->package ,(symbol->string specification)))
 
 (define packages-keyword #:packages)
 (define services-keyword #:services)

@@ -1,3 +1,4 @@
+import os
 # blocked hosts
 c.content.host_blocking.lists = ["https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"]
 # privacy
@@ -8,9 +9,9 @@ c.content.cookies.accept = "never";
 c.scrolling.smooth = False
 
 # hide statusbar
-c.statusbar.hide = False # todo: set true when browsing an image file?
+# c.statusbar.hide = False # todo: set true when browsing an image file?
 
-c.qt.highdpi = True
+c.qt.highdpi = float(os.environ['DPI']) > 150
 # c.zoom.default = 33
 
 c.new_instance_open_target = "window"

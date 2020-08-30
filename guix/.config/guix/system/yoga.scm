@@ -1,13 +1,18 @@
 (use-modules (srfi srfi-1)
              (gnu)
              (gnu system nss)
+             (gnu system pam)
              (gnu services base)
              (gnu services xorg)
              (gnu services mcron)
              (gnu services networking)
              (gnu packages linux)
              (gnu packages fonts)
+             (my-packages)
              (nongnu packages linux)
+             (nongnu system linux-initrd)
+             (guix channels)
+             (guix inferior)
              (lib)
              (os-modules)
              (os-modules graphical)
@@ -16,22 +21,38 @@
 (use-service-modules desktop xorg)
 (use-package-modules certs)
 
-(let ((keyboard-layout (keyboard-layout "us" "altgr-intl"))
-      (default-user-name "adrian")
-      (os-module ((os-module #:inherit (list core
-                                             exwm
-                                             audio
-                                             bluetooth
-                                             graphical-games
-                                             bitlbee
-                                             ;; virtual-machines
-                                             android
-                                             (garbage-collection #:free "10G"
-                                                                 #:delete-after "1w"))
-                             #:packages (list nss-certs)))))
+(let* ((keyboard-layout (keyboard-layout "us" "altgr-intl"))
+       (default-user-name "adrian")
+       (os-module ((os-module #:inherit (list core
+                                              wine
+                                              (exwm default-user-name keyboard-layout)
+                                              audio
+                                              bluetooth
+                                              graphical-games
+                                              bitlbee
+                                              ;; virtual-machines
+                                              android
+                                              (garbage-collection #:free "10G" #:delete-after "1w")
+                                              (delete-generations #:delete-after "1m"))
+                              #:packages (list nss-certs)))))
   (operating-system
-    (kernel linux-5.4)
-    (firmware (list linux-firmware))
+    (kernel
+     (let* ((channels
+             (list (channel
+                    (name 'nonguix)
+                    (url "https://gitlab.com/nonguix/nonguix")
+                    (commit "b5ee7782d931939332f92212b51771cff6dc6783"))
+                   (channel
+                    (name 'guix)
+                    (url "https://git.savannah.gnu.org/git/guix.git")
+                    (commit "0ca7b108b7259fdacb737acfedeecf55084a74ff"))))
+            (inferior (inferior-for-channels channels)))
+       (first (lookup-inferior-packages inferior "linux" "5.4.55"))))
+    (initrd microcode-initrd)
+    (firmware 
+     (cons* ibt-hw-firmware
+            iwlwifi-firmware
+            %base-firmware))
     (host-name "guix-yoga")
     (timezone "America/Chicago")
     (locale "en_US.utf8")
@@ -89,29 +110,33 @@ COMMIT
 "
                                       
                                       )))
-                          
                           (iptables-configuration
                            (ipv4-rules rules)
-                           (ipv6-rules rules)
-                           )))
+                           (ipv6-rules rules))))
+               (simple-service 'set-env-vars
+                               session-environment-service-type
+                               '(("DPI" . "276")
+                                 ("GUIX_OS_CONFIG_FILE" . "/home/guix/adrian/.config/guix/system/yoga.scm")
+                                 ("GUIX_CONFIG_DIRECTORY" . "/home/guix/adrian/.config/guix/system/")))
                (modify-services (assoc-ref os-module #:services)
-                 
-                 (gdm-service-type
-                  config => (gdm-configuration
-                             (inherit config)
-                             (default-user default-user-name)
-                             (xorg-configuration
-                              (xorg-configuration
-                               (inherit (gdm-configuration-xorg config))
-                               (keyboard-layout keyboard-layout)))))
                  (slim-service-type
                   config => (slim-configuration
                              (inherit config)
-                             (default-user default-user-name)
                              (xorg-configuration
                               (xorg-configuration
                                (inherit (slim-configuration-xorg config))
-                               (keyboard-layout keyboard-layout)))))
+                               (extra-config '("
+                         Section \"Device\"
+                         
+                             Identifier \"Intel Graphics\"
+                         
+                             Driver \"intel\"
+                         
+                             Option \"TearFree\" \"false\"
+                         
+                         EndSection
+                         "
+                                               ))))))
                  (console-font-service-type
                   config => (map (lambda (tty)
                                    (cons (car tty)

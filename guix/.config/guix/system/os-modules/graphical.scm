@@ -1,125 +1,93 @@
 (define-module (os-modules graphical)
   #:use-module (lib)
   #:use-module (my-packages)
+  #:use-module (gnu packages)
   #:use-module (os-modules emacs)
-
   #:use-module (srfi srfi-1)
   #:use-module (gnu)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module (gnu services xorg)
-
-  #:use-module (gnu packages compton)
-  #:use-module (gnu packages suckless)
-  #:use-module (gnu packages gnome)
-  #:use-module (gnu packages linux)
-  #:use-module (gnu packages fonts)
-
-  #:use-module (gnu packages gimp)
-  #:use-module (gnu packages kde)
-  #:use-module (gnu packages emacs-xyz)
-  #:use-module (gnu packages display-managers)
-  #:use-module (gnu packages games)
-  #:use-module (games packages minecraft)
-  #:use-module (gnu packages web-browsers)
-  #:use-module (gnu packages xorg)
-  #:use-module (gnu packages video)
-  #:use-module (gnu packages bittorrent)
-  #:use-module (gnu packages wine)
   #:use-module (nongnu packages wine)
-  #:use-module (gnu packages disk)
-  #:use-module (gnu packages fontutils)
-  #:use-module (gnu packages xdisorg)
-  #:use-module (gnu packages imagemagick)
-  #:use-module (gnu packages pulseaudio)
-  #:use-module (gnu packages gl)
-  #:use-module (gnu packages lxqt)
-  #:use-module (gnu packages libreoffice)
-  #:use-module (gnu packages gnupg)
-  #:use-module (gnu packages syncthing)
-  #:use-module (gnu packages freedesktop)
+  ;; #:export (exwm)
   )
 
-(define-public graphical-games (os-module #:packages (list crawl-tiles
-                                                           my-multimc)))
+(define-public graphical-games (os-module #:packages (cons*
+                                                      my-multimc
+                                                      (pkgs crawl-tiles
+                                                            mgba))))
 
-(define-public art (os-module #:packages (list gimp krita)))
+(define-public art (os-module #:packages (pkgs gimp krita)))
+
+(define-public wine
+  (os-module #:inherit (list)
+             #:packages (cons*
+                         winetricks
+                         (pkgs wine
+                               wine64))))
 
 (define-public graphical
-  (os-module #:inherit (list art)
-             #:packages (list
-                         qutebrowser
-                         xcape
-                         xrdb
-                         xrandr
+  (os-module #:inherit (list)
+             #:packages (cons*
+                         (pkgs xcape
+                               xrdb
+                               xrandr
+                               xdg-utils
+                               xinput
 
-                         mpv
+                               mpv
 
-                         qbittorrent
+                               qbittorrent
 
-                         pavucontrol
+                               gparted
 
-                         wine
-                         winetricks
+                               ;; fonts
+                               font-gnu-freefont
+                               font-google-noto
+                               font-tex-gyre
+                               font-ubuntu
+                               font-dejavu
+                               font-terminus
+                               font-liberation
+                               font-inconsolata
+                               font-gnu-unifont
+                               font-adobe-source-han-sans
+                               gs-fonts
+                               fontconfig
+                               xfontsel
 
-                         ;; gparted
+                               redshift
 
-                         ;; fonts
-                         font-gnu-freefont
-                         font-google-noto
-                         font-tex-gyre
-                         font-ubuntu
-                         font-dejavu
-                         font-terminus
-                         font-liberation
-                         font-inconsolata
-                         font-gnu-unifont
-                         font-adobe-source-han-sans
-                         
-                         fontconfig
-                         xfontsel
-                         redshift
+                               sxiv
+                               imagemagick
+                               xdpyinfo
+                               
+                               ;; graphvis
+                               mesa-utils
 
-                         imagemagick
-                         xdpyinfo
-                         
-                         ;; graphvis
-                         mesa-utils
+                               screengrab
 
-                         screengrab
+                               pinentry-emacs
 
-                         pinentry-emacs
+                               syncthing
+                               ;; qsyncthingtray
+                               ))))
 
-                         syncthing
-                         ;; qsyncthingtray
-
-                         udiskie
-                         )))
-
-(define-public no-desktop-environment
+(define-public (no-desktop-environment default-user-name keyboard-layout)
   (os-module
-   #:packages (list
-               compton
-               slock
-               gnome-icon-theme
-               brightnessctl)
+   #:packages (pkgs compton
+                    slock
+                    gnome-icon-theme
+                    brightnessctl
+                    pavucontrol)
    #:services (cons*
                (service
                 slim-service-type
                 (slim-configuration
+                 (default-user default-user-name)
                  (xorg-configuration
                   (xorg-configuration
-                   (extra-config '("
-                         Section \"Device\"
-                         
-                             Identifier \"Intel Graphics\"
-                         
-                             Driver \"intel\"
-                         
-                             Option \"TearFree\" \"false\"
-                         
-                         EndSection
-                         "))))))
+                   (keyboard-layout keyboard-layout)))))
                (remove
                 (lambda (service)
                   (eq? (service-kind service) gdm-service-type))
@@ -128,16 +96,26 @@
                    config =>
                    (udev-configuration
                     (inherit config)
-                    (rules (cons brightnessctl
+                    (rules (cons (pkg brightnessctl)
                                  (udev-configuration-rules config))))))))))
 
-(define-public exwm
+(define-public (exwm default-user-name keyboard-layout)
   (os-module #:inherit (list emacs
-                             no-desktop-environment
+                             (no-desktop-environment default-user-name keyboard-layout)
                              graphical)
-             #:packages (list my-emacs-exwm ;; emacs-exwm
-                              emacs-helm-exwm)))
+             #:packages (cons*
+                         my-emacs-exwm ; emacs-exwm
+                         (pkgs emacs-helm-exwm))))
 
-(define-public gnome
-  (os-module #:packages (list gvfs) ; for user mounts
+(define-public (gnome)
+  (os-module #:packages (pkgs gvfs) ; for user mounts
              #:services (list (service gnome-desktop-service-type))))
+
+;; (gdm-service-type
+;;  config => (gdm-configuration
+;;             (inherit config)
+;;             (default-user default-user-name)
+;;             (xorg-configuration
+;;              (xorg-configuration
+;;               (inherit (gdm-configuration-xorg config))
+;;               (keyboard-layout keyboard-layout)))))

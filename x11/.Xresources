@@ -1,7 +1,7 @@
 !! Xft options
 ! Xft.antialias: false
 ! Xft.antialias: rgba
-Xft.dpi: 208
+Xft.dpi: 192
 Xft.hinting: true
 ! Xft.hintstyle: hintlight
 Xft.rgba: rgb

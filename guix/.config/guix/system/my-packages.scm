@@ -3,6 +3,7 @@
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix download)
+  #:use-module (gnu packages emacs)
   #:use-module (gnu packages emacs-xyz)
   #:use-module (guix build-system emacs)
   #:use-module (gnu packages messaging)
@@ -136,6 +137,7 @@
 (define-public my-emacs-guix
   (package
     (inherit emacs-guix)
+    (name "my-emacs-guix")
     (version "0.5.2")
     (source (origin
               (method url-fetch)
@@ -261,7 +263,7 @@
        (synopsis "Exwm X window manager modified to launch a
 daemon and client.")
        (arguments
-        `(#:emacs ,e
+        `(#:emacs ,emacs-next
           #:phases
           (modify-phases ,p
             (replace 'install-xsession
@@ -273,15 +275,12 @@ daemon and client.")
                   ;; Add a .desktop file to xsessions
                   (mkdir-p xsessions)
                   (mkdir-p bin)
-                  (with-output-to-file
-                      (string-append xsessions "/exwm.desktop")
-                    (lambda _
-                      (format #t "[Desktop Entry]~@
-                     Name=~a~@
-                     Comment=~a~@
-                     Exec=~a~@
-                     TryExec=~:*~a~@
-                     Type=Application~%" ,name ,synopsis exwm-executable)))
+                  (make-desktop-entry-file
+                   (string-append xsessions "/exwm.desktop")
+                   #:name ,name
+                   #:comment ,synopsis
+                   #:exec exwm-executable
+                   #:try-exec exwm-executable)
                   ;; Add a shell wrapper to bin
                   (with-output-to-file exwm-executable
                     (lambda _
@@ -304,5 +303,5 @@ daemon and client.")
                                  (exwm-config-default)
                                  (message (concat "exwm configuration not found. "
                                                   "Falling back to default configuration...")))))))
-                  (chmod exwm-executable 365)
+                  (chmod exwm-executable #o555)
                   #t))))))))))

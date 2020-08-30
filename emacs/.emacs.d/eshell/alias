@@ -1,5 +1,4 @@
 alias nil  $*
-alias fantasygrounds wine ~/.wine/drive_c/Program\ Files/Fantasy\ Grounds/FantasyGrounds.exe
 alias ll ls -l $*
 alias md mkdir $*
 alias ... ../..
@@ -11,9 +10,8 @@ alias nquery nix-env --query $*
 alias nuninstall sudo nix-env -f '<nixpkgs>' --uninstall $*
 alias nget sudo nix-env -f '<nixpkgs>' --install -A $*
 alias :q exit
-alias spotify spotify --force-device-scale-factor=2.0 > out.log 2> /dev/null &
 alias def bash ~/auto/def/def.bash
 alias tb nc termbin.com 9999
 alias clear clear t
-alias reconf sudo guix system reconfigure -L ~/.config/guix/system/ ~/.config/guix/system/yoga.scm  $*
+alias reconf sudo guix system reconfigure -L $GUIX_CONFIG_DIRECTORY $GUIX_OS_CONFIG_FILE  $*
 alias sdo /run/setuid-programs/sudo $*
