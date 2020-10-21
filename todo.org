@@ -1,0 +1,5 @@
+* emacs
+split up exwm monolith
+** emms
+emms-playlist-mode-kill-track accept numerical argument, and get an evil-delete thing working for it.
+contribute this to evil-collection if it's nice.

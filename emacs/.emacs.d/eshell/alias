@@ -13,5 +13,5 @@ alias :q exit
 alias def bash ~/auto/def/def.bash
 alias tb nc termbin.com 9999
 alias clear clear t
-alias reconf sudo guix system reconfigure -L $GUIX_CONFIG_DIRECTORY $GUIX_OS_CONFIG_FILE  $*
+alias reconf sudo guix system reconfigure -L $GUIX_RECONF_LOAD_DIRECTORY $GUIX_RECONF_FILE $*
 alias sdo /run/setuid-programs/sudo $*

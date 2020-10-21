@@ -116,8 +116,8 @@ COMMIT
                (simple-service 'set-env-vars
                                session-environment-service-type
                                '(("DPI" . "276")
-                                 ("GUIX_OS_CONFIG_FILE" . "/home/guix/adrian/.config/guix/system/yoga.scm")
-                                 ("GUIX_CONFIG_DIRECTORY" . "/home/guix/adrian/.config/guix/system/")))
+                                 ("GUIX_RECONF_FILE" . "/home/guix/adrian/.config/guix/system/yoga.scm")
+                                 ("GUIX_RECONF_LOAD_DIRECTORY" . "/home/guix/adrian/.config/guix/system/")))
                (modify-services (assoc-ref os-module #:services)
                  (slim-service-type
                   config => (slim-configuration

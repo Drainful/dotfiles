@@ -8,8 +8,8 @@
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module (gnu services xorg)
-  #:use-module (nongnu packages wine)
-  ;; #:export (exwm)
+  ;;#:use-module (nongnu packages wine)
+  #:export (exwm no-desktop-environment)
   )
 
 (define-public graphical-games (os-module #:packages (cons*
@@ -22,7 +22,7 @@
 (define-public wine
   (os-module #:inherit (list)
              #:packages (cons*
-                         winetricks
+                         ;; winetricks
                          (pkgs wine
                                wine64))))
 
@@ -37,24 +37,14 @@
 
                                mpv
 
-                               qbittorrent
-
                                gparted
 
                                ;; fonts
-                               font-gnu-freefont
-                               font-google-noto
-                               font-tex-gyre
-                               font-ubuntu
                                font-dejavu
-                               font-terminus
-                               font-liberation
-                               font-inconsolata
+                               font-iosevka
+                               font-gnu-freefont
                                font-gnu-unifont
                                font-adobe-source-han-sans
-                               gs-fonts
-                               fontconfig
-                               xfontsel
 
                                redshift
 
@@ -73,39 +63,53 @@
                                ;; qsyncthingtray
                                ))))
 
-(define-public (no-desktop-environment default-user-name keyboard-layout)
-  (os-module
-   #:packages (pkgs compton
-                    slock
-                    gnome-icon-theme
-                    brightnessctl
-                    pavucontrol)
-   #:services (cons*
-               (service
-                slim-service-type
-                (slim-configuration
-                 (default-user default-user-name)
-                 (xorg-configuration
-                  (xorg-configuration
-                   (keyboard-layout keyboard-layout)))))
-               (remove
-                (lambda (service)
-                  (eq? (service-kind service) gdm-service-type))
-                (modify-services %desktop-services
-                  (udev-service-type
-                   config =>
-                   (udev-configuration
-                    (inherit config)
-                    (rules (cons (pkg brightnessctl)
-                                 (udev-configuration-rules config))))))))))
+(define* (no-desktop-environment default-user-name keyboard-layout #:optional vts)
+  (let ((vts (or vts (list "vt7"))))
+    (os-module
+     #:packages (pkgs compton
+                      slock
+                      gnome-icon-theme
+                      brightnessctl
+                      pavucontrol)
+     #:services (cons*
+                 ;; (service
+                 ;;  slim-service-type
+                 ;;  (slim-configuration
+                 ;;   (default-user default-user-name)
+                 ;;   (xorg-configuration
+                 ;;    (xorg-configuration
+                 ;;     (keyboard-layout keyboard-layout)))))
+                 (append
+                  (map (lambda (vt display)
+                         (service
+                          slim-service-type
+                          (slim-configuration
+                           (default-user default-user-name)
+                           (vt vt)
+                           (xorg-configuration
+                            (xorg-configuration
+                             (keyboard-layout keyboard-layout))))))
+                       vts
+                       (map (lambda (n)
+                              (string-append ":" (number->string n)))
+                            (iota (length vts))))
+                  (remove
+                   (lambda (service)
+                     (eq? (service-kind service) gdm-service-type))
+                   (modify-services %desktop-services
+                     (udev-service-type
+                      config =>
+                      (udev-configuration
+                       (inherit config)
+                       (rules (cons (pkg brightnessctl)
+                                    (udev-configuration-rules config))))))))))))
 
-(define-public (exwm default-user-name keyboard-layout)
+(define (exwm)
   (os-module #:inherit (list emacs
-                             (no-desktop-environment default-user-name keyboard-layout)
                              graphical)
              #:packages (cons*
-                         my-emacs-exwm ; emacs-exwm
-                         (pkgs emacs-helm-exwm))))
+                         ;; my-emacs-exwm
+                         (pkgs emacs-exwm emacs-helm-exwm))))
 
 (define-public (gnome)
   (os-module #:packages (pkgs gvfs) ; for user mounts

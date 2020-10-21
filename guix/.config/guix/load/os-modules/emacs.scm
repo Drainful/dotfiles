@@ -43,6 +43,7 @@
           emacs-dired-hacks
           emacs-bash-completion
           emacs-fish-completion
+          emacs-vterm
           emacs-multi-term
           emacs-doom-themes
           emacs-projectile
@@ -81,7 +82,7 @@
           ;; emacs-toc-org
           ;; emacs-elfeed-org
           emacs-org
-          emacs-lsp-java
+          ;;;emacs-lsp-java
           emacs-nix-mode
           emacs-openwith
           emacs-erc-hl-nicks 

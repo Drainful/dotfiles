@@ -3,6 +3,7 @@
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix download)
+  #:use-module (gnu packages base)
   #:use-module (gnu packages emacs)
   #:use-module (gnu packages emacs-xyz)
   #:use-module (guix build-system emacs)
@@ -21,6 +22,10 @@
   #:use-module (guix git-download)
 
   #:use-module (ice-9 match))
+
+(define-public glibc-32
+  (package
+    (inherit glibc)))
 
 (define-public my-emacs-god-mode
   (let ((commit "7122a1a8e617d87b9acb8fea7e322ee2c89e15cb")
@@ -263,7 +268,7 @@
        (synopsis "Exwm X window manager modified to launch a
 daemon and client.")
        (arguments
-        `(#:emacs ,emacs-next
+        `(#:emacs ,e
           #:phases
           (modify-phases ,p
             (replace 'install-xsession
@@ -282,16 +287,16 @@ daemon and client.")
                    #:exec exwm-executable
                    #:try-exec exwm-executable)
                   ;; Add a shell wrapper to bin
+                  ;; [ -f \"$HOME/.xinitrc\" ] && . \"$HOME/.xinitrc\" ~@
                   (with-output-to-file exwm-executable
                     (lambda _
+                      ;; ~a --daemon=$XDG_RUNTIME_DIR/emacs/server ~@
                       (format #t "#!~a ~@
                      ~a +SI:localuser:$USER ~@
-                     [ -f \"$HOME/.xinitrc\" ] && . \"$HOME/.xinitrc\" ~@
-                     ~a --daemon ~@
                      exec ~a --exit-with-session ~a --create-frame --eval '~s' \"$@\" ~%"
                               (string-append (assoc-ref inputs "bash") "/bin/sh")
                               (string-append (assoc-ref inputs "xhost") "/bin/xhost")
-                              (string-append (assoc-ref inputs "emacs") "/bin/emacs")
+                              ;;(string-append (assoc-ref inputs "emacs") "/bin/emacs")
                               (string-append (assoc-ref inputs "dbus") "/bin/dbus-launch")
                               (string-append (assoc-ref inputs "emacs") "/bin/emacsclient")
                               '(cond

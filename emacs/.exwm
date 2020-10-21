@@ -2,13 +2,14 @@
 
 (require 'exwm)
 (exwm-init)
+(server-start)
 (exwm-randr--init)
 (setenv "EDITOR" "emacsclient")
-(setenv "BROWSER" "qutebrowser")
-(setenv "GDK_SCALE" "1")
-(setenv "PASSWORD_STORE_ENABLE_EXTENSIONS" "true")
+(setenv "BROWSER" "icecat")
+;; (setenv "GDK_SCALE" "1")
+;; (setenv "PASSWORD_STORE_ENABLE_EXTENSIONS" "true")
 ;; (setenv "XDG_DATA_HOME" "~/.local/share/applications/")
-(add-to-path  "/home/guix/adrian/.local/share/applications/" "XDG_DATA_DIRS")
+;; (add-to-path  "/home/guix/adrian/.local/share/applications/" "XDG_DATA_DIRS")
 (defun sh-cmd (command &optional args buffer)
   (start-process-shell-command command
                                (when buffer (concat "*" command "*"))
@@ -18,23 +19,12 @@
 (sh-cmd "xdg-mime" "default emacsclient.desktop inode/directory")
 (sh-cmd "xdg-mime" "default emacsclient.desktop text/plain")
 (sh-cmd "xdg-mime" "default qutebrowser.desktop text/html")
-(sh-cmd "nm-applet")
+(sh-cmd "synclient" "TapButton1=1 TapButton2=3 TapButton3=2")
+;; (sh-cmd "nm-applet")
 ;; (sh-cmd "pulseaudio" "" t)
-(sh-cmd "redshift" "-l 42.05:-87.69" t)
-(sh-cmd "compton" "--vsync drm --paint-on-overlay" t)
-(sh-cmd "ssh-agent")
-(sh-cmd "syncthing" "-no-browser" "-home=/home/guix/adrian/.config/syncthing/")
-
-(defun eshell/fantasygrounds ()
-  (interactive)
-  (let ((default-directory "/home/guix/adrian/.wine/drive_c/Program Files/Fantasy Grounds/"))
-    (start-process-shell-command "fantasygrounds"
-                                 "wine /home/guix/adrian/.wine/drive_c/Program\\ Files/Fantasy\\ Grounds/FantasyGrounds.exe")))
-
-;; (sh-cmd "mpv" "https://www.twitch.tv/yogscast")
-;; (start-process-shell-command "pulseaudio daemon" "*pulseaudio-daemon*" "pulseaudio")
-
-;; (server-start)
-;; (start-process-shell-command "Xresources" nil " [ -f \"$HOME/.Xresources\" ] && xrdb -merge \"$HOME/.Xresources\" ")
+;; (sh-cmd "redshift" "-l 42.05:-87.69" t)
+;; (sh-cmd "compton" "--vsync drm --paint-on-overlay" t)
+;; (sh-cmd "ssh-agent")
+;; (sh-cmd "syncthing" "-no-browser" "-home=/home/guix/adrian/.config/syncthing/") -- transferred to shepherd service
 
 (provide 'exwm-initialized)

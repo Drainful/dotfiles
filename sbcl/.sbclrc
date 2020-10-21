@@ -6,3 +6,6 @@
     (load quicklisp-init)))
 
 (require :asdf)
+
+#+quicklisp
+(ql:quickload :cepl.examples)
