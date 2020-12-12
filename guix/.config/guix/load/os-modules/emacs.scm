@@ -1,4 +1,13 @@
 (define-module (os-modules emacs)
+
+  #:use-module (gnu packages emacs-xyz)
+  #:use-module (gnu packages guile)
+  #:use-module (gnu packages gnupg)
+  #:use-module (gnu packages package-management)
+  #:use-module (guix packages)
+  #:use-module (guix git-download)
+  #:use-module (guix download)
+
   #:use-module (lib)
   #:use-module (gnu packages)
   #:use-module (my-packages))
@@ -12,6 +21,34 @@
     my-emacs-org-roam
     my-emacs-company-org-roam
     my-emacs-nov-el
+    
+    (package
+      (inherit emacs-guix)
+      (name "emacs-guix-fixed")
+      (inputs
+       `(("guile" ,guile-3.0-latest)
+         ("guix" ,guix)))
+      (propagated-inputs
+       `(("geiser" ,(package
+                      (inherit emacs-geiser)
+                      (name "emacs-geiser")
+                      (version "0.11.2")
+                      (source
+                       (origin
+                         (method git-fetch)
+                         (uri (git-reference
+	                       (url "https://gitlab.com/jaor/geiser/")
+	                       (commit version)))
+                         (file-name (git-file-name name version))
+                         (sha256
+                          (base32 "1khi1bghsjx6cs5acizmlbw9z19s4qycnji9krdbn42cbpv0rysv"))))
+                      (inputs
+                       `(("guile" ,guile-3.0-latest)))))
+         ("guile-gcrypt" ,guile-gcrypt)
+         ("dash" ,emacs-dash)
+         ("bui" ,emacs-bui)
+         ("edit-indirect" ,emacs-edit-indirect)
+         ("magit-popup" ,emacs-magit-popup))))
     ;; (let ((file "/home/guix/adrian/Code/guix-packages/emacs-guix/guix.scm"))
     ;;   (if (stat file #f)
     ;;       (load file)
@@ -34,6 +71,7 @@
           emacs-helm-ag
           emacs-helm-company
           emacs-which-key
+          emacs-all-the-icons
           emacs-iedit
           ;; emacs-evil-iedit-state
           emacs-dired-rsync rsync
@@ -41,8 +79,8 @@
           ;; emacs-dired-atool
           emacs-dired-du
           emacs-dired-hacks
-          emacs-bash-completion
-          emacs-fish-completion
+          emacs-all-the-icons-dired
+          emacs-helm-fish-completion
           emacs-vterm
           emacs-multi-term
           emacs-doom-themes
@@ -68,7 +106,7 @@
           emacs-clojure-mode
           emacs-cider
           emacs-spinner
-          emacs-geiser
+          ;; emacs-geiser
           emacs-lua-mode
           ;; emacs-shen-mode
           emacs-rust-mode
@@ -80,7 +118,7 @@
           emacs-web-mode
           emacs-emmet-mode
           ;; emacs-toc-org
-          ;; emacs-elfeed-org
+          emacs-elfeed
           emacs-org
           ;;;emacs-lsp-java
           emacs-nix-mode

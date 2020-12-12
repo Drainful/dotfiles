@@ -1,5 +1,27 @@
+* nyxt
+- write and contribute a next and previous url functionality like eww
+- make a cli option to open in new window?
 * emacs
+add a repeat command for evil-surround
+
 split up exwm monolith
+** elfeed
+- self host nitter, invidious
+*** elfeed-image
+Analogous to dired-image, a command generates thumbnails for the entries in the elfeed search buffer, and then produces an image preview buffer which contains on alternating lines
+- entry title
+- thumbnails for that entry
+
+There should be a command to jump between entries, and when the point is on an entry line, perhaps the point in the search buffer should relocate to the respective line.
+There should be a command to open elfeed-show for the current entry in the elfeed-image buffer.
+
+If there are a very large number of entries, only the first X should be used for the elfeed-image buffer, and there should be a command to page through the entries X at a time.
+**** DONE Get content of entries, unread or not.
+**** DONE parse the html of an entry's content to find images
+**** TODO download the images and produce thumbnails (look to shr and image-dired)
+**** TODO create a buffer which contains those thumbnails
+** emacs-guix
+contribute completion fix
 ** emms
 emms-playlist-mode-kill-track accept numerical argument, and get an evil-delete thing working for it.
 contribute this to evil-collection if it's nice.

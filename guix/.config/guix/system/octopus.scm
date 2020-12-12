@@ -7,6 +7,7 @@
              (gnu services networking)
              (gnu services nix)
              (gnu packages fonts)
+             (gnu packages fontutils)
              (my-packages)
              (nongnu packages linux)
              (nongnu system linux-initrd)
@@ -87,12 +88,16 @@
 
     (packages (append (assoc-ref os-module #:packages) %base-packages))
     (services (cons*
+               ;; (service nix-service-type)
                (simple-service 'ld-service-type activation-service-type
                                #~(begin
                                    ;; (system* "mkdir" "-p" "/lib")
                                    ;; (system* "ln" "-sf"
                                    ;;          (string-append #$glibc "/lib/ld-linux-x86.so.2")
                                    ;;          "/lib64/ld-linux-x86-64.so.2")
+                                   (system* "ln" "-sf"
+                                            (string-append #$fontconfig "/etc/fonts")
+                                            "/etc/fonts")
                                    (system* "mkdir" "-p" "/lib64")
                                    (system* "ln" "-sf"
                                             (string-append #$glibc "/lib/ld-linux-x86-64.so.2")

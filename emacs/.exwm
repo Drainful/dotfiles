@@ -22,7 +22,7 @@
 (sh-cmd "synclient" "TapButton1=1 TapButton2=3 TapButton3=2")
 ;; (sh-cmd "nm-applet")
 ;; (sh-cmd "pulseaudio" "" t)
-;; (sh-cmd "redshift" "-l 42.05:-87.69" t)
+(sh-cmd "redshift" "-l 42.05:-87.69 -t 6000:4000" t)
 ;; (sh-cmd "compton" "--vsync drm --paint-on-overlay" t)
 ;; (sh-cmd "ssh-agent")
 ;; (sh-cmd "syncthing" "-no-browser" "-home=/home/guix/adrian/.config/syncthing/") -- transferred to shepherd service

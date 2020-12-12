@@ -13,6 +13,9 @@ gpgconf --launch gpg-agent
 export SSH_AGENT_PID=""
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 export PATH=$PATH:~/.npm/bin
+export TAICHI_REPO_DIR=/home/adrian/Code/python/taichi-stuff/taichi  # Path to your taichi repository
+export PYTHONPATH=$TAICHI_REPO_DIR/python:$PYTHONPATH
+export PATH=$TAICHI_REPO_DIR/bin:$PATH
 
 ## Vterm
 vterm_printf(){

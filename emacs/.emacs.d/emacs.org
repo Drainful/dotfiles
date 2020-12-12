@@ -9,7 +9,7 @@
 #+END_SRC
 
 ** Garbage Collector Threshold
-I took some advice from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom Emacs]] for faster startup times. 
+ took some advice from [[https://github.com/hlissner/doom-emacs/wiki/FAQ][Doom Emacs]] for faster startup times. 
 #+BEGIN_SRC emacs-lisp
   (setq gc-cons-threshold 402653184
         gc-cons-percentage 0.6)
@@ -309,8 +309,8 @@ These are normal mode mappings not specific to any major mode.
     "M-j" 'move-line-down
     "M-k" 'move-line-up
     ;; "/" 'evil-ex-search-forward
-    "t" nil
-    "q" 'evil-avy-goto-subword-1
+    ;; "t" nil
+    ;; "q" nil
     "g r" 'revert-buffer)
 
 
@@ -457,13 +457,15 @@ Usage:
                   "h" 'help
                   "O" 'helm-do-ag-this-file 
                   "o" 'helm-occur 
-                  "i" 'helm-imenu
                   "8" 'helm-imenu-in-all-buffers
                   ";" 'eval-expression
                   "r" 'evil-surround-edit
                   "R" 'evil-Surround-edit
                   ;; "RET" (kbd ":noh")
                   )
+
+  (leader-key-def 'normal
+                  "i" 'helm-imenu)
 #+END_SRC
 *** Visual Mode Leader Bindings
 #+BEGIN_SRC emacs-lisp
@@ -857,7 +859,7 @@ key command. ~which-key~ key replacements are generated [[#leader][here]].
     :after delight
     :config
     (delight 'which-key-mode "" t)
-    (which-key-mode t))
+    (which-key-mode nil))
 #+END_SRC
 *** Prefix command completion
 From [[https://with-emacs.com/posts/prefix-command-completion/][this blog post]], offer compltion of key prefix candidates in the
@@ -1085,6 +1087,10 @@ Utilities for buffer management
 #+BEGIN_SRC emacs-lisp
   (setq mouse-wheel-scroll-amount '(2 ((shift) . 1) ((meta)) ((control) . text-scale)))
 #+END_SRC
+** COMMENT Icons
+#+BEGIN_SRC emacs-lisp
+  (use-package all-the-icons)
+#+END_SRC
 * Autosaves
 #+BEGIN_SRC emacs-lisp
   (setq backup-directory-alist
@@ -1118,14 +1124,18 @@ Iedit is a package for interactive refactoring.
 #+END_SRC
 * Info/Man
 #+BEGIN_SRC emacs-lisp
-  (with-eval-after-load 'man
+  (with-eval-after-load 'info
     (general-def normal Info-mode-map
       "m" #'Info-menu
       "n" #'Info-next
       "p" #'Info-prev
       "g m" #'evil-set-marker
       "g n" #'evil-search-next
-      "g p" #'evil-search-previous)
+      "g p" #'evil-search-previous
+      "H" #'Info-history-back
+      "L" #'Info-history-forward
+      "C-o" nil
+      "C-i" nil)
 
     (eval-after-load 'Info
       (defface Info-quoted
@@ -1141,7 +1151,8 @@ Dired is the file manager built into Emacs.
   (require 'dired)
 
   ;; Dired parses ls to produce its output. Use the flags "-alh"
-  (setq dired-listing-switches "-alh")
+  (setq dired-listing-switches "-alh"
+        wdired-allow-to-change-permissions t)
 
   ;; Highlight the current line in dired mode
   (add-hook 'dired-mode-hook #'hl-line-mode)
@@ -1163,10 +1174,6 @@ Dired is the file manager built into Emacs.
             (call-interactively #'dired-up-directory)
             (kill-buffer current)))
     "SPC" nil)
-
-  (leader-key-def normal dired-mode-map
-                  "i" (lambda nil (interactive)
-                        (image-dired default-directory)))
 
   (general-def normal dired-mode-map
     "s" #'me/dired-sort)
@@ -1239,6 +1246,10 @@ Dired is the file manager built into Emacs.
     "RET" #'me/image-dired-display-thumbnail-original-image
     "n" #'image-dired-display-next-thumbnail-original
     "p" #'image-dired-display-previous-thumbnail-original)
+
+  (leader-key-def normal dired-mode-map
+                  "i" (lambda nil (interactive)
+                        (image-dired default-directory)))
 #+END_SRC
 ** COMMENT Async
 #+BEGIN_SRC emacs-lisp
@@ -1266,12 +1277,13 @@ Add additional font lock rules for dired
 ** COMMENT Dired Atool
 Use atool for compression and extraction
 #+BEGIN_SRC emacs-lisp
-(use-package dired-atool
-  :ensure t
-  :config
-  (leader-key-def normal dired-mode-map
-                  "z" #'dired-atool-do-unpack
-                  "Z" #'dired-atool-do-pack))
+  (use-package dired-atool
+    :ensure t
+    :config
+    (leader-key-def normal dired-mode-map
+                    "z" #'dired-atool-do-unpack
+                    ;; "Z" #'dired-atool-do-pack
+                    ))
 #+END_SRC
 ** Dired Du
 Use du to list folder sizes
@@ -1328,6 +1340,14 @@ Multi-stage copy/paste
     (leader-key-def normal dired-mode-map
                     "v" #'dired-ranger-move))
 #+END_SRC
+*** Dired Filter
+
+#+BEGIN_SRC emacs-lisp
+  (use-package dired-filter
+    :config
+    (customize-set-variable 'dired-filter-stack nil)
+    (add-hook 'dired-mode-hook #'dired-filter-mode))
+#+END_SRC
 *** Dired Narrow
 Interactively narrow/filter a dired buffer. Usually I just use
 helm-find-file, but sometimes it's nice to narrow for a Dired
@@ -1336,7 +1356,14 @@ selection.
   (use-package dired-narrow
     :config
     (leader-key-def normal dired-mode-map
-                    "n" #'dired-narrow))
+                    "n" #'dired-narrow
+                    "M-n" #'dired-narrow-regexp
+                    "C-n" #'dired-narrow-fuzzy))
+#+END_SRC
+** COMMENT Dired Icons
+#+BEGIN_SRC emacs-lisp
+  (use-package all-the-icons-dired :config
+    (add-hook 'dired-mode-hook #'all-the-icons-dired-mode))
 #+END_SRC
 * Proced
 #+BEGIN_SRC emacs-lisp
@@ -1363,9 +1390,9 @@ primary shell.
   (setq eshell-where-to-jump 'begin)
   (setq eshell-review-quick-commands nil)
   (setq eshell-smart-space-goes-to-end t)
-  ;;(add-to-list 'eshell-visual-commands "rlwrap")
+  (setq eshell-history-size 1024)
 
-  ;; (fmakunbound 'eshell/cp)
+  ;;(add-to-list 'eshell-visual-commands "rlwrap")
 
   ;; Eshell modules
   (require 'esh-module)
@@ -1392,11 +1419,11 @@ primary shell.
                 (concat directory "/")))
             "*"))
 
-  (defun eshell-new ()
-    "Open a new instance of eshell."
-    (interactive)
-    (let ((eshell-buffer-name (eshell-buffer-name-function)))
-      (eshell 'N)))
+  ;; (defun eshell-new ()
+  ;;   "Open a new instance of eshell."
+  ;;   (interactive)
+  ;;   (let ((eshell-buffer-name (eshell-buffer-name-function)))
+  ;;     (eshell 'N)))
 
   (defun eshell-singular ()
     "Open or switch to eshell"
@@ -1408,7 +1435,7 @@ primary shell.
     "Open a new instance of eshell in a new directory."
     (interactive (list (read-file-name "Eshell at: ")))
     (let ((default-directory directory))
-      (eshell-new)))
+      (eshell)))
 
   (defun eshell-at-or-switch (directory)
     (interactive (list (read-file-name "Eshell at: ")))
@@ -1546,34 +1573,32 @@ primary shell.
     (interactive "p")
     (eshell-previous-matching-input-from-input (- arg)))
 
+
   (defun set-eshell-keybinds ()
-    (leader-key-def normal eshell-mode-map
-                    "c" #'fish-completion-mode)
     (general-def :states 'normal :keymaps 'eshell-mode-map
       "M-p" #'eshell-previous-matching-input-from-input
       "M-n" #'eshell-next-matching-input-from-input
-
       "I" #'comint-style-insert-line
       "A" #'comint-style-append-line
-      "M-<tab>" #'helm-winconf-swap
-      "<return>" #'eshell-properly-send-input)
+      "<return>" #'eshell-properly-send-input) ;;add push button support TODO
     (general-def 'insert 'eshell-mode-map
+      "<tab>" #'helm-esh-pcomplete
+      "TAB" #'helm-esh-pcomplete ; for text mode emacs
       "C-<return>" #'newline)
     (leader-key-def normal eshell-mode-map
+                    "c" #'fish-completion-mode
                     "e" #'helm-eshell-history))
 
   (add-hook 'eshell-mode-hook ; needs to be in a hook because eshell is dumb/stupid
             #'set-eshell-keybinds)
-
 #+END_SRC
-*** Helm support
-~helm~ can be used for ~eshell~ completions with the following code.
+*** Helm completion
+~helm~ can be used for ~eshell~ completions.
 #+BEGIN_SRC emacs-lisp
-  (defun setup-eshell-helm-completion ()
-    (define-key eshell-mode-map [remap eshell-pcomplete] 'helm-esh-pcomplete))
+  ;; The keybinding to activate helm completion is bound in `set-eshell-keybinds'
 
-  (add-hook 'eshell-mode-hook
-            #'setup-eshell-helm-completion)
+  (general-def 'helm-esh-completion-map
+    "<backtab>" #'helm-previous-line)
 #+END_SRC
 *** Disable Company
 While company mode is widely useful, helm does better for eshell.
@@ -1641,16 +1666,25 @@ This code is the sum of failed attempts to get the above feature working.
 ** Fish/Bash Completion
 Get completion hints from bash and fish.
 #+BEGIN_SRC emacs-lisp
-  (use-package bash-completion
-    :config
-    (add-hook 'shell-dynamic-complete-functions
-              #'bash-completion-dynamic-complete))
-
   (use-package fish-completion
-    :after bash-completion
     :config
-    (global-fish-completion-mode 0)
-    (setq fish-completion-fallback-on-bash-p t))
+    ;; I toggle fish-completion-mode in eshell in the function
+    ;; `set-eshell-keybinds'
+    )
+  (use-package helm-fish-completion
+    :config
+    (setq fish-completion-fallback-on-bash-p t)
+    (define-key shell-mode-map (kbd "<tab>") 'helm-fish-completion)
+    ;;   (defun me/helm-fish-completion-make-eshell-source ()
+    ;;     "Make and return Helm sources for Eshell.
+    ;; This is a good candidate for `helm-esh-pcomplete-build-source-fn'.
+    ;; For `M-x shell', use `helm-fish-completion' instead."
+    ;;     (list
+    ;;      ;; 'helm-fish-completion-source
+    ;;      (helm-make-source "Eshell completions" 'helm-esh-source
+    ;;        :fuzzy-match helm-eshell-fuzzy-match)))
+    ;;   (setq helm-esh-pcomplete-build-source-fn #'helm-esh-pcomplete-default-source)
+    )
 #+END_SRC
 ** Comint Mode
 ~comint mode~ is a generalized mode for repl-like interfaces.
@@ -1928,7 +1962,7 @@ given Nix environment.
     (interactive)
     (mapcar #'disable-theme custom-enabled-themes))
 
-  (switch-theme 'doom-fairy-floss)
+  ;; (switch-theme 'doom-fairy-floss)
 #+END_SRC
 *** COMMENT time-based theme
 The theme loaded depends upon time of day. Causes slight face issues.
@@ -3406,7 +3440,34 @@ Tools for Guix, a package manager and operating system.
                   (when (> (length intxt) 0)
                     (and prompt-end (narrow-to-region prompt-beg prompt-end))
                     t))
-              nil)))))
+              nil)))
+        ;;       (defun guix-fix-completion ()
+        ;;         (defvar guix-help-parse-command-regexp
+        ;;           (rx bol "    "
+        ;;               (group wordchar (one-or-more (or wordchar "-"))))
+        ;;           "Regexp used to find guix commands.
+        ;; 'Command' means any option not prefixed with '-'.  For example,
+        ;; guix subcommand, system action, importer, etc.")
+
+        ;;         (guix-pcomplete-define-options-finder guix-pcomplete-commands
+        ;;           "If COMMANDS is nil, return a list of available guix commands.
+        ;; If COMMANDS is non-nil (it should be a list of strings), return
+        ;; available subcommands, actions, etc. for 'guix COMMANDS'."
+        ;;           guix-help-parse-command-regexp)
+
+        ;;         (progn
+        ;;           (guix-geiser-eval-in-repl-synchronously
+        ;;            "(load-from-path \"/home/adrian/Code/guile/guix/guix/gexp.scm\")" guix-internal-repl-buffer t t)
+        ;;           (guix-geiser-eval-in-repl-synchronously
+        ;;            ",m (emacs-guix)" guix-internal-repl-buffer t t)
+        ;;           )
+        ;;         )
+        ;;       (add-hook 'guix-repl-after-start-hook
+        ;;                 #'guix-fix-completion)
+
+        ;; broken
+        (fmakunbound 'pcomplete/guix)
+        ))
 #+END_SRC
 
 ** Nix
@@ -3651,7 +3712,7 @@ Create a table of contents without exporting.
 #+BEGIN_SRC emacs-lisp
   (setq org-agenda-files '("~/Documents/notes/" "~/dotfiles/"))
 #+END_SRC
-*** superstar
+*** COMMENT superstar
 
 #+BEGIN_SRC emacs-lisp
   (use-package org-superstar
@@ -3767,7 +3828,6 @@ Control spotify running on any device from Emacs.
 *** Main Package
 Call emacsclient with ~-f exwm-enable~ in order to start exwm.
 #+BEGIN_SRC emacs-lisp
-  ;; -*- lexical-binding: t; -*-
   (setq mouse-autoselect-window nil
         focus-follows-mouse nil)
 
@@ -3874,12 +3934,16 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
                     (start-process-shell-command command nil command)))
        ([?\s-@] . (lambda (command)
                     (interactive (list (read-shell-command "@ ")))
+                    (setq me/exwm-always-home-dir nil)
                     (start-process-shell-command command nil command)))
 
        ([?\s-`] . helm-qutebrowser)
        ([?\s-1] . eshell-here)
-       ([?\s-2] . shell)
-       ;; ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
+       ([?\s-2] . (lambda nil (interactive) (find-file default-directory)))
+       ([?\s-3] . (lambda nil (interactive) (eshell-at-or-switch "~/")))
+
+       (,(kbd "<s-f1>"). previous-buffer)
+       (,(kbd "<s-f2>"). next-buffer)
 
        ;; ,@(mapcar (lambda (n)
        ;;             `(,(kbd (format "s-%d" n)) .
@@ -3908,7 +3972,11 @@ Call emacsclient with ~-f exwm-enable~ in order to start exwm.
        (,(kbd "C-<XF86AudioLowerVolume>") . desktop-volume-decrement-small)
        (,(kbd "<XF86AudioMute>") . pulseaudio-control-toggle-current-sink-mute)
 
-       (,(kbd "<C-f12>") . ttp)
+       (,(kbd "<s-f12>") . ttp)
+       (,(kbd "<s-f11>") . (lambda ()
+                             (interactive)
+                             (start-process-shell-command "toggle redshift" nil
+                                                          "pkill -USR1 '^redshift$'")))
 
 
        ;; Bind "s- " to launch external commands through my launcher.
@@ -4348,11 +4416,31 @@ This allows sending Common Lisp code to a live running Next browser process.
   ;;                               (buffer-string))))))
   ;;                 nil t))))
 #+END_SRC
+*** Browse url
+#+BEGIN_SRC emacs-lisp
+  (setq browse-url-generic-program "nyxt")
+
+  (setq browse-url-browser-function
+        '((".*youtu\\.*be." . browse-url-mpv)
+          (".*invidious\\..*" . browse-url-mpv)
+          ("." . browse-url-generic)))
+
+  (defvar browse-url-mpv-arguments nil)
+
+  (defun browse-url-mpv (url &optional _new-window)
+    (interactive (browse-url-interactive-arg "URL: "))
+    (setq url (browse-url-encode-url url))
+    (let* ((process-environment (browse-url-process-environment)))
+      (apply 'start-process
+             (concat "mpv " url) nil
+             "mpv"
+             (append browse-url-mpv-arguments (list url)))))
+#+END_SRC
 *** Qutebrowser
 #+BEGIN_SRC emacs-lisp
-  (setq browse-url-browser-function #'browse-url-generic)
-  (setq browse-url-generic-program "qutebrowser"
-        browse-url-generic-args '("--target" "window"))
+  ;; (setq browse-url-browser-function #'browse-url-generic)
+  ;; (setq browse-url-generic-program "qutebrowser"
+  ;;       browse-url-generic-args '("--target" "window"))
 
   (require 'helm-qutebrowser)
 
@@ -4363,14 +4451,14 @@ This allows sending Common Lisp code to a live running Next browser process.
 
   (defvar helm-source-start-program
     (helm-build-dummy-source
-        "Create buffer"
+        "Start Program"
       :action (helm-make-actions
                "Start program"
                (lambda (candidate) (start-process-shell-command candidate nil candidate)))))
 
-  (setq helm-qutebrowser-sources '(helm-qutebrowser--buffers-source
+  (setq helm-qutebrowser-sources '(;; helm-qutebrowser--buffers-source
                                    helm-exwm-source
-                                   helm-qutebrowser-source-not-found
+                                   ;; helm-qutebrowser-source-not-found
                                    helm-source-start-program))
 #+END_SRC
 *** COMMENT EXWM firefox
@@ -5180,29 +5268,61 @@ Emacs web wowser for integrated web browsing
   (general-def 'normal 'eww-mode-map)
 #+END_SRC
 ** Elfeed
-
 #+BEGIN_SRC emacs-lisp
+  (use-package elfeed
+    :config
+    (defvar twitter-accounts-nsfw (split-string (file-string "~/dotfiles/feeds/twitter-nsfw.txt")))
 
+    (defvar default-nitter-instance "nitter.net")
+
+    (cl-defun nitter-account-homepage (account &optional (instance default-nitter-instance))
+      (concat "https://" instance "/" account))
+
+    (cl-defun me/elfeed-add-nitter (account &key (instance default-nitter-instance) tags)
+      (let* ((url (concat (nitter-account-homepage account instance) "/rss")))
+        (cl-pushnew (append (list url 'nitter) tags) elfeed-feeds
+                    :test #'equal)
+        (setf (elfeed-meta (elfeed-db-get-feed url) :twitter-account)
+              account)
+        elfeed-feeds))
+
+    (dolist (account twitter-accounts-nsfw)
+      (me/elfeed-add-nitter account :tags (list 'nsfw)))
+
+    (defun me/elfeed-never-read-tagger (entry)
+      (when (and (< date (- (float-time) (elfeed-time-duration "2 weeks ago")))
+                 (find 'unread (elfeed-entry-tags entry)))
+        (elfeed-untag entry 'unread)
+        (elfeed-tag entry 'never-read)
+        entry))
+
+    (add-hook 'elfeed-new-entry-hook #'me/elfeed-never-read-tagger)
+
+    (defalias 'elfeed-search-toggle-star
+      (elfeed-expose #'elfeed-search-toggle-all 'star))
+    (general-def 'normal 'elfeed-search-mode-map
+      "m" #'elfeed-search-toggle-star)
+    ;; (defun elfeed-show-toggle-star
+    ;;     (elfeed-s))
+
+    )
 #+END_SRC
 ** COMMENT Gnus
 #+BEGIN_SRC emacs-lisp
   (require 'gnus)
   (setq gnus-select-method 
+        ;; '(nntp "news.gwene.org")
         ;; '(nnimap "imap.mail.yahoo.com:993")
-        '(nrss "https://www.youtube.com/feeds/videos.xml?channel_id=UCH-_hzb2ILSCo9ftVSnrCIQ")
+        '(nnrss "nitter.net")
         )
 
-  (setq gnus-secondary-select-methods
-        nil
-        ;; nil
-        ;; '(
-        ;;   ;; (nntp "news.gnus.org")
-        ;;   (nrss "https://www.youtube.com/feeds/videos.xml?channel_id=UCH-_hzb2ILSCo9ftVSnrCIQ")
-        ;;   )
-        )
+  (add-hook 'gnus-mode-hook
+            #'gnus-topic-mode)
+  (add-hook 'gnus-mode-hook
+            #'hl-line-mode)
 
-  (setq user-mail-address "adrianfullmer@yahoo.com"
-        user-full-name "Adrian Fullmer")
+  ;; (setq user-mail-address "adrianfullmer@yahoo.com"
+  ;;       user-full-name "Adrian Fullmer")
 #+END_SRC
 ** Weather
 Interface to wttr.in
@@ -5260,15 +5380,13 @@ Interface to the bittorrent client Transmission
 #+BEGIN_SRC emacs-lisp
   (use-package transmission)
 #+END_SRC
-* Post-startup
+* COMMENT Post-startup
 ~envrc-global-mode~ should be enabled late in the startup sequence so
 that it is initialized before other modes which might rely upon the
 updated environment variables, since ~envrc-global-mode~ prepends
 itself to various hooks
 #+BEGIN_SRC emacs-lisp
-  (eval-after-load 'envrc nil
-                   ;; (envrc-global-mode)
-                   )
+  (eval-after-load 'envrc (envrc-global-mode))
 #+END_SRC
 * Utilities
 Various functions and macros which are evaluated before anything else in the file.
@@ -5276,6 +5394,10 @@ Various functions and macros which are evaluated before anything else in the fil
 #+BEGIN_SRC emacs-lisp :tangle no
   ;; -*- lexical-binding: t; -*-
 
+  (defun file-string (filename)
+    (with-temp-buffer
+      (insert-file-contents filename)
+      (buffer-string)))
 
   (defun true-dpi (&optional display)
     "Get the DPI of DISPLAY.
